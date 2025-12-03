@@ -3635,6 +3635,160 @@ export const moreStringExercises: Exercise[] = [
   },
 ];
 
+// ==================== 并查集 ====================
+export const unionFindExercises: Exercise[] = [
+  { id: 'uf-provinces', category: '并查集', title: '省份数量', difficulty: 'medium', type: 'coding',
+    description: '给定城市连接矩阵，求省份数量', templates: { c: `int findCircleNum(int** m, int n) {}`, cpp: `int findCircleNum(vector<vector<int>>& m) {}`, java: `int findCircleNum(int[][] m) {}`, python: `def find_circle_num(m): pass` },
+    solutions: { c: `// 并查集`, cpp: `int findCircleNum(vector<vector<int>>& m) {\n    int n = m.size();\n    vector<int> p(n); iota(p.begin(),p.end(),0);\n    function<int(int)> f = [&](int x) { return p[x]==x?x:p[x]=f(p[x]); };\n    for(int i=0;i<n;i++) for(int j=i+1;j<n;j++) if(m[i][j]) p[f(i)]=f(j);\n    int c=0; for(int i=0;i<n;i++) if(p[i]==i) c++;\n    return c;\n}`, java: `// 并查集`, python: `def find_circle_num(m):\n    n=len(m); p=list(range(n))\n    def f(x): p[x]=f(p[x]) if p[x]!=x else x; return p[x]\n    for i in range(n):\n        for j in range(i+1,n):\n            if m[i][j]: p[f(i)]=f(j)\n    return sum(1 for i in range(n) if p[i]==i)` },
+    testCases: [{ input: '[[1,1,0],[1,1,0],[0,0,1]]', expectedOutput: '2', description: '2省份' }], hints: ['并查集'], explanation: '连通的城市合并' },
+  { id: 'uf-redundant', category: '并查集', title: '冗余连接', difficulty: 'medium', type: 'coding',
+    description: '找出使树变图的多余边', templates: { c: `int* findRedundant(int** e, int n) {}`, cpp: `vector<int> findRedundantConnection(vector<vector<int>>& e) {}`, java: `int[] findRedundant(int[][] e) {}`, python: `def find_redundant(e): pass` },
+    solutions: { c: `// 并查集`, cpp: `vector<int> findRedundantConnection(vector<vector<int>>& e) {\n    int n=e.size(); vector<int> p(n+1); iota(p.begin(),p.end(),0);\n    function<int(int)> f=[&](int x){return p[x]==x?x:p[x]=f(p[x]);};\n    for(auto& edge:e) { int a=f(edge[0]),b=f(edge[1]); if(a==b) return edge; p[a]=b; }\n    return {};\n}`, java: `// 并查集`, python: `def find_redundant(e):\n    p=list(range(len(e)+1))\n    def f(x): p[x]=f(p[x]) if p[x]!=x else x; return p[x]\n    for a,b in e:\n        if f(a)==f(b): return [a,b]\n        p[f(a)]=f(b)\n    return []` },
+    testCases: [{ input: '[[1,2],[1,3],[2,3]]', expectedOutput: '[2,3]', description: '删[2,3]' }], hints: ['逐边union'], explanation: '已连通再加边则多余' },
+];
+
+// ==================== 单调栈 ====================
+export const monotoneStackExercises: Exercise[] = [
+  { id: 'mono-next-greater', category: '单调栈', title: '下一个更大元素', difficulty: 'easy', type: 'coding',
+    description: '每个元素右边第一个更大的', templates: { c: `int* nextGreater(int* a, int n) {}`, cpp: `vector<int> nextGreater(vector<int>& a) {}`, java: `int[] nextGreater(int[] a) {}`, python: `def next_greater(a): pass` },
+    solutions: { c: `// 单调栈`, cpp: `vector<int> nextGreater(vector<int>& a) {\n    int n=a.size(); vector<int> r(n,-1); stack<int> s;\n    for(int i=n-1;i>=0;i--) { while(!s.empty()&&s.top()<=a[i]) s.pop(); if(!s.empty()) r[i]=s.top(); s.push(a[i]); }\n    return r;\n}`, java: `// 单调栈`, python: `def next_greater(a):\n    n=len(a); r=[-1]*n; s=[]\n    for i in range(n-1,-1,-1):\n        while s and s[-1]<=a[i]: s.pop()\n        if s: r[i]=s[-1]\n        s.append(a[i])\n    return r` },
+    testCases: [{ input: '[2,1,2,4,3]', expectedOutput: '[4,2,4,-1,-1]', description: '' }], hints: ['单调递减栈'], explanation: '栈顶是右边第一个更大' },
+  { id: 'mono-daily-temp', category: '单调栈', title: '每日温度', difficulty: 'medium', type: 'coding',
+    description: '等几天才有更高温度', templates: { c: `int* dailyTemp(int* t, int n) {}`, cpp: `vector<int> dailyTemperatures(vector<int>& t) {}`, java: `int[] dailyTemp(int[] t) {}`, python: `def daily_temp(t): pass` },
+    solutions: { c: `// 单调栈`, cpp: `vector<int> dailyTemperatures(vector<int>& t) {\n    int n=t.size(); vector<int> r(n,0); stack<int> s;\n    for(int i=0;i<n;i++) { while(!s.empty()&&t[s.top()]<t[i]) { r[s.top()]=i-s.top(); s.pop(); } s.push(i); }\n    return r;\n}`, java: `// 单调栈`, python: `def daily_temp(t):\n    n=len(t); r=[0]*n; s=[]\n    for i in range(n):\n        while s and t[s[-1]]<t[i]: r[s[-1]]=i-s[-1]; s.pop()\n        s.append(i)\n    return r` },
+    testCases: [{ input: '[73,74,75,71,69,72,76,73]', expectedOutput: '[1,1,4,2,1,1,0,0]', description: '' }], hints: ['栈存下标'], explanation: '遇到更高时出栈计算' },
+  { id: 'mono-largest-rect', category: '单调栈', title: '柱状图最大矩形', difficulty: 'hard', type: 'coding',
+    description: '柱状图中最大矩形面积', templates: { c: `int largestRect(int* h, int n) {}`, cpp: `int largestRectangleArea(vector<int>& h) {}`, java: `int largestRect(int[] h) {}`, python: `def largest_rect(h): pass` },
+    solutions: { c: `// 单调栈`, cpp: `int largestRectangleArea(vector<int>& h) {\n    h.push_back(0); stack<int> s; int m=0;\n    for(int i=0;i<h.size();i++) { while(!s.empty()&&h[s.top()]>h[i]) { int t=h[s.top()]; s.pop(); int w=s.empty()?i:i-s.top()-1; m=max(m,t*w); } s.push(i); }\n    return m;\n}`, java: `// 单调栈`, python: `def largest_rect(h):\n    h.append(0); s=[]; m=0\n    for i,v in enumerate(h):\n        while s and h[s[-1]]>v: t=h[s.pop()]; w=i if not s else i-s[-1]-1; m=max(m,t*w)\n        s.append(i)\n    return m` },
+    testCases: [{ input: '[2,1,5,6,2,3]', expectedOutput: '10', description: '' }], hints: ['单调递增栈'], explanation: '出栈时计算该高度最大矩形' },
+];
+
+// ==================== 前缀和 ====================
+export const prefixSumExercises: Exercise[] = [
+  { id: 'prefix-subarray-k', category: '前缀和', title: '和为K的子数组', difficulty: 'medium', type: 'coding',
+    description: '和为k的连续子数组个数', templates: { c: `int subarraySum(int* a, int n, int k) {}`, cpp: `int subarraySum(vector<int>& a, int k) {}`, java: `int subarraySum(int[] a, int k) {}`, python: `def subarray_sum(a, k): pass` },
+    solutions: { c: `// 前缀和+哈希`, cpp: `int subarraySum(vector<int>& a, int k) {\n    unordered_map<int,int> m{{0,1}}; int s=0,c=0;\n    for(int x:a) { s+=x; if(m.count(s-k)) c+=m[s-k]; m[s]++; }\n    return c;\n}`, java: `// 前缀和+哈希`, python: `def subarray_sum(a, k):\n    from collections import defaultdict\n    m=defaultdict(int); m[0]=1; s=c=0\n    for x in a: s+=x; c+=m[s-k]; m[s]+=1\n    return c` },
+    testCases: [{ input: '[1,1,1], k=2', expectedOutput: '2', description: '' }], hints: ['prefix[j]-prefix[i]=k'], explanation: '哈希存前缀和次数' },
+  { id: 'prefix-range-sum', category: '前缀和', title: '区域和检索', difficulty: 'easy', type: 'coding',
+    description: '多次查询区间和', templates: { c: `// NumArray`, cpp: `class NumArray { public: NumArray(vector<int>& a) {} int sumRange(int l, int r) {} };`, java: `class NumArray {}`, python: `class NumArray: pass` },
+    solutions: { c: `// 前缀和`, cpp: `class NumArray { vector<int> p;\npublic: NumArray(vector<int>& a) { p.resize(a.size()+1,0); for(int i=0;i<a.size();i++) p[i+1]=p[i]+a[i]; }\n    int sumRange(int l, int r) { return p[r+1]-p[l]; }\n};`, java: `// 前缀和`, python: `class NumArray:\n    def __init__(self, a): self.p=[0]; [self.p.append(self.p[-1]+x) for x in a]\n    def sum_range(self, l, r): return self.p[r+1]-self.p[l]` },
+    testCases: [{ input: '[-2,0,3,-5,2,-1], sumRange(0,2)', expectedOutput: '1', description: '' }], hints: ['预处理前缀和'], explanation: 'O(n)预处理O(1)查询' },
+];
+
+// ==================== 更多二分 ====================
+export const moreBinarySearchExercises: Exercise[] = [
+  { id: 'bs-search-range', category: '二分查找', title: '查找元素范围', difficulty: 'medium', type: 'coding',
+    description: '目标值第一个和最后一个位置', templates: { c: `int* searchRange(int* a, int n, int t) {}`, cpp: `vector<int> searchRange(vector<int>& a, int t) {}`, java: `int[] searchRange(int[] a, int t) {}`, python: `def search_range(a, t): pass` },
+    solutions: { c: `// 两次二分`, cpp: `vector<int> searchRange(vector<int>& a, int t) {\n    int l=lower_bound(a.begin(),a.end(),t)-a.begin();\n    if(l==a.size()||a[l]!=t) return {-1,-1};\n    int r=upper_bound(a.begin(),a.end(),t)-a.begin()-1;\n    return {l,r};\n}`, java: `// 两次二分`, python: `def search_range(a, t):\n    from bisect import bisect_left, bisect_right\n    l=bisect_left(a,t)\n    if l==len(a) or a[l]!=t: return [-1,-1]\n    return [l, bisect_right(a,t)-1]` },
+    testCases: [{ input: '[5,7,7,8,8,10], t=8', expectedOutput: '[3,4]', description: '' }], hints: ['lower_bound+upper_bound'], explanation: '两次二分找左右边界' },
+  { id: 'bs-rotated', category: '二分查找', title: '搜索旋转数组', difficulty: 'medium', type: 'coding',
+    description: '旋转排序数组中搜索', templates: { c: `int search(int* a, int n, int t) {}`, cpp: `int search(vector<int>& a, int t) {}`, java: `int search(int[] a, int t) {}`, python: `def search(a, t): pass` },
+    solutions: { c: `// 二分`, cpp: `int search(vector<int>& a, int t) {\n    int l=0,r=a.size()-1;\n    while(l<=r) { int m=(l+r)/2; if(a[m]==t) return m;\n        if(a[l]<=a[m]) { if(a[l]<=t&&t<a[m]) r=m-1; else l=m+1; }\n        else { if(a[m]<t&&t<=a[r]) l=m+1; else r=m-1; } }\n    return -1;\n}`, java: `// 二分`, python: `def search(a, t):\n    l,r=0,len(a)-1\n    while l<=r:\n        m=(l+r)//2\n        if a[m]==t: return m\n        if a[l]<=a[m]:\n            if a[l]<=t<a[m]: r=m-1\n            else: l=m+1\n        else:\n            if a[m]<t<=a[r]: l=m+1\n            else: r=m-1\n    return -1` },
+    testCases: [{ input: '[4,5,6,7,0,1,2], t=0', expectedOutput: '4', description: '' }], hints: ['判断哪半有序'], explanation: '二分时判断target在哪半' },
+  { id: 'bs-find-min', category: '二分查找', title: '旋转数组最小值', difficulty: 'medium', type: 'coding',
+    description: '找旋转数组最小元素', templates: { c: `int findMin(int* a, int n) {}`, cpp: `int findMin(vector<int>& a) {}`, java: `int findMin(int[] a) {}`, python: `def find_min(a): pass` },
+    solutions: { c: `// 二分`, cpp: `int findMin(vector<int>& a) { int l=0,r=a.size()-1; while(l<r) { int m=(l+r)/2; if(a[m]>a[r]) l=m+1; else r=m; } return a[l]; }`, java: `// 二分`, python: `def find_min(a):\n    l,r=0,len(a)-1\n    while l<r: m=(l+r)//2; l,r=(m+1,r) if a[m]>a[r] else (l,m)\n    return a[l]` },
+    testCases: [{ input: '[3,4,5,1,2]', expectedOutput: '1', description: '' }], hints: ['a[m]>a[r]则最小在右'], explanation: '二分找最小' },
+  { id: 'bs-sqrt', category: '二分查找', title: '求平方根', difficulty: 'easy', type: 'coding',
+    description: '计算平方根向下取整', templates: { c: `int mySqrt(int x) {}`, cpp: `int mySqrt(int x) {}`, java: `int mySqrt(int x) {}`, python: `def my_sqrt(x): pass` },
+    solutions: { c: `// 二分`, cpp: `int mySqrt(int x) { if(x<2) return x; long l=1,r=x/2; while(l<=r) { long m=(l+r)/2; if(m*m==x) return m; else if(m*m<x) l=m+1; else r=m-1; } return r; }`, java: `// 二分`, python: `def my_sqrt(x):\n    if x<2: return x\n    l,r=1,x//2\n    while l<=r: m=(l+r)//2; l,r=(m+1,r) if m*m<x else ((l,m-1) if m*m>x else (m,m))\n    return r if l>r else l` },
+    testCases: [{ input: 'x=8', expectedOutput: '2', description: '' }], hints: ['二分找m²≤x最大m'], explanation: '注意用long防溢出' },
+];
+
+// ==================== 更多回溯 ====================
+export const moreBacktrackExercises: Exercise[] = [
+  { id: 'bt-permute', category: '回溯', title: '全排列', difficulty: 'medium', type: 'coding',
+    description: '返回所有排列', templates: { c: `int** permute(int* a, int n) {}`, cpp: `vector<vector<int>> permute(vector<int>& a) {}`, java: `List<List<Integer>> permute(int[] a) {}`, python: `def permute(a): pass` },
+    solutions: { c: `// 回溯`, cpp: `vector<vector<int>> permute(vector<int>& a) {\n    vector<vector<int>> r; function<void(int)> bt=[&](int s) { if(s==a.size()) { r.push_back(a); return; } for(int i=s;i<a.size();i++) { swap(a[s],a[i]); bt(s+1); swap(a[s],a[i]); } }; bt(0); return r;\n}`, java: `// 回溯`, python: `def permute(a):\n    r=[]\n    def bt(s):\n        if s==len(a): r.append(a[:]); return\n        for i in range(s,len(a)): a[s],a[i]=a[i],a[s]; bt(s+1); a[s],a[i]=a[i],a[s]\n    bt(0); return r` },
+    testCases: [{ input: '[1,2,3]', expectedOutput: '[[1,2,3],...]', description: '6种' }], hints: ['交换法'], explanation: '每位和后面交换' },
+  { id: 'bt-subsets', category: '回溯', title: '子集', difficulty: 'medium', type: 'coding',
+    description: '返回所有子集', templates: { c: `int** subsets(int* a, int n) {}`, cpp: `vector<vector<int>> subsets(vector<int>& a) {}`, java: `List<List<Integer>> subsets(int[] a) {}`, python: `def subsets(a): pass` },
+    solutions: { c: `// 回溯`, cpp: `vector<vector<int>> subsets(vector<int>& a) {\n    vector<vector<int>> r; vector<int> p;\n    function<void(int)> bt=[&](int s) { r.push_back(p); for(int i=s;i<a.size();i++) { p.push_back(a[i]); bt(i+1); p.pop_back(); } }; bt(0); return r;\n}`, java: `// 回溯`, python: `def subsets(a):\n    r=[]\n    def bt(s,p): r.append(p[:]); [bt(i+1,p+[a[i]]) for i in range(s,len(a))]\n    bt(0,[]); return r` },
+    testCases: [{ input: '[1,2,3]', expectedOutput: '[[],[1],...]', description: '8个' }], hints: ['选或不选'], explanation: '每步都是有效子集' },
+  { id: 'bt-combine-sum', category: '回溯', title: '组合总和', difficulty: 'medium', type: 'coding',
+    description: '和为target的组合，可重复', templates: { c: `int** combinationSum(int* c, int n, int t) {}`, cpp: `vector<vector<int>> combinationSum(vector<int>& c, int t) {}`, java: `List<List<Integer>> combinationSum(int[] c, int t) {}`, python: `def combination_sum(c, t): pass` },
+    solutions: { c: `// 回溯`, cpp: `vector<vector<int>> combinationSum(vector<int>& c, int t) {\n    vector<vector<int>> r; vector<int> p;\n    function<void(int,int)> bt=[&](int s,int rem) { if(rem==0) { r.push_back(p); return; } if(rem<0) return;\n        for(int i=s;i<c.size();i++) { p.push_back(c[i]); bt(i,rem-c[i]); p.pop_back(); } }; bt(0,t); return r;\n}`, java: `// 回溯`, python: `def combination_sum(c, t):\n    r=[]\n    def bt(s,rem,p):\n        if rem==0: r.append(p[:]); return\n        if rem<0: return\n        for i in range(s,len(c)): bt(i,rem-c[i],p+[c[i]])\n    bt(0,t,[]); return r` },
+    testCases: [{ input: '[2,3,6,7], t=7', expectedOutput: '[[2,2,3],[7]]', description: '' }], hints: ['从i开始可重复'], explanation: '递归传i允许重复' },
+  { id: 'bt-word-search', category: '回溯', title: '单词搜索', difficulty: 'medium', type: 'coding',
+    description: '网格中搜索单词', templates: { c: `int exist(char** b, int m, int n, char* w) {}`, cpp: `bool exist(vector<vector<char>>& b, string w) {}`, java: `boolean exist(char[][] b, String w) {}`, python: `def exist(b, w): pass` },
+    solutions: { c: `// DFS`, cpp: `bool exist(vector<vector<char>>& b, string w) {\n    int m=b.size(),n=b[0].size();\n    function<bool(int,int,int)> dfs=[&](int i,int j,int k) {\n        if(k==w.size()) return true; if(i<0||i>=m||j<0||j>=n||b[i][j]!=w[k]) return false;\n        char t=b[i][j]; b[i][j]='#'; bool f=dfs(i+1,j,k+1)||dfs(i-1,j,k+1)||dfs(i,j+1,k+1)||dfs(i,j-1,k+1); b[i][j]=t; return f;\n    };\n    for(int i=0;i<m;i++) for(int j=0;j<n;j++) if(dfs(i,j,0)) return true; return false;\n}`, java: `// DFS`, python: `def exist(b, w):\n    m,n=len(b),len(b[0])\n    def dfs(i,j,k):\n        if k==len(w): return True\n        if i<0 or i>=m or j<0 or j>=n or b[i][j]!=w[k]: return False\n        t,b[i][j]=b[i][j],'#'; f=dfs(i+1,j,k+1) or dfs(i-1,j,k+1) or dfs(i,j+1,k+1) or dfs(i,j-1,k+1); b[i][j]=t\n        return f\n    return any(dfs(i,j,0) for i in range(m) for j in range(n))` },
+    testCases: [{ input: '[["A","B"],["C","D"]], w="ABCD"', expectedOutput: 'false', description: '' }], hints: ['DFS+标记'], explanation: '访问过标记#' },
+];
+
+// ==================== 更多贪心 ====================
+export const moreGreedyExercises: Exercise[] = [
+  { id: 'greedy-jump2', category: '贪心', title: '跳跃游戏II', difficulty: 'medium', type: 'coding',
+    description: '最少跳跃次数', templates: { c: `int jump(int* a, int n) {}`, cpp: `int jump(vector<int>& a) {}`, java: `int jump(int[] a) {}`, python: `def jump(a): pass` },
+    solutions: { c: `// 贪心`, cpp: `int jump(vector<int>& a) { int j=0,e=0,f=0; for(int i=0;i<a.size()-1;i++) { f=max(f,i+a[i]); if(i==e) { j++; e=f; } } return j; }`, java: `// 贪心`, python: `def jump(a):\n    j=e=f=0\n    for i in range(len(a)-1): f=max(f,i+a[i]); j,e=(j+1,f) if i==e else (j,e)\n    return j` },
+    testCases: [{ input: '[2,3,1,1,4]', expectedOutput: '2', description: '' }], hints: ['到边界必须跳'], explanation: '贪心选最远' },
+  { id: 'greedy-gas', category: '贪心', title: '加油站', difficulty: 'medium', type: 'coding',
+    description: '能绕一圈的起点', templates: { c: `int canComplete(int* g, int* c, int n) {}`, cpp: `int canCompleteCircuit(vector<int>& g, vector<int>& c) {}`, java: `int canComplete(int[] g, int[] c) {}`, python: `def can_complete(g, c): pass` },
+    solutions: { c: `// 贪心`, cpp: `int canCompleteCircuit(vector<int>& g, vector<int>& c) {\n    int t=0,tank=0,s=0;\n    for(int i=0;i<g.size();i++) { int d=g[i]-c[i]; t+=d; tank+=d; if(tank<0) { s=i+1; tank=0; } }\n    return t>=0?s:-1;\n}`, java: `// 贪心`, python: `def can_complete(g, c):\n    t=tank=s=0\n    for i in range(len(g)): d=g[i]-c[i]; t+=d; tank+=d; s,tank=(i+1,0) if tank<0 else (s,tank)\n    return s if t>=0 else -1` },
+    testCases: [{ input: '[1,2,3,4,5], [3,4,5,1,2]', expectedOutput: '3', description: '' }], hints: ['油箱负则换起点'], explanation: 'i到j负则i-j都不行' },
+  { id: 'greedy-candy', category: '贪心', title: '分发糖果', difficulty: 'hard', type: 'coding',
+    description: '最少糖果数', templates: { c: `int candy(int* r, int n) {}`, cpp: `int candy(vector<int>& r) {}`, java: `int candy(int[] r) {}`, python: `def candy(r): pass` },
+    solutions: { c: `// 两次遍历`, cpp: `int candy(vector<int>& r) {\n    int n=r.size(); vector<int> c(n,1);\n    for(int i=1;i<n;i++) if(r[i]>r[i-1]) c[i]=c[i-1]+1;\n    for(int i=n-2;i>=0;i--) if(r[i]>r[i+1]&&c[i]<=c[i+1]) c[i]=c[i+1]+1;\n    return accumulate(c.begin(),c.end(),0);\n}`, java: `// 两次遍历`, python: `def candy(r):\n    n=len(r); c=[1]*n\n    for i in range(1,n):\n        if r[i]>r[i-1]: c[i]=c[i-1]+1\n    for i in range(n-2,-1,-1):\n        if r[i]>r[i+1] and c[i]<=c[i+1]: c[i]=c[i+1]+1\n    return sum(c)` },
+    testCases: [{ input: '[1,0,2]', expectedOutput: '5', description: '2+1+2' }], hints: ['左右各遍历一次'], explanation: '先保证左边规则再保证右边' },
+];
+
+// ==================== 更多DP ====================
+export const moreDpExercises: Exercise[] = [
+  { id: 'dp-coin-change', category: '动态规划', title: '零钱兑换', difficulty: 'medium', type: 'coding',
+    description: '凑成金额的最少硬币数', templates: { c: `int coinChange(int* c, int n, int a) {}`, cpp: `int coinChange(vector<int>& c, int a) {}`, java: `int coinChange(int[] c, int a) {}`, python: `def coin_change(c, a): pass` },
+    solutions: { c: `// DP`, cpp: `int coinChange(vector<int>& c, int a) {\n    vector<int> dp(a+1,a+1); dp[0]=0;\n    for(int i=1;i<=a;i++) for(int x:c) if(x<=i) dp[i]=min(dp[i],dp[i-x]+1);\n    return dp[a]>a?-1:dp[a];\n}`, java: `// DP`, python: `def coin_change(c, a):\n    dp=[0]+[a+1]*a\n    for i in range(1,a+1):\n        for x in c:\n            if x<=i: dp[i]=min(dp[i],dp[i-x]+1)\n    return dp[a] if dp[a]<=a else -1` },
+    testCases: [{ input: '[1,2,5], a=11', expectedOutput: '3', description: '5+5+1' }], hints: ['dp[i]=min(dp[i-c]+1)'], explanation: '完全背包变体' },
+  { id: 'dp-longest-increasing', category: '动态规划', title: '最长递增子序列', difficulty: 'medium', type: 'coding',
+    description: '最长严格递增子序列长度', templates: { c: `int lengthOfLIS(int* a, int n) {}`, cpp: `int lengthOfLIS(vector<int>& a) {}`, java: `int lengthOfLIS(int[] a) {}`, python: `def length_of_lis(a): pass` },
+    solutions: { c: `// DP或二分`, cpp: `int lengthOfLIS(vector<int>& a) {\n    vector<int> d;\n    for(int x:a) { auto it=lower_bound(d.begin(),d.end(),x); if(it==d.end()) d.push_back(x); else *it=x; }\n    return d.size();\n}`, java: `// 二分`, python: `def length_of_lis(a):\n    from bisect import bisect_left\n    d=[]\n    for x in a: i=bisect_left(d,x); d[i:i+1]=[x]\n    return len(d)` },
+    testCases: [{ input: '[10,9,2,5,3,7,101,18]', expectedOutput: '4', description: '2,3,7,101' }], hints: ['O(n²)DP或O(nlogn)二分'], explanation: '维护最小末尾数组' },
+  { id: 'dp-word-break', category: '动态规划', title: '单词拆分', difficulty: 'medium', type: 'coding',
+    description: '字符串能否拆成字典中的单词', templates: { c: `int wordBreak(char* s, char** dict, int n) {}`, cpp: `bool wordBreak(string s, vector<string>& dict) {}`, java: `boolean wordBreak(String s, List<String> dict) {}`, python: `def word_break(s, dict): pass` },
+    solutions: { c: `// DP`, cpp: `bool wordBreak(string s, vector<string>& dict) {\n    unordered_set<string> st(dict.begin(),dict.end());\n    int n=s.size(); vector<bool> dp(n+1,false); dp[0]=true;\n    for(int i=1;i<=n;i++) for(int j=0;j<i;j++) if(dp[j]&&st.count(s.substr(j,i-j))) { dp[i]=true; break; }\n    return dp[n];\n}`, java: `// DP`, python: `def word_break(s, dict):\n    st=set(dict); n=len(s); dp=[True]+[False]*n\n    for i in range(1,n+1):\n        for j in range(i):\n            if dp[j] and s[j:i] in st: dp[i]=True; break\n    return dp[n]` },
+    testCases: [{ input: 's="leetcode", dict=["leet","code"]', expectedOutput: 'true', description: '' }], hints: ['dp[i]=任意j使dp[j]且s[j:i]在字典'], explanation: '检查所有分割点' },
+  { id: 'dp-unique-paths', category: '动态规划', title: '不同路径', difficulty: 'medium', type: 'coding',
+    description: '从左上到右下的路径数', templates: { c: `int uniquePaths(int m, int n) {}`, cpp: `int uniquePaths(int m, int n) {}`, java: `int uniquePaths(int m, int n) {}`, python: `def unique_paths(m, n): pass` },
+    solutions: { c: `// DP`, cpp: `int uniquePaths(int m, int n) { vector<int> dp(n,1); for(int i=1;i<m;i++) for(int j=1;j<n;j++) dp[j]+=dp[j-1]; return dp[n-1]; }`, java: `// DP`, python: `def unique_paths(m, n):\n    dp=[1]*n\n    for _ in range(1,m):\n        for j in range(1,n): dp[j]+=dp[j-1]\n    return dp[-1]` },
+    testCases: [{ input: 'm=3, n=7', expectedOutput: '28', description: '' }], hints: ['dp[i][j]=dp[i-1][j]+dp[i][j-1]'], explanation: '空间优化为一维' },
+  { id: 'dp-edit-distance', category: '动态规划', title: '编辑距离', difficulty: 'hard', type: 'coding',
+    description: '将word1转换为word2的最少操作数', templates: { c: `int minDistance(char* w1, char* w2) {}`, cpp: `int minDistance(string w1, string w2) {}`, java: `int minDistance(String w1, String w2) {}`, python: `def min_distance(w1, w2): pass` },
+    solutions: { c: `// DP`, cpp: `int minDistance(string w1, string w2) {\n    int m=w1.size(),n=w2.size(); vector<vector<int>> dp(m+1,vector<int>(n+1));\n    for(int i=0;i<=m;i++) dp[i][0]=i; for(int j=0;j<=n;j++) dp[0][j]=j;\n    for(int i=1;i<=m;i++) for(int j=1;j<=n;j++)\n        dp[i][j]=w1[i-1]==w2[j-1]?dp[i-1][j-1]:1+min({dp[i-1][j],dp[i][j-1],dp[i-1][j-1]});\n    return dp[m][n];\n}`, java: `// DP`, python: `def min_distance(w1, w2):\n    m,n=len(w1),len(w2); dp=[[0]*(n+1) for _ in range(m+1)]\n    for i in range(m+1): dp[i][0]=i\n    for j in range(n+1): dp[0][j]=j\n    for i in range(1,m+1):\n        for j in range(1,n+1):\n            dp[i][j]=dp[i-1][j-1] if w1[i-1]==w2[j-1] else 1+min(dp[i-1][j],dp[i][j-1],dp[i-1][j-1])\n    return dp[m][n]` },
+    testCases: [{ input: 'w1="horse", w2="ros"', expectedOutput: '3', description: '' }], hints: ['插入删除替换'], explanation: '经典二维DP' },
+];
+
+// ==================== 更多填空题 ====================
+export const extraFillBlankExercises: Exercise[] = [
+  { id: 'fb-merge-sort', category: '填空题', title: '归并排序填空', difficulty: 'medium', type: 'fillblank',
+    description: '补全归并排序代码',
+    templates: { cpp: `void merge(int* a, int l, int m, int r) {\n    int n1=m-l+1, n2=r-m;\n    int* L=new int[n1], *R=new int[n2];\n    for(int i=0;i<n1;i++) L[i]=a[l+i];\n    for(int j=0;j<n2;j++) R[j]=a[___BLANK1___];\n    int i=0, j=0, k=l;\n    while(i<n1 && j<n2) {\n        if(L[i]<=R[j]) a[k++]=___BLANK2___;\n        else a[k++]=R[j++];\n    }\n    while(i<n1) a[k++]=L[i++];\n    while(j<n2) a[k++]=___BLANK3___;\n}`, java: `// 归并排序`, python: `# 归并排序` },
+    solutions: { cpp: `// 答案`, java: `// 答案`, python: `# 答案` },
+    testCases: [], blanks: [{ id: 'BLANK1', answer: 'm+1+j', hint: '右半部分起点' }, { id: 'BLANK2', answer: 'L[i++]', hint: '取左边元素' }, { id: 'BLANK3', answer: 'R[j++]', hint: '剩余右边' }],
+    hints: ['归并'], explanation: '归并：分别拷贝左右，合并时比较' },
+  { id: 'fb-heap-down', category: '填空题', title: '堆下沉操作', difficulty: 'medium', type: 'fillblank',
+    description: '补全堆的下沉操作',
+    templates: { cpp: `void heapifyDown(int* heap, int n, int i) {\n    int largest = i;\n    int left = 2*i+1, right = 2*i+2;\n    if(left<n && heap[left]>heap[largest]) largest=___BLANK1___;\n    if(right<n && heap[right]>heap[largest]) largest=___BLANK2___;\n    if(largest != i) {\n        swap(heap[i], heap[largest]);\n        heapifyDown(heap, n, ___BLANK3___);\n    }\n}`, java: `// 堆下沉`, python: `# 堆下沉` },
+    solutions: { cpp: `// 答案`, java: `// 答案`, python: `# 答案` },
+    testCases: [], blanks: [{ id: 'BLANK1', answer: 'left', hint: '左子更大' }, { id: 'BLANK2', answer: 'right', hint: '右子更大' }, { id: 'BLANK3', answer: 'largest', hint: '递归下沉' }],
+    hints: ['堆'], explanation: '大顶堆下沉：与较大的子节点交换' },
+  { id: 'fb-dijkstra', category: '填空题', title: 'Dijkstra填空', difficulty: 'hard', type: 'fillblank',
+    description: '补全Dijkstra最短路',
+    templates: { cpp: `void dijkstra(vector<vector<int>>& g, int src, vector<int>& dist) {\n    int n=g.size();\n    vector<bool> vis(n,false);\n    dist.assign(n, ___BLANK1___);\n    dist[src]=0;\n    for(int c=0;c<n-1;c++) {\n        int u=-1, minD=INT_MAX;\n        for(int v=0;v<n;v++) if(!vis[v]&&dist[v]<minD) { minD=dist[v]; u=v; }\n        vis[u]=true;\n        for(int v=0;v<n;v++)\n            if(!vis[v]&&g[u][v]&&dist[u]+g[u][v]<dist[v])\n                dist[v]=___BLANK2___;\n    }\n}`, java: `// Dijkstra`, python: `# Dijkstra` },
+    solutions: { cpp: `// 答案`, java: `// 答案`, python: `# 答案` },
+    testCases: [], blanks: [{ id: 'BLANK1', answer: 'INT_MAX', hint: '初始化无穷大' }, { id: 'BLANK2', answer: 'dist[u]+g[u][v]', hint: '松弛操作' }],
+    hints: ['最短路'], explanation: 'Dijkstra：贪心选最近，松弛邻居' },
+  { id: 'fb-trie-insert', category: '填空题', title: '字典树插入', difficulty: 'medium', type: 'fillblank',
+    description: '补全Trie插入操作',
+    templates: { cpp: `struct TrieNode { TrieNode* ch[26]={}; bool end=false; };\nvoid insert(TrieNode* root, string& word) {\n    TrieNode* node = root;\n    for(char c:word) {\n        int idx = c - 'a';\n        if(!node->ch[idx]) node->ch[idx] = ___BLANK1___;\n        node = node->___BLANK2___;\n    }\n    node->end = ___BLANK3___;\n}`, java: `// Trie`, python: `# Trie` },
+    solutions: { cpp: `// 答案`, java: `// 答案`, python: `# 答案` },
+    testCases: [], blanks: [{ id: 'BLANK1', answer: 'new TrieNode()', hint: '创建新节点' }, { id: 'BLANK2', answer: 'ch[idx]', hint: '移动到子节点' }, { id: 'BLANK3', answer: 'true', hint: '标记单词结束' }],
+    hints: ['字典树'], explanation: 'Trie：按字符路径插入' },
+  { id: 'fb-kmp', category: '填空题', title: 'KMP算法填空', difficulty: 'hard', type: 'fillblank',
+    description: '补全KMP的next数组构建',
+    templates: { cpp: `void buildNext(string& p, vector<int>& next) {\n    int m=p.size(); next.resize(m);\n    next[0] = ___BLANK1___;\n    int j = -1;\n    for(int i=1; i<m; i++) {\n        while(j>=0 && p[i]!=p[j+1]) j=___BLANK2___;\n        if(p[i]==p[j+1]) j++;\n        next[i] = ___BLANK3___;\n    }\n}`, java: `// KMP`, python: `# KMP` },
+    solutions: { cpp: `// 答案`, java: `// 答案`, python: `# 答案` },
+    testCases: [], blanks: [{ id: 'BLANK1', answer: '-1', hint: '第一个字符无前缀' }, { id: 'BLANK2', answer: 'next[j]', hint: '回退到前缀' }, { id: 'BLANK3', answer: 'j', hint: '记录最长前缀' }],
+    hints: ['KMP'], explanation: 'KMP：next[i]表示最长相等前后缀' },
+];
+
 // 所有练习题汇总
 export const allExercises: Exercise[] = [
   ...linkedListExercises,
@@ -3668,6 +3822,14 @@ export const allExercises: Exercise[] = [
   ...classicDpProblems,
   ...designExercises,
   ...moreStringExercises,
+  ...unionFindExercises,
+  ...monotoneStackExercises,
+  ...prefixSumExercises,
+  ...moreBinarySearchExercises,
+  ...moreBacktrackExercises,
+  ...moreGreedyExercises,
+  ...moreDpExercises,
+  ...extraFillBlankExercises,
 ];
 
 // 导出递归分类供其他模块使用
