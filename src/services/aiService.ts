@@ -226,7 +226,7 @@ export async function generateCodingExercise(
   }
 }
 
-// 生成填空题
+// 生成填空题 - 函数实现填空格式
 export async function generateFillBlank(
   topic: string,
   difficulty: 'easy' | 'medium' | 'hard' = 'easy',
@@ -234,33 +234,54 @@ export async function generateFillBlank(
 ): Promise<GeneratedFillBlank> {
   const prompt = `生成一道关于"${dataStructure} - ${topic}"的${
     difficulty === 'easy' ? '简单' : difficulty === 'medium' ? '中等' : '困难'
-  }难度代码填空题。
+  }难度【函数实现填空题】。
 
-【重要】严格按照JSON格式返回，不要添加额外文字：
+【题目格式要求】
+这是一道需要补全多个函数体的填空题，类似考试题：
+- 给出完整的程序框架（包含结构体定义、main函数等）
+- 需要学生填写的是【整个函数的实现代码】，不是单个表达式
+- 每个需要填写的函数用 ___FUNC1___ ___FUNC2___ 等标记
+- 每个空需要填写3-10行代码
 
-{
-  "title": "简短标题",
-  "description": "说明这段代码的功能（纯文字）",
-  "difficulty": "${difficulty}",
-  "codeTemplate": {
-    "c": "C语言代码，用___blank1___标记填空",
-    "cpp": "C++代码，用___blank1___标记填空",
-    "java": "Java代码",
-    "python": "Python代码"
-  },
-  "blanks": [
-    {"id": "blank1", "answer": "正确代码", "hint": "提示"},
-    {"id": "blank2", "answer": "正确代码", "hint": "提示"}
-  ],
-  "explanation": "解释为什么这样填"
+【示例格式】
+#include <stdio.h>
+struct Node {
+    int data;
+    struct Node* next;
+};
+// 函数1：创建节点
+struct Node* createNode(int val) {
+___FUNC1___
+}
+// 函数2：插入节点
+void insert(struct Node** head, int val) {
+___FUNC2___
+}
+int main() {
+    // main函数已实现
 }
 
-【填空规则】
-1. 空格处必须填实际代码（变量、表达式、语句）
-2. 禁止填概念词汇（如"栈"、"O(n)"）
-3. 用___blank1___格式标记，数字递增
+【JSON格式返回】
+{
+  "title": "简短标题（如：单链表基本操作）",
+  "description": "完成以下程序中标记的函数实现",
+  "difficulty": "${difficulty}",
+  "codeTemplate": {
+    "c": "完整C语言程序，函数体用___FUNC1___等标记"
+  },
+  "blanks": [
+    {"id": "FUNC1", "answer": "完整的函数实现代码（多行）", "hint": "函数功能提示"},
+    {"id": "FUNC2", "answer": "完整的函数实现代码（多行）", "hint": "函数功能提示"}
+  ],
+  "explanation": "解释每个函数的实现思路"
+}
+
+【重要规则】
+1. 必须有2-4个需要填写的函数
+2. 每个函数答案是完整的函数体代码（多行）
+3. 给出的代码框架必须完整可编译（填空后）
 4. 代码换行用\\n表示
-5. 只返回JSON`;
+5. 只返回JSON，不要其他文字`;
 
   const response = await callAI(prompt);
   
