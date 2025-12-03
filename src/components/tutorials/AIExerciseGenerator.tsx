@@ -80,11 +80,7 @@ export default function AIExerciseGenerator() {
   const handleGenerate = async () => {
     const finalTopic = topic || customTopic || '基本操作';
     
-    if (!config.apiKey) {
-      setError('请先配置AI API密钥');
-      setShowConfig(true);
-      return;
-    }
+    // API密钥已在服务器端配置，无需前端验证
 
     setLoading(true);
     setError('');

@@ -51,7 +51,10 @@ export interface AIConfig {
 }
 
 // 代理服务地址 (API密钥存储在服务器端，前端不暴露)
-const AI_PROXY_URL = import.meta.env.VITE_AI_PROXY_URL || 'https://lingma.cornna.xyz/api/ai';
+// 本地开发时使用 localhost:3001，生产环境使用远程服务器
+const AI_PROXY_URL = import.meta.env.DEV 
+  ? 'http://localhost:3001/api/ai' 
+  : (import.meta.env.VITE_AI_PROXY_URL || 'https://lingma.cornna.xyz/api/ai');
 
 // 默认配置 - 通过代理服务调用，无需在前端配置密钥
 let aiConfig: AIConfig = {

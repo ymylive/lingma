@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { AIExerciseGenerator, CodingExercise, FillInBlank } from '../components/tutorials/TutorialPanel';
 import { allExercises, type Exercise } from '../data/exercises';
 import { useTheme } from '../contexts/ThemeContext';
@@ -58,6 +58,16 @@ export default function Practice() {
   const [difficulty, setDifficulty] = useState<'all' | 'easy' | 'medium' | 'hard'>('all');
   const [selectedExercise, setSelectedExercise] = useState<Exercise | null>(null);
   const [typeFilter, setTypeFilter] = useState<'all' | 'coding' | 'fillblank'>('all');
+  const exerciseAreaRef = useRef<HTMLDivElement>(null);
+
+  // 选择题目并滚动到练习区
+  const handleSelectExercise = (exercise: Exercise) => {
+    setSelectedExercise(exercise);
+    // 延迟滚动，等待DOM更新
+    setTimeout(() => {
+      exerciseAreaRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 100);
+  };
 
   // 统计信息
   const stats = useMemo(() => {
@@ -229,11 +239,12 @@ export default function Practice() {
             </div>
 
             {/* 题目列表或做题界面 */}
+            <div ref={exerciseAreaRef} className="scroll-mt-24">
             {selectedExercise ? (
-              <div>
+              <div className="animate-fadeIn">
                 <button
                   onClick={() => setSelectedExercise(null)}
-                  className="mb-4 px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700"
+                  className="mb-4 px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 transition-all hover:scale-105"
                 >
                   ← 返回题目列表
                 </button>
@@ -272,8 +283,8 @@ export default function Practice() {
                   return (
                     <div
                       key={exercise.id}
-                      onClick={() => setSelectedExercise(exercise)}
-                      className={`rounded-xl border p-5 hover:shadow-lg transition-all cursor-pointer group ${
+                      onClick={() => handleSelectExercise(exercise)}
+                      className={`rounded-xl border p-5 hover:shadow-lg transition-all cursor-pointer group active:scale-95 ${
                         completed 
                           ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-700 hover:border-emerald-400 dark:hover:border-emerald-500'
                           : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-indigo-300 dark:hover:border-indigo-500'
@@ -315,6 +326,7 @@ export default function Practice() {
                 })}
               </div>
             )}
+            </div>
 
             {filteredExercises.length === 0 && !selectedExercise && (
               <div className="text-center py-12 text-slate-500 dark:text-slate-400">
