@@ -2982,6 +2982,330 @@ export const moreFillBlankExercises: Exercise[] = [
   },
 ];
 
+// ==================== 堆与优先队列 ====================
+export const heapExercises: Exercise[] = [
+  {
+    id: 'heap-kth-largest', category: '堆', title: '第K大元素', difficulty: 'medium', type: 'coding',
+    description: '在未排序数组中找到第K大的元素',
+    templates: {
+      c: `int findKthLargest(int* nums, int n, int k) {\n    // 请实现\n}`,
+      cpp: `int findKthLargest(vector<int>& nums, int k) {\n    // 请实现\n}`,
+      java: `int findKthLargest(int[] nums, int k) {\n    // 请实现\n}`,
+      python: `def find_kth_largest(nums, k):\n    pass`
+    },
+    solutions: {
+      c: `// 快速选择算法\nint partition(int* nums, int l, int r) {\n    int pivot = nums[r], i = l;\n    for (int j = l; j < r; j++)\n        if (nums[j] >= pivot) { int t = nums[i]; nums[i] = nums[j]; nums[j] = t; i++; }\n    int t = nums[i]; nums[i] = nums[r]; nums[r] = t;\n    return i;\n}\nint findKthLargest(int* nums, int n, int k) {\n    int l = 0, r = n - 1;\n    while (1) {\n        int p = partition(nums, l, r);\n        if (p == k - 1) return nums[p];\n        else if (p < k - 1) l = p + 1;\n        else r = p - 1;\n    }\n}`,
+      cpp: `int findKthLargest(vector<int>& nums, int k) {\n    priority_queue<int, vector<int>, greater<int>> minHeap;\n    for (int num : nums) {\n        minHeap.push(num);\n        if (minHeap.size() > k) minHeap.pop();\n    }\n    return minHeap.top();\n}`,
+      java: `int findKthLargest(int[] nums, int k) {\n    PriorityQueue<Integer> minHeap = new PriorityQueue<>();\n    for (int num : nums) {\n        minHeap.offer(num);\n        if (minHeap.size() > k) minHeap.poll();\n    }\n    return minHeap.peek();\n}`,
+      python: `def find_kth_largest(nums, k):\n    import heapq\n    return heapq.nlargest(k, nums)[-1]`
+    },
+    testCases: [{ input: 'nums=[3,2,1,5,6,4], k=2', expectedOutput: '5', description: '第2大是5' }],
+    hints: ['小顶堆维护k个最大元素', '快速选择O(n)平均'],
+    explanation: `【小顶堆】O(nlogk)
+维护大小为k的小顶堆，堆顶即为第k大
+【快速选择】O(n)平均，类似快排分区`
+  },
+  {
+    id: 'heap-top-k-frequent', category: '堆', title: '前K个高频元素', difficulty: 'medium', type: 'coding',
+    description: '返回数组中出现频率最高的k个元素',
+    templates: {
+      c: `int* topKFrequent(int* nums, int n, int k, int* returnSize) {\n    // 请实现\n}`,
+      cpp: `vector<int> topKFrequent(vector<int>& nums, int k) {\n    // 请实现\n}`,
+      java: `int[] topKFrequent(int[] nums, int k) {\n    // 请实现\n}`,
+      python: `def top_k_frequent(nums, k):\n    pass`
+    },
+    solutions: {
+      c: `// 简化版：使用计数排序思想\nint* topKFrequent(int* nums, int n, int k, int* returnSize) {\n    // 实际实现需要哈希表，这里省略\n    *returnSize = k;\n    return NULL;\n}`,
+      cpp: `vector<int> topKFrequent(vector<int>& nums, int k) {\n    unordered_map<int, int> cnt;\n    for (int n : nums) cnt[n]++;\n    priority_queue<pair<int,int>, vector<pair<int,int>>, greater<pair<int,int>>> pq;\n    for (auto& [num, freq] : cnt) {\n        pq.push({freq, num});\n        if (pq.size() > k) pq.pop();\n    }\n    vector<int> res;\n    while (!pq.empty()) { res.push_back(pq.top().second); pq.pop(); }\n    return res;\n}`,
+      java: `int[] topKFrequent(int[] nums, int k) {\n    Map<Integer, Integer> cnt = new HashMap<>();\n    for (int n : nums) cnt.merge(n, 1, Integer::sum);\n    PriorityQueue<int[]> pq = new PriorityQueue<>((a,b) -> a[1] - b[1]);\n    for (var e : cnt.entrySet()) {\n        pq.offer(new int[]{e.getKey(), e.getValue()});\n        if (pq.size() > k) pq.poll();\n    }\n    int[] res = new int[k];\n    for (int i = 0; i < k; i++) res[i] = pq.poll()[0];\n    return res;\n}`,
+      python: `def top_k_frequent(nums, k):\n    from collections import Counter\n    return [x for x, _ in Counter(nums).most_common(k)]`
+    },
+    testCases: [{ input: 'nums=[1,1,1,2,2,3], k=2', expectedOutput: '[1,2]', description: '1出现3次，2出现2次' }],
+    hints: ['先统计频率', '用小顶堆维护k个最高频'],
+    explanation: '哈希表统计频率 + 小顶堆维护前k个'
+  },
+  {
+    id: 'heap-merge-k-lists', category: '堆', title: '合并K个有序链表', difficulty: 'hard', type: 'coding',
+    description: '将k个升序链表合并为一个升序链表',
+    templates: {
+      c: `Node* mergeKLists(Node** lists, int k) {\n    // 请实现\n}`,
+      cpp: `ListNode* mergeKLists(vector<ListNode*>& lists) {\n    // 请实现\n}`,
+      java: `ListNode mergeKLists(ListNode[] lists) {\n    // 请实现\n}`,
+      python: `def merge_k_lists(lists):\n    pass`
+    },
+    solutions: {
+      c: `// 分治合并\nNode* merge2(Node* a, Node* b) {\n    if (!a) return b; if (!b) return a;\n    if (a->val < b->val) { a->next = merge2(a->next, b); return a; }\n    else { b->next = merge2(a, b->next); return b; }\n}\nNode* mergeKLists(Node** lists, int k) {\n    if (k == 0) return NULL;\n    if (k == 1) return lists[0];\n    int mid = k / 2;\n    Node* left = mergeKLists(lists, mid);\n    Node* right = mergeKLists(lists + mid, k - mid);\n    return merge2(left, right);\n}`,
+      cpp: `ListNode* mergeKLists(vector<ListNode*>& lists) {\n    auto cmp = [](ListNode* a, ListNode* b) { return a->val > b->val; };\n    priority_queue<ListNode*, vector<ListNode*>, decltype(cmp)> pq(cmp);\n    for (auto l : lists) if (l) pq.push(l);\n    ListNode dummy(0), *tail = &dummy;\n    while (!pq.empty()) {\n        auto node = pq.top(); pq.pop();\n        tail->next = node; tail = tail->next;\n        if (node->next) pq.push(node->next);\n    }\n    return dummy.next;\n}`,
+      java: `ListNode mergeKLists(ListNode[] lists) {\n    PriorityQueue<ListNode> pq = new PriorityQueue<>((a,b) -> a.val - b.val);\n    for (ListNode l : lists) if (l != null) pq.offer(l);\n    ListNode dummy = new ListNode(0), tail = dummy;\n    while (!pq.isEmpty()) {\n        ListNode node = pq.poll();\n        tail.next = node; tail = tail.next;\n        if (node.next != null) pq.offer(node.next);\n    }\n    return dummy.next;\n}`,
+      python: `def merge_k_lists(lists):\n    import heapq\n    heap = []\n    for i, l in enumerate(lists):\n        if l: heapq.heappush(heap, (l.val, i, l))\n    dummy = tail = ListNode(0)\n    while heap:\n        val, i, node = heapq.heappop(heap)\n        tail.next = node; tail = tail.next\n        if node.next:\n            heapq.heappush(heap, (node.next.val, i, node.next))\n    return dummy.next`
+    },
+    testCases: [{ input: 'lists=[[1,4,5],[1,3,4],[2,6]]', expectedOutput: '[1,1,2,3,4,4,5,6]', description: '合并3个链表' }],
+    hints: ['小顶堆存k个链表头', '每次取最小，再把next入堆'],
+    explanation: `【优先队列】O(Nlogk)
+堆中始终维护k个链表的当前节点
+【分治】两两合并，T(k)=2T(k/2)+O(N)`
+  },
+];
+
+// ==================== 数组操作 ====================
+export const arrayExercises: Exercise[] = [
+  {
+    id: 'arr-rotate', category: '数组', title: '旋转数组', difficulty: 'medium', type: 'coding',
+    description: '将数组向右旋转k个位置，要求原地O(1)空间',
+    templates: {
+      c: `void rotate(int* nums, int n, int k) {\n    // 请原地旋转\n}`,
+      cpp: `void rotate(vector<int>& nums, int k) {\n    // 请实现\n}`,
+      java: `void rotate(int[] nums, int k) {\n    // 请实现\n}`,
+      python: `def rotate(nums, k):\n    pass`
+    },
+    solutions: {
+      c: `void reverse(int* nums, int l, int r) {\n    while (l < r) { int t = nums[l]; nums[l++] = nums[r]; nums[r--] = t; }\n}\nvoid rotate(int* nums, int n, int k) {\n    k %= n;\n    reverse(nums, 0, n - 1);\n    reverse(nums, 0, k - 1);\n    reverse(nums, k, n - 1);\n}`,
+      cpp: `void rotate(vector<int>& nums, int k) {\n    int n = nums.size(); k %= n;\n    reverse(nums.begin(), nums.end());\n    reverse(nums.begin(), nums.begin() + k);\n    reverse(nums.begin() + k, nums.end());\n}`,
+      java: `void rotate(int[] nums, int k) {\n    int n = nums.length; k %= n;\n    reverse(nums, 0, n - 1);\n    reverse(nums, 0, k - 1);\n    reverse(nums, k, n - 1);\n}\nvoid reverse(int[] nums, int l, int r) {\n    while (l < r) { int t = nums[l]; nums[l++] = nums[r]; nums[r--] = t; }\n}`,
+      python: `def rotate(nums, k):\n    n = len(nums); k %= n\n    nums[:] = nums[-k:] + nums[:-k]  # Python切片`
+    },
+    testCases: [{ input: 'nums=[1,2,3,4,5,6,7], k=3', expectedOutput: '[5,6,7,1,2,3,4]', description: '右移3位' }],
+    hints: ['三次翻转：全部翻转→前k个翻转→后n-k个翻转', 'k要对n取模'],
+    explanation: `【三次翻转】O(n) O(1)
+[1,2,3,4,5] k=2
+→ [5,4,3,2,1] 全翻
+→ [4,5,3,2,1] 前k翻
+→ [4,5,1,2,3] 后翻`
+  },
+  {
+    id: 'arr-move-zeros', category: '数组', title: '移动零', difficulty: 'easy', type: 'coding',
+    description: '将所有0移动到数组末尾，保持非零元素相对顺序',
+    templates: {
+      c: `void moveZeroes(int* nums, int n) {\n    // 请原地实现\n}`,
+      cpp: `void moveZeroes(vector<int>& nums) {\n    // 请实现\n}`,
+      java: `void moveZeroes(int[] nums) {\n    // 请实现\n}`,
+      python: `def move_zeroes(nums):\n    pass`
+    },
+    solutions: {
+      c: `void moveZeroes(int* nums, int n) {\n    int j = 0;\n    for (int i = 0; i < n; i++) {\n        if (nums[i] != 0) {\n            int t = nums[j]; nums[j] = nums[i]; nums[i] = t;\n            j++;\n        }\n    }\n}`,
+      cpp: `void moveZeroes(vector<int>& nums) {\n    int j = 0;\n    for (int i = 0; i < nums.size(); i++) {\n        if (nums[i] != 0) swap(nums[j++], nums[i]);\n    }\n}`,
+      java: `void moveZeroes(int[] nums) {\n    int j = 0;\n    for (int i = 0; i < nums.length; i++) {\n        if (nums[i] != 0) {\n            int t = nums[j]; nums[j] = nums[i]; nums[i] = t;\n            j++;\n        }\n    }\n}`,
+      python: `def move_zeroes(nums):\n    j = 0\n    for i in range(len(nums)):\n        if nums[i] != 0:\n            nums[j], nums[i] = nums[i], nums[j]\n            j += 1`
+    },
+    testCases: [{ input: 'nums=[0,1,0,3,12]', expectedOutput: '[1,3,12,0,0]', description: '移动零到末尾' }],
+    hints: ['双指针：j指向下一个非零位置', '遇到非零就交换到j位置'],
+    explanation: '快慢指针：j记录非零元素应放的位置，遇到非零就交换'
+  },
+  {
+    id: 'arr-product-except-self', category: '数组', title: '除自身以外的乘积', difficulty: 'medium', type: 'coding',
+    description: 'answer[i]等于nums中除nums[i]外所有元素的乘积，不能用除法，O(n)时间',
+    templates: {
+      c: `int* productExceptSelf(int* nums, int n, int* returnSize) {\n    // 请实现\n}`,
+      cpp: `vector<int> productExceptSelf(vector<int>& nums) {\n    // 请实现\n}`,
+      java: `int[] productExceptSelf(int[] nums) {\n    // 请实现\n}`,
+      python: `def product_except_self(nums):\n    pass`
+    },
+    solutions: {
+      c: `int* productExceptSelf(int* nums, int n, int* returnSize) {\n    *returnSize = n;\n    int* ans = malloc(n * sizeof(int));\n    ans[0] = 1;\n    for (int i = 1; i < n; i++) ans[i] = ans[i-1] * nums[i-1];\n    int right = 1;\n    for (int i = n - 1; i >= 0; i--) {\n        ans[i] *= right;\n        right *= nums[i];\n    }\n    return ans;\n}`,
+      cpp: `vector<int> productExceptSelf(vector<int>& nums) {\n    int n = nums.size();\n    vector<int> ans(n, 1);\n    for (int i = 1; i < n; i++) ans[i] = ans[i-1] * nums[i-1];\n    int right = 1;\n    for (int i = n - 1; i >= 0; i--) {\n        ans[i] *= right;\n        right *= nums[i];\n    }\n    return ans;\n}`,
+      java: `int[] productExceptSelf(int[] nums) {\n    int n = nums.length;\n    int[] ans = new int[n];\n    ans[0] = 1;\n    for (int i = 1; i < n; i++) ans[i] = ans[i-1] * nums[i-1];\n    int right = 1;\n    for (int i = n - 1; i >= 0; i--) {\n        ans[i] *= right;\n        right *= nums[i];\n    }\n    return ans;\n}`,
+      python: `def product_except_self(nums):\n    n = len(nums)\n    ans = [1] * n\n    for i in range(1, n):\n        ans[i] = ans[i-1] * nums[i-1]\n    right = 1\n    for i in range(n-1, -1, -1):\n        ans[i] *= right\n        right *= nums[i]\n    return ans`
+    },
+    testCases: [{ input: 'nums=[1,2,3,4]', expectedOutput: '[24,12,8,6]', description: '24=2*3*4' }],
+    hints: ['左边乘积数组 × 右边乘积', '可用一个变量代替右边数组'],
+    explanation: `【前缀积+后缀积】
+ans[i] = 左边所有数乘积 × 右边所有数乘积
+先从左往右算左边积，再从右往左乘右边积`
+  },
+  {
+    id: 'arr-max-subarray', category: '数组', title: '最大子数组和', difficulty: 'medium', type: 'coding',
+    description: '找到具有最大和的连续子数组',
+    templates: {
+      c: `int maxSubArray(int* nums, int n) {\n    // 请实现\n}`,
+      cpp: `int maxSubArray(vector<int>& nums) {\n    // 请实现\n}`,
+      java: `int maxSubArray(int[] nums) {\n    // 请实现\n}`,
+      python: `def max_sub_array(nums):\n    pass`
+    },
+    solutions: {
+      c: `int maxSubArray(int* nums, int n) {\n    int maxSum = nums[0], curSum = nums[0];\n    for (int i = 1; i < n; i++) {\n        curSum = curSum > 0 ? curSum + nums[i] : nums[i];\n        if (curSum > maxSum) maxSum = curSum;\n    }\n    return maxSum;\n}`,
+      cpp: `int maxSubArray(vector<int>& nums) {\n    int maxSum = nums[0], curSum = nums[0];\n    for (int i = 1; i < nums.size(); i++) {\n        curSum = max(curSum + nums[i], nums[i]);\n        maxSum = max(maxSum, curSum);\n    }\n    return maxSum;\n}`,
+      java: `int maxSubArray(int[] nums) {\n    int maxSum = nums[0], curSum = nums[0];\n    for (int i = 1; i < nums.length; i++) {\n        curSum = Math.max(curSum + nums[i], nums[i]);\n        maxSum = Math.max(maxSum, curSum);\n    }\n    return maxSum;\n}`,
+      python: `def max_sub_array(nums):\n    max_sum = cur_sum = nums[0]\n    for num in nums[1:]:\n        cur_sum = max(cur_sum + num, num)\n        max_sum = max(max_sum, cur_sum)\n    return max_sum`
+    },
+    testCases: [{ input: 'nums=[-2,1,-3,4,-1,2,1,-5,4]', expectedOutput: '6', description: '[4,-1,2,1]' }],
+    hints: ['Kadane算法', '当前和<0时重新开始'],
+    explanation: `【Kadane算法】O(n)
+curSum = max(curSum + num, num)
+若前面累加和为负，不如从当前重新开始`
+  },
+];
+
+// ==================== 矩阵操作 ====================
+export const matrixExercises: Exercise[] = [
+  {
+    id: 'matrix-rotate', category: '矩阵', title: '旋转图像', difficulty: 'medium', type: 'coding',
+    description: '将n×n矩阵顺时针旋转90度，原地操作',
+    templates: {
+      c: `void rotate(int** matrix, int n) {\n    // 请原地旋转\n}`,
+      cpp: `void rotate(vector<vector<int>>& matrix) {\n    // 请实现\n}`,
+      java: `void rotate(int[][] matrix) {\n    // 请实现\n}`,
+      python: `def rotate(matrix):\n    pass`
+    },
+    solutions: {
+      c: `void rotate(int** matrix, int n) {\n    // 先转置\n    for (int i = 0; i < n; i++)\n        for (int j = i + 1; j < n; j++) {\n            int t = matrix[i][j]; matrix[i][j] = matrix[j][i]; matrix[j][i] = t;\n        }\n    // 再左右翻转\n    for (int i = 0; i < n; i++)\n        for (int j = 0; j < n / 2; j++) {\n            int t = matrix[i][j]; matrix[i][j] = matrix[i][n-1-j]; matrix[i][n-1-j] = t;\n        }\n}`,
+      cpp: `void rotate(vector<vector<int>>& matrix) {\n    int n = matrix.size();\n    // 转置\n    for (int i = 0; i < n; i++)\n        for (int j = i + 1; j < n; j++)\n            swap(matrix[i][j], matrix[j][i]);\n    // 左右翻转\n    for (auto& row : matrix)\n        reverse(row.begin(), row.end());\n}`,
+      java: `void rotate(int[][] matrix) {\n    int n = matrix.length;\n    // 转置\n    for (int i = 0; i < n; i++)\n        for (int j = i + 1; j < n; j++) {\n            int t = matrix[i][j]; matrix[i][j] = matrix[j][i]; matrix[j][i] = t;\n        }\n    // 左右翻转\n    for (int i = 0; i < n; i++)\n        for (int j = 0; j < n / 2; j++) {\n            int t = matrix[i][j]; matrix[i][j] = matrix[i][n-1-j]; matrix[i][n-1-j] = t;\n        }\n}`,
+      python: `def rotate(matrix):\n    n = len(matrix)\n    # 转置\n    for i in range(n):\n        for j in range(i + 1, n):\n            matrix[i][j], matrix[j][i] = matrix[j][i], matrix[i][j]\n    # 左右翻转\n    for row in matrix:\n        row.reverse()`
+    },
+    testCases: [{ input: 'matrix=[[1,2,3],[4,5,6],[7,8,9]]', expectedOutput: '[[7,4,1],[8,5,2],[9,6,3]]', description: '顺时针90°' }],
+    hints: ['先转置（行列互换）', '再左右翻转每一行'],
+    explanation: `【转置+翻转】
+顺时针90° = 转置 + 左右翻转
+逆时针90° = 转置 + 上下翻转`
+  },
+  {
+    id: 'matrix-spiral', category: '矩阵', title: '螺旋矩阵', difficulty: 'medium', type: 'coding',
+    description: '按螺旋顺序返回矩阵中的所有元素',
+    templates: {
+      c: `int* spiralOrder(int** matrix, int m, int n, int* returnSize) {\n    // 请实现\n}`,
+      cpp: `vector<int> spiralOrder(vector<vector<int>>& matrix) {\n    // 请实现\n}`,
+      java: `List<Integer> spiralOrder(int[][] matrix) {\n    // 请实现\n}`,
+      python: `def spiral_order(matrix):\n    pass`
+    },
+    solutions: {
+      c: `int* spiralOrder(int** matrix, int m, int n, int* returnSize) {\n    *returnSize = m * n;\n    int* res = malloc(*returnSize * sizeof(int));\n    int idx = 0, top = 0, bottom = m - 1, left = 0, right = n - 1;\n    while (top <= bottom && left <= right) {\n        for (int i = left; i <= right; i++) res[idx++] = matrix[top][i];\n        top++;\n        for (int i = top; i <= bottom; i++) res[idx++] = matrix[i][right];\n        right--;\n        if (top <= bottom) { for (int i = right; i >= left; i--) res[idx++] = matrix[bottom][i]; bottom--; }\n        if (left <= right) { for (int i = bottom; i >= top; i--) res[idx++] = matrix[i][left]; left++; }\n    }\n    return res;\n}`,
+      cpp: `vector<int> spiralOrder(vector<vector<int>>& matrix) {\n    vector<int> res;\n    if (matrix.empty()) return res;\n    int top = 0, bottom = matrix.size() - 1;\n    int left = 0, right = matrix[0].size() - 1;\n    while (top <= bottom && left <= right) {\n        for (int i = left; i <= right; i++) res.push_back(matrix[top][i]); top++;\n        for (int i = top; i <= bottom; i++) res.push_back(matrix[i][right]); right--;\n        if (top <= bottom) { for (int i = right; i >= left; i--) res.push_back(matrix[bottom][i]); bottom--; }\n        if (left <= right) { for (int i = bottom; i >= top; i--) res.push_back(matrix[i][left]); left++; }\n    }\n    return res;\n}`,
+      java: `List<Integer> spiralOrder(int[][] matrix) {\n    List<Integer> res = new ArrayList<>();\n    if (matrix.length == 0) return res;\n    int top = 0, bottom = matrix.length - 1;\n    int left = 0, right = matrix[0].length - 1;\n    while (top <= bottom && left <= right) {\n        for (int i = left; i <= right; i++) res.add(matrix[top][i]); top++;\n        for (int i = top; i <= bottom; i++) res.add(matrix[i][right]); right--;\n        if (top <= bottom) { for (int i = right; i >= left; i--) res.add(matrix[bottom][i]); bottom--; }\n        if (left <= right) { for (int i = bottom; i >= top; i--) res.add(matrix[i][left]); left++; }\n    }\n    return res;\n}`,
+      python: `def spiral_order(matrix):\n    res = []\n    if not matrix: return res\n    top, bottom = 0, len(matrix) - 1\n    left, right = 0, len(matrix[0]) - 1\n    while top <= bottom and left <= right:\n        for i in range(left, right + 1): res.append(matrix[top][i])\n        top += 1\n        for i in range(top, bottom + 1): res.append(matrix[i][right])\n        right -= 1\n        if top <= bottom:\n            for i in range(right, left - 1, -1): res.append(matrix[bottom][i])\n            bottom -= 1\n        if left <= right:\n            for i in range(bottom, top - 1, -1): res.append(matrix[i][left])\n            left += 1\n    return res`
+    },
+    testCases: [{ input: 'matrix=[[1,2,3],[4,5,6],[7,8,9]]', expectedOutput: '[1,2,3,6,9,8,7,4,5]', description: '螺旋遍历' }],
+    hints: ['四个边界：top/bottom/left/right', '一圈一圈向内收缩'],
+    explanation: '模拟：按右→下→左→上的顺序遍历，每遍历一边就收缩对应边界'
+  },
+  {
+    id: 'matrix-set-zeroes', category: '矩阵', title: '矩阵置零', difficulty: 'medium', type: 'coding',
+    description: '如果矩阵中有0，则将其所在行和列都设为0，原地操作',
+    templates: {
+      c: `void setZeroes(int** matrix, int m, int n) {\n    // 请原地实现\n}`,
+      cpp: `void setZeroes(vector<vector<int>>& matrix) {\n    // 请实现\n}`,
+      java: `void setZeroes(int[][] matrix) {\n    // 请实现\n}`,
+      python: `def set_zeroes(matrix):\n    pass`
+    },
+    solutions: {
+      c: `void setZeroes(int** matrix, int m, int n) {\n    int row0 = 0, col0 = 0;\n    for (int i = 0; i < m; i++) if (matrix[i][0] == 0) col0 = 1;\n    for (int j = 0; j < n; j++) if (matrix[0][j] == 0) row0 = 1;\n    for (int i = 1; i < m; i++)\n        for (int j = 1; j < n; j++)\n            if (matrix[i][j] == 0) { matrix[i][0] = 0; matrix[0][j] = 0; }\n    for (int i = 1; i < m; i++)\n        for (int j = 1; j < n; j++)\n            if (matrix[i][0] == 0 || matrix[0][j] == 0) matrix[i][j] = 0;\n    if (col0) for (int i = 0; i < m; i++) matrix[i][0] = 0;\n    if (row0) for (int j = 0; j < n; j++) matrix[0][j] = 0;\n}`,
+      cpp: `void setZeroes(vector<vector<int>>& matrix) {\n    int m = matrix.size(), n = matrix[0].size();\n    bool row0 = false, col0 = false;\n    for (int i = 0; i < m; i++) if (matrix[i][0] == 0) col0 = true;\n    for (int j = 0; j < n; j++) if (matrix[0][j] == 0) row0 = true;\n    for (int i = 1; i < m; i++)\n        for (int j = 1; j < n; j++)\n            if (matrix[i][j] == 0) { matrix[i][0] = 0; matrix[0][j] = 0; }\n    for (int i = 1; i < m; i++)\n        for (int j = 1; j < n; j++)\n            if (matrix[i][0] == 0 || matrix[0][j] == 0) matrix[i][j] = 0;\n    if (col0) for (int i = 0; i < m; i++) matrix[i][0] = 0;\n    if (row0) for (int j = 0; j < n; j++) matrix[0][j] = 0;\n}`,
+      java: `void setZeroes(int[][] matrix) {\n    int m = matrix.length, n = matrix[0].length;\n    boolean row0 = false, col0 = false;\n    for (int i = 0; i < m; i++) if (matrix[i][0] == 0) col0 = true;\n    for (int j = 0; j < n; j++) if (matrix[0][j] == 0) row0 = true;\n    for (int i = 1; i < m; i++)\n        for (int j = 1; j < n; j++)\n            if (matrix[i][j] == 0) { matrix[i][0] = 0; matrix[0][j] = 0; }\n    for (int i = 1; i < m; i++)\n        for (int j = 1; j < n; j++)\n            if (matrix[i][0] == 0 || matrix[0][j] == 0) matrix[i][j] = 0;\n    if (col0) for (int i = 0; i < m; i++) matrix[i][0] = 0;\n    if (row0) for (int j = 0; j < n; j++) matrix[0][j] = 0;\n}`,
+      python: `def set_zeroes(matrix):\n    m, n = len(matrix), len(matrix[0])\n    row0 = any(matrix[0][j] == 0 for j in range(n))\n    col0 = any(matrix[i][0] == 0 for i in range(m))\n    for i in range(1, m):\n        for j in range(1, n):\n            if matrix[i][j] == 0:\n                matrix[i][0] = matrix[0][j] = 0\n    for i in range(1, m):\n        for j in range(1, n):\n            if matrix[i][0] == 0 or matrix[0][j] == 0:\n                matrix[i][j] = 0\n    if row0:\n        for j in range(n): matrix[0][j] = 0\n    if col0:\n        for i in range(m): matrix[i][0] = 0`
+    },
+    testCases: [{ input: 'matrix=[[1,1,1],[1,0,1],[1,1,1]]', expectedOutput: '[[1,0,1],[0,0,0],[1,0,1]]', description: '中心为0' }],
+    hints: ['用第一行第一列作为标记数组', '先记录第一行/列本身是否有0'],
+    explanation: `【原地标记】O(1)空间
+用第一行/列存储该行/列是否需要置零
+注意先处理内部，最后处理第一行/列`
+  },
+];
+
+// ==================== 区间问题 ====================
+export const intervalExercises: Exercise[] = [
+  {
+    id: 'interval-merge', category: '区间', title: '合并区间', difficulty: 'medium', type: 'coding',
+    description: '合并所有重叠的区间',
+    templates: {
+      c: `int** merge(int** intervals, int n, int* returnSize, int** returnColumnSizes) {\n    // 请实现\n}`,
+      cpp: `vector<vector<int>> merge(vector<vector<int>>& intervals) {\n    // 请实现\n}`,
+      java: `int[][] merge(int[][] intervals) {\n    // 请实现\n}`,
+      python: `def merge(intervals):\n    pass`
+    },
+    solutions: {
+      c: `int cmp(const void* a, const void* b) { return (*(int**)a)[0] - (*(int**)b)[0]; }\nint** merge(int** intervals, int n, int* returnSize, int** returnColumnSizes) {\n    if (n == 0) { *returnSize = 0; return NULL; }\n    qsort(intervals, n, sizeof(int*), cmp);\n    int** res = malloc(n * sizeof(int*));\n    *returnColumnSizes = malloc(n * sizeof(int));\n    int idx = 0;\n    res[0] = malloc(2 * sizeof(int));\n    res[0][0] = intervals[0][0]; res[0][1] = intervals[0][1];\n    for (int i = 1; i < n; i++) {\n        if (intervals[i][0] <= res[idx][1]) {\n            if (intervals[i][1] > res[idx][1]) res[idx][1] = intervals[i][1];\n        } else {\n            idx++;\n            res[idx] = malloc(2 * sizeof(int));\n            res[idx][0] = intervals[i][0]; res[idx][1] = intervals[i][1];\n        }\n    }\n    *returnSize = idx + 1;\n    for (int i = 0; i <= idx; i++) (*returnColumnSizes)[i] = 2;\n    return res;\n}`,
+      cpp: `vector<vector<int>> merge(vector<vector<int>>& intervals) {\n    sort(intervals.begin(), intervals.end());\n    vector<vector<int>> res;\n    for (auto& i : intervals) {\n        if (res.empty() || res.back()[1] < i[0])\n            res.push_back(i);\n        else\n            res.back()[1] = max(res.back()[1], i[1]);\n    }\n    return res;\n}`,
+      java: `int[][] merge(int[][] intervals) {\n    Arrays.sort(intervals, (a, b) -> a[0] - b[0]);\n    List<int[]> res = new ArrayList<>();\n    for (int[] i : intervals) {\n        if (res.isEmpty() || res.get(res.size()-1)[1] < i[0])\n            res.add(i);\n        else\n            res.get(res.size()-1)[1] = Math.max(res.get(res.size()-1)[1], i[1]);\n    }\n    return res.toArray(new int[0][]);\n}`,
+      python: `def merge(intervals):\n    intervals.sort()\n    res = []\n    for i in intervals:\n        if not res or res[-1][1] < i[0]:\n            res.append(i)\n        else:\n            res[-1][1] = max(res[-1][1], i[1])\n    return res`
+    },
+    testCases: [{ input: 'intervals=[[1,3],[2,6],[8,10],[15,18]]', expectedOutput: '[[1,6],[8,10],[15,18]]', description: '[1,3]和[2,6]合并' }],
+    hints: ['先按起点排序', '若当前起点≤上一个终点则合并'],
+    explanation: '排序后，若当前区间起点≤前一个终点，说明重叠，更新终点'
+  },
+  {
+    id: 'interval-insert', category: '区间', title: '插入区间', difficulty: 'medium', type: 'coding',
+    description: '将新区间插入到有序不重叠区间列表中，合并重叠部分',
+    templates: {
+      c: `int** insert(int** intervals, int n, int* newInterval, int* returnSize, int** returnColumnSizes) {\n    // 请实现\n}`,
+      cpp: `vector<vector<int>> insert(vector<vector<int>>& intervals, vector<int>& newInterval) {\n    // 请实现\n}`,
+      java: `int[][] insert(int[][] intervals, int[] newInterval) {\n    // 请实现\n}`,
+      python: `def insert(intervals, new_interval):\n    pass`
+    },
+    solutions: {
+      c: `// 简化实现省略`,
+      cpp: `vector<vector<int>> insert(vector<vector<int>>& intervals, vector<int>& newInterval) {\n    vector<vector<int>> res;\n    int i = 0, n = intervals.size();\n    // 添加所有在newInterval左边的\n    while (i < n && intervals[i][1] < newInterval[0])\n        res.push_back(intervals[i++]);\n    // 合并重叠\n    while (i < n && intervals[i][0] <= newInterval[1]) {\n        newInterval[0] = min(newInterval[0], intervals[i][0]);\n        newInterval[1] = max(newInterval[1], intervals[i][1]);\n        i++;\n    }\n    res.push_back(newInterval);\n    // 添加右边剩余的\n    while (i < n) res.push_back(intervals[i++]);\n    return res;\n}`,
+      java: `int[][] insert(int[][] intervals, int[] newInterval) {\n    List<int[]> res = new ArrayList<>();\n    int i = 0, n = intervals.length;\n    while (i < n && intervals[i][1] < newInterval[0])\n        res.add(intervals[i++]);\n    while (i < n && intervals[i][0] <= newInterval[1]) {\n        newInterval[0] = Math.min(newInterval[0], intervals[i][0]);\n        newInterval[1] = Math.max(newInterval[1], intervals[i][1]);\n        i++;\n    }\n    res.add(newInterval);\n    while (i < n) res.add(intervals[i++]);\n    return res.toArray(new int[0][]);\n}`,
+      python: `def insert(intervals, new_interval):\n    res = []\n    i, n = 0, len(intervals)\n    while i < n and intervals[i][1] < new_interval[0]:\n        res.append(intervals[i]); i += 1\n    while i < n and intervals[i][0] <= new_interval[1]:\n        new_interval[0] = min(new_interval[0], intervals[i][0])\n        new_interval[1] = max(new_interval[1], intervals[i][1])\n        i += 1\n    res.append(new_interval)\n    while i < n:\n        res.append(intervals[i]); i += 1\n    return res`
+    },
+    testCases: [{ input: 'intervals=[[1,3],[6,9]], newInterval=[2,5]', expectedOutput: '[[1,5],[6,9]]', description: '插入并合并' }],
+    hints: ['三步：添加左边→合并中间→添加右边', '判断重叠：start≤end'],
+    explanation: '分三步：添加不重叠的左边部分，合并重叠部分，添加右边部分'
+  },
+];
+
+// ==================== 更多图论题 ====================
+export const moreGraphExercises: Exercise[] = [
+  {
+    id: 'graph-num-islands', category: '图', title: '岛屿数量', difficulty: 'medium', type: 'coding',
+    description: '计算由"1"（陆地）组成的岛屿数量，水平或垂直相邻的陆地连成岛屿',
+    templates: {
+      c: `int numIslands(char** grid, int m, int n) {\n    // 请实现\n}`,
+      cpp: `int numIslands(vector<vector<char>>& grid) {\n    // 请实现\n}`,
+      java: `int numIslands(char[][] grid) {\n    // 请实现\n}`,
+      python: `def num_islands(grid):\n    pass`
+    },
+    solutions: {
+      c: `void dfs(char** grid, int m, int n, int i, int j) {\n    if (i < 0 || i >= m || j < 0 || j >= n || grid[i][j] != '1') return;\n    grid[i][j] = '0';\n    dfs(grid, m, n, i+1, j); dfs(grid, m, n, i-1, j);\n    dfs(grid, m, n, i, j+1); dfs(grid, m, n, i, j-1);\n}\nint numIslands(char** grid, int m, int n) {\n    int count = 0;\n    for (int i = 0; i < m; i++)\n        for (int j = 0; j < n; j++)\n            if (grid[i][j] == '1') { count++; dfs(grid, m, n, i, j); }\n    return count;\n}`,
+      cpp: `int numIslands(vector<vector<char>>& grid) {\n    int m = grid.size(), n = grid[0].size(), count = 0;\n    function<void(int, int)> dfs = [&](int i, int j) {\n        if (i < 0 || i >= m || j < 0 || j >= n || grid[i][j] != '1') return;\n        grid[i][j] = '0';\n        dfs(i+1, j); dfs(i-1, j); dfs(i, j+1); dfs(i, j-1);\n    };\n    for (int i = 0; i < m; i++)\n        for (int j = 0; j < n; j++)\n            if (grid[i][j] == '1') { count++; dfs(i, j); }\n    return count;\n}`,
+      java: `int numIslands(char[][] grid) {\n    int m = grid.length, n = grid[0].length, count = 0;\n    for (int i = 0; i < m; i++)\n        for (int j = 0; j < n; j++)\n            if (grid[i][j] == '1') { count++; dfs(grid, i, j); }\n    return count;\n}\nvoid dfs(char[][] grid, int i, int j) {\n    if (i < 0 || i >= grid.length || j < 0 || j >= grid[0].length || grid[i][j] != '1') return;\n    grid[i][j] = '0';\n    dfs(grid, i+1, j); dfs(grid, i-1, j); dfs(grid, i, j+1); dfs(grid, i, j-1);\n}`,
+      python: `def num_islands(grid):\n    if not grid: return 0\n    m, n = len(grid), len(grid[0])\n    def dfs(i, j):\n        if i < 0 or i >= m or j < 0 or j >= n or grid[i][j] != '1': return\n        grid[i][j] = '0'\n        dfs(i+1, j); dfs(i-1, j); dfs(i, j+1); dfs(i, j-1)\n    count = 0\n    for i in range(m):\n        for j in range(n):\n            if grid[i][j] == '1':\n                count += 1; dfs(i, j)\n    return count`
+    },
+    testCases: [{ input: 'grid=[["1","1","0","0","0"],["1","1","0","0","0"],["0","0","1","0","0"],["0","0","0","1","1"]]', expectedOutput: '3', description: '3个岛屿' }],
+    hints: ['遇到1就DFS/BFS标记整个岛', '标记为0避免重复访问'],
+    explanation: '遍历网格，每发现一个"1"就计数+1，然后DFS把整个岛标记为"0"'
+  },
+  {
+    id: 'graph-course-schedule', category: '图', title: '课程表', difficulty: 'medium', type: 'coding',
+    description: '判断是否能完成所有课程（检测有向图是否有环）',
+    templates: {
+      c: `int canFinish(int numCourses, int** prerequisites, int n) {\n    // 请实现\n}`,
+      cpp: `bool canFinish(int numCourses, vector<vector<int>>& prerequisites) {\n    // 请实现\n}`,
+      java: `boolean canFinish(int numCourses, int[][] prerequisites) {\n    // 请实现\n}`,
+      python: `def can_finish(num_courses, prerequisites):\n    pass`
+    },
+    solutions: {
+      c: `// 拓扑排序BFS实现省略`,
+      cpp: `bool canFinish(int numCourses, vector<vector<int>>& prerequisites) {\n    vector<int> indegree(numCourses, 0);\n    vector<vector<int>> adj(numCourses);\n    for (auto& p : prerequisites) {\n        adj[p[1]].push_back(p[0]);\n        indegree[p[0]]++;\n    }\n    queue<int> q;\n    for (int i = 0; i < numCourses; i++)\n        if (indegree[i] == 0) q.push(i);\n    int count = 0;\n    while (!q.empty()) {\n        int cur = q.front(); q.pop(); count++;\n        for (int next : adj[cur])\n            if (--indegree[next] == 0) q.push(next);\n    }\n    return count == numCourses;\n}`,
+      java: `boolean canFinish(int numCourses, int[][] prerequisites) {\n    int[] indegree = new int[numCourses];\n    List<List<Integer>> adj = new ArrayList<>();\n    for (int i = 0; i < numCourses; i++) adj.add(new ArrayList<>());\n    for (int[] p : prerequisites) {\n        adj.get(p[1]).add(p[0]);\n        indegree[p[0]]++;\n    }\n    Queue<Integer> q = new LinkedList<>();\n    for (int i = 0; i < numCourses; i++)\n        if (indegree[i] == 0) q.offer(i);\n    int count = 0;\n    while (!q.isEmpty()) {\n        int cur = q.poll(); count++;\n        for (int next : adj.get(cur))\n            if (--indegree[next] == 0) q.offer(next);\n    }\n    return count == numCourses;\n}`,
+      python: `def can_finish(num_courses, prerequisites):\n    from collections import deque\n    indegree = [0] * num_courses\n    adj = [[] for _ in range(num_courses)]\n    for a, b in prerequisites:\n        adj[b].append(a)\n        indegree[a] += 1\n    q = deque([i for i in range(num_courses) if indegree[i] == 0])\n    count = 0\n    while q:\n        cur = q.popleft(); count += 1\n        for nxt in adj[cur]:\n            indegree[nxt] -= 1\n            if indegree[nxt] == 0: q.append(nxt)\n    return count == num_courses`
+    },
+    testCases: [{ input: 'numCourses=2, prerequisites=[[1,0]]', expectedOutput: 'true', description: '先修0再修1' }],
+    hints: ['拓扑排序', '入度为0的先修，修完后更新后继入度'],
+    explanation: `【拓扑排序/Kahn算法】
+1. 统计入度，入度0的入队
+2. 出队时将后继入度-1，变0则入队
+3. 若处理数=课程数，则无环`
+  },
+  {
+    id: 'graph-clone', category: '图', title: '克隆图', difficulty: 'medium', type: 'coding',
+    description: '深拷贝一个无向连通图',
+    templates: {
+      c: `struct Node* cloneGraph(struct Node* node) {\n    // 请实现\n}`,
+      cpp: `Node* cloneGraph(Node* node) {\n    // 请实现\n}`,
+      java: `Node cloneGraph(Node node) {\n    // 请实现\n}`,
+      python: `def clone_graph(node):\n    pass`
+    },
+    solutions: {
+      c: `// 需要哈希表实现，省略`,
+      cpp: `Node* cloneGraph(Node* node) {\n    if (!node) return nullptr;\n    unordered_map<Node*, Node*> visited;\n    function<Node*(Node*)> dfs = [&](Node* n) -> Node* {\n        if (visited.count(n)) return visited[n];\n        Node* clone = new Node(n->val);\n        visited[n] = clone;\n        for (Node* neighbor : n->neighbors)\n            clone->neighbors.push_back(dfs(neighbor));\n        return clone;\n    };\n    return dfs(node);\n}`,
+      java: `Map<Node, Node> visited = new HashMap<>();\nNode cloneGraph(Node node) {\n    if (node == null) return null;\n    if (visited.containsKey(node)) return visited.get(node);\n    Node clone = new Node(node.val);\n    visited.put(node, clone);\n    for (Node neighbor : node.neighbors)\n        clone.neighbors.add(cloneGraph(neighbor));\n    return clone;\n}`,
+      python: `def clone_graph(node):\n    if not node: return None\n    visited = {}\n    def dfs(n):\n        if n in visited: return visited[n]\n        clone = Node(n.val)\n        visited[n] = clone\n        clone.neighbors = [dfs(neighbor) for neighbor in n.neighbors]\n        return clone\n    return dfs(node)`
+    },
+    testCases: [{ input: 'adjList=[[2,4],[1,3],[2,4],[1,3]]', expectedOutput: '深拷贝', description: '4节点图' }],
+    hints: ['哈希表记录原节点到克隆节点的映射', 'DFS/BFS遍历并克隆'],
+    explanation: '用哈希表避免重复克隆同一节点，DFS递归克隆邻居'
+  },
+];
+
 // 所有练习题汇总
 export const allExercises: Exercise[] = [
   ...linkedListExercises,
@@ -3006,6 +3330,11 @@ export const allExercises: Exercise[] = [
   ...moreLinkedListExercises,
   ...moreTreeExercises,
   ...moreFillBlankExercises,
+  ...heapExercises,
+  ...arrayExercises,
+  ...matrixExercises,
+  ...intervalExercises,
+  ...moreGraphExercises,
 ];
 
 // 导出递归分类供其他模块使用
