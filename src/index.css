@@ -1,0 +1,134 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    @apply bg-slate-50 text-slate-900 transition-colors duration-300;
+  }
+
+  .dark body {
+    @apply bg-slate-900 text-slate-50;
+  }
+}
+
+/* 自定义滚动条 */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.dark ::-webkit-scrollbar-track {
+  background: #1e293b;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: #475569;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a1a1a1;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
+/* 可视化画布样式 */
+.visualization-canvas {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 12px;
+}
+
+/* 节点动画 */
+@keyframes nodeAppear {
+  from {
+    transform: scale(0);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.node-appear {
+  animation: nodeAppear 0.3s ease-out forwards;
+}
+
+/* 代码高亮行 */
+.code-highlight-line {
+  background: linear-gradient(90deg, rgba(102, 126, 234, 0.2) 0%, transparent 100%);
+  border-left: 3px solid #667eea;
+}
+
+.dark .code-highlight-line {
+  background: linear-gradient(90deg, rgba(102, 126, 234, 0.4) 0%, transparent 100%);
+}
+
+/* 深色模式下课程内容的颜色覆盖 */
+.dark .prose {
+  /* 文字颜色 */
+  --tw-prose-body: #e2e8f0;
+  --tw-prose-headings: #f1f5f9;
+}
+
+/* 深色模式下的卡片和背景颜色覆盖 */
+.dark .bg-indigo-50 { background-color: rgba(99, 102, 241, 0.15) !important; }
+.dark .bg-purple-50 { background-color: rgba(147, 51, 234, 0.15) !important; }
+.dark .bg-emerald-50 { background-color: rgba(16, 185, 129, 0.15) !important; }
+.dark .bg-amber-50 { background-color: rgba(245, 158, 11, 0.15) !important; }
+.dark .bg-rose-50 { background-color: rgba(244, 63, 94, 0.15) !important; }
+.dark .bg-cyan-50 { background-color: rgba(6, 182, 212, 0.15) !important; }
+.dark .bg-slate-50 { background-color: rgb(30, 41, 59) !important; }
+
+/* 深色模式下的渐变背景 */
+.dark .from-indigo-50 { --tw-gradient-from: rgba(99, 102, 241, 0.15) !important; }
+.dark .to-purple-50 { --tw-gradient-to: rgba(147, 51, 234, 0.15) !important; }
+.dark .from-emerald-50 { --tw-gradient-from: rgba(16, 185, 129, 0.15) !important; }
+.dark .to-emerald-50 { --tw-gradient-to: rgba(16, 185, 129, 0.15) !important; }
+.dark .from-cyan-50 { --tw-gradient-from: rgba(6, 182, 212, 0.15) !important; }
+
+/* 深色模式下的文字颜色覆盖 */
+.dark .text-slate-800 { color: #e2e8f0 !important; }
+.dark .text-slate-700 { color: #cbd5e1 !important; }
+.dark .text-slate-600 { color: #94a3b8 !important; }
+.dark .text-slate-500 { color: #64748b !important; }
+.dark .text-indigo-800 { color: #a5b4fc !important; }
+.dark .text-indigo-700 { color: #a5b4fc !important; }
+.dark .text-indigo-600:not(.hover\:text-indigo-600) { color: #818cf8 !important; }
+.dark .text-emerald-800 { color: #6ee7b7 !important; }
+.dark .text-emerald-600 { color: #34d399 !important; }
+.dark .text-amber-800 { color: #fcd34d !important; }
+.dark .text-rose-600 { color: #fb7185 !important; }
+
+/* 深色模式下的边框颜色 */
+.dark .border-indigo-100 { border-color: rgba(99, 102, 241, 0.3) !important; }
+.dark .border-indigo-200 { border-color: rgba(99, 102, 241, 0.4) !important; }
+.dark .border-slate-100 { border-color: rgb(51, 65, 85) !important; }
+.dark .border-slate-200 { border-color: rgb(51, 65, 85) !important; }
+.dark .border-slate-300 { border-color: rgb(71, 85, 105) !important; }
+
+/* 深色模式下白色背景改为深色 */
+.dark .bg-white:not(.dark\:bg-slate-800):not(.dark\:bg-slate-600):not(.dark\:bg-slate-700) { 
+  background-color: rgb(30, 41, 59) !important; 
+}
