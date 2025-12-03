@@ -17,6 +17,7 @@ export interface Exercise {
   hints?: string[];
   explanation: string;
   commonMistakes?: string[]; // 常见错误/易错点
+  isExamFocus?: boolean; // 考试重点题目标记
 }
 
 // ==================== 链表 ====================
@@ -3789,6 +3790,159 @@ export const extraFillBlankExercises: Exercise[] = [
     hints: ['KMP'], explanation: 'KMP：next[i]表示最长相等前后缀' },
 ];
 
+// ==================== 考试重点题目 ====================
+// 老师强调：双指针法实现数组原地删除，不申请额外空间
+export const examFocusExercises: Exercise[] = [
+  {
+    id: 'exam-remove-element', category: '双指针', title: '【考试重点】移除元素', difficulty: 'easy', type: 'coding',
+    description: '原地移除数组中所有等于val的元素，返回新数组长度。要求：不申请额外空间，使用双指针法。\n\n这是老师课上强调的重点：普通方法用三层循环，双指针法只需两层循环，时间复杂度更低。',
+    isExamFocus: true,
+    templates: {
+      c: `// 【考试重点】双指针法原地删除\n// 不能申请新数组，只能在原数组上操作\nint removeElement(int* nums, int numsSize, int val) {\n    // slow: 指向下一个要保留元素应该放的位置\n    // fast: 遍历数组的指针\n    // 请实现双指针法\n}`,
+      cpp: `// 【考试重点】双指针法原地删除\nint removeElement(vector<int>& nums, int val) {\n    // 请实现双指针法\n}`,
+      java: `// 【考试重点】双指针法原地删除\nint removeElement(int[] nums, int val) {\n    // 请实现双指针法\n}`,
+      python: `# 【考试重点】双指针法原地删除\ndef remove_element(nums, val):\n    # 请实现双指针法\n    pass`
+    },
+    solutions: {
+      c: `// 【双指针法】时间O(n)，空间O(1)\nint removeElement(int* nums, int numsSize, int val) {\n    int slow = 0;  // 慢指针：指向下一个保留元素应放的位置\n    for (int fast = 0; fast < numsSize; fast++) {\n        // 快指针遍历，遇到不等于val的元素就保留\n        if (nums[fast] != val) {\n            nums[slow] = nums[fast];  // 把要保留的元素放到slow位置\n            slow++;  // slow前进一步\n        }\n        // 如果等于val，fast继续走，slow不动（相当于跳过了这个元素）\n    }\n    return slow;  // slow就是新数组的长度\n}`,
+      cpp: `int removeElement(vector<int>& nums, int val) {\n    int slow = 0;\n    for (int fast = 0; fast < nums.size(); fast++) {\n        if (nums[fast] != val) {\n            nums[slow++] = nums[fast];\n        }\n    }\n    return slow;\n}`,
+      java: `int removeElement(int[] nums, int val) {\n    int slow = 0;\n    for (int fast = 0; fast < nums.length; fast++) {\n        if (nums[fast] != val) {\n            nums[slow++] = nums[fast];\n        }\n    }\n    return slow;\n}`,
+      python: `def remove_element(nums, val):\n    slow = 0\n    for fast in range(len(nums)):\n        if nums[fast] != val:\n            nums[slow] = nums[fast]\n            slow += 1\n    return slow`
+    },
+    testCases: [
+      { input: 'nums=[3,2,2,3], val=3', expectedOutput: '2, nums=[2,2,_,_]', description: '删除所有3' },
+      { input: 'nums=[0,1,2,2,3,0,4,2], val=2', expectedOutput: '5, nums=[0,1,3,0,4,_,_,_]', description: '删除所有2' }
+    ],
+    hints: [
+      '【核心思想】slow指向"下一个要保留元素应该放的位置"',
+      '【工作原理】fast遍历，遇到不等于val的就复制到slow位置',
+      '【为什么高效】普通方法每删一个要移动后面所有元素O(n²)，双指针只遍历一次O(n)'
+    ],
+    explanation: `【双指针法核心原理】
+    
+slow和fast两个"指针"（下标）：
+- fast：快指针，负责遍历整个数组
+- slow：慢指针，指向下一个保留元素应该放的位置
+
+工作过程：
+1. fast遍历数组的每个元素
+2. 如果nums[fast] != val（不是要删除的），把它复制到nums[slow]，然后slow++
+3. 如果nums[fast] == val（是要删除的），fast继续走，slow不动
+4. 最后slow的值就是新数组长度
+
+【对比普通方法】
+普通方法：遇到要删除的元素，把后面所有元素前移一位 → 三层循环O(n²)
+双指针法：一次遍历，直接把要保留的覆盖到前面 → 两层循环O(n)`,
+    commonMistakes: [
+      '忘记在保留元素后slow++',
+      '把slow和fast的角色搞混',
+      '返回值错误（应返回slow，不是slow-1）'
+    ]
+  },
+  {
+    id: 'exam-remove-duplicates', category: '双指针', title: '【考试重点】删除有序数组重复项', difficulty: 'easy', type: 'coding',
+    description: '原地删除有序数组中的重复元素，使每个元素只出现一次，返回新长度。要求：不申请额外空间，使用双指针法。',
+    isExamFocus: true,
+    templates: {
+      c: `// 【考试重点】双指针法去重\nint removeDuplicates(int* nums, int numsSize) {\n    // 请实现\n}`,
+      cpp: `int removeDuplicates(vector<int>& nums) {\n    // 请实现\n}`,
+      java: `int removeDuplicates(int[] nums) {\n    // 请实现\n}`,
+      python: `def remove_duplicates(nums):\n    pass`
+    },
+    solutions: {
+      c: `int removeDuplicates(int* nums, int numsSize) {\n    if (numsSize == 0) return 0;\n    int slow = 0;  // slow指向最后一个不重复元素的位置\n    for (int fast = 1; fast < numsSize; fast++) {\n        if (nums[fast] != nums[slow]) {\n            slow++;  // slow前进\n            nums[slow] = nums[fast];  // 把新元素放到slow位置\n        }\n    }\n    return slow + 1;  // 长度是下标+1\n}`,
+      cpp: `int removeDuplicates(vector<int>& nums) {\n    if (nums.empty()) return 0;\n    int slow = 0;\n    for (int fast = 1; fast < nums.size(); fast++) {\n        if (nums[fast] != nums[slow]) {\n            nums[++slow] = nums[fast];\n        }\n    }\n    return slow + 1;\n}`,
+      java: `int removeDuplicates(int[] nums) {\n    if (nums.length == 0) return 0;\n    int slow = 0;\n    for (int fast = 1; fast < nums.length; fast++) {\n        if (nums[fast] != nums[slow]) {\n            nums[++slow] = nums[fast];\n        }\n    }\n    return slow + 1;\n}`,
+      python: `def remove_duplicates(nums):\n    if not nums: return 0\n    slow = 0\n    for fast in range(1, len(nums)):\n        if nums[fast] != nums[slow]:\n            slow += 1\n            nums[slow] = nums[fast]\n    return slow + 1`
+    },
+    testCases: [
+      { input: 'nums=[1,1,2]', expectedOutput: '2, nums=[1,2,_]', description: '去重后[1,2]' },
+      { input: 'nums=[0,0,1,1,1,2,2,3,3,4]', expectedOutput: '5, nums=[0,1,2,3,4,...]', description: '去重后5个元素' }
+    ],
+    hints: [
+      'slow指向最后一个不重复元素',
+      'fast遇到新元素时，slow先++再赋值',
+      '返回slow+1（长度=下标+1）'
+    ],
+    explanation: `【去重双指针】
+slow指向当前不重复序列的最后一个元素
+fast遍历时，若与slow不同，说明是新元素，放到slow+1位置`,
+    commonMistakes: ['数组为空时未特判', '返回slow而不是slow+1']
+  },
+  {
+    id: 'exam-sorted-squares', category: '双指针', title: '【考试重点】有序数组的平方', difficulty: 'easy', type: 'coding',
+    description: '给定非递减数组，返回每个数字的平方组成的新数组，也要非递减排序。要求：使用双指针法达到O(n)时间复杂度。',
+    isExamFocus: true,
+    templates: {
+      c: `int* sortedSquares(int* nums, int n, int* returnSize) {\n    // 请实现双指针法\n}`,
+      cpp: `vector<int> sortedSquares(vector<int>& nums) {\n    // 请实现\n}`,
+      java: `int[] sortedSquares(int[] nums) {\n    // 请实现\n}`,
+      python: `def sorted_squares(nums):\n    pass`
+    },
+    solutions: {
+      c: `int* sortedSquares(int* nums, int n, int* returnSize) {\n    *returnSize = n;\n    int* res = (int*)malloc(n * sizeof(int));\n    int l = 0, r = n - 1, pos = n - 1;  // 从结果数组末尾开始填\n    while (l <= r) {\n        int sl = nums[l] * nums[l];\n        int sr = nums[r] * nums[r];\n        if (sl > sr) {\n            res[pos--] = sl;\n            l++;\n        } else {\n            res[pos--] = sr;\n            r--;\n        }\n    }\n    return res;\n}`,
+      cpp: `vector<int> sortedSquares(vector<int>& nums) {\n    int n = nums.size();\n    vector<int> res(n);\n    int l = 0, r = n - 1, pos = n - 1;\n    while (l <= r) {\n        int sl = nums[l] * nums[l], sr = nums[r] * nums[r];\n        if (sl > sr) { res[pos--] = sl; l++; }\n        else { res[pos--] = sr; r--; }\n    }\n    return res;\n}`,
+      java: `int[] sortedSquares(int[] nums) {\n    int n = nums.length;\n    int[] res = new int[n];\n    int l = 0, r = n - 1, pos = n - 1;\n    while (l <= r) {\n        int sl = nums[l] * nums[l], sr = nums[r] * nums[r];\n        if (sl > sr) { res[pos--] = sl; l++; }\n        else { res[pos--] = sr; r--; }\n    }\n    return res;\n}`,
+      python: `def sorted_squares(nums):\n    n = len(nums)\n    res = [0] * n\n    l, r, pos = 0, n - 1, n - 1\n    while l <= r:\n        sl, sr = nums[l] ** 2, nums[r] ** 2\n        if sl > sr:\n            res[pos] = sl; l += 1\n        else:\n            res[pos] = sr; r -= 1\n        pos -= 1\n    return res`
+    },
+    testCases: [
+      { input: 'nums=[-4,-1,0,3,10]', expectedOutput: '[0,1,9,16,100]', description: '包含负数' },
+      { input: 'nums=[-7,-3,2,3,11]', expectedOutput: '[4,9,9,49,121]', description: '负数平方可能更大' }
+    ],
+    hints: [
+      '原数组有序，平方后最大值一定在两端',
+      '左右双指针，比较平方值，大的放到结果末尾',
+      '从结果数组的末尾往前填'
+    ],
+    explanation: `【双指针法】
+关键观察：原数组有序（可能有负数），平方后最大值一定在两端之一
+用左右双指针，每次比较两端平方值，大的放到结果数组末尾`,
+    commonMistakes: ['忘记负数平方可能更大', '结果数组填充方向错误']
+  },
+  {
+    id: 'exam-array-shift', category: '双指针', title: '【考试重点】数组元素删除与移动', difficulty: 'medium', type: 'coding',
+    description: '实现一个函数，删除数组中所有小于给定阈值的元素，并返回新数组长度。要求：原地操作，不申请额外空间，使用双指针法。',
+    isExamFocus: true,
+    templates: {
+      c: `// 【考试典型题】删除所有小于threshold的元素\nint removeSmaller(int* nums, int n, int threshold) {\n    // 使用双指针法实现\n}`,
+      cpp: `int removeSmaller(vector<int>& nums, int threshold) {\n    // 请实现\n}`,
+      java: `int removeSmaller(int[] nums, int threshold) {\n    // 请实现\n}`,
+      python: `def remove_smaller(nums, threshold):\n    pass`
+    },
+    solutions: {
+      c: `int removeSmaller(int* nums, int n, int threshold) {\n    int slow = 0;\n    for (int fast = 0; fast < n; fast++) {\n        if (nums[fast] >= threshold) {  // 保留>=threshold的\n            nums[slow] = nums[fast];\n            slow++;\n        }\n    }\n    return slow;\n}`,
+      cpp: `int removeSmaller(vector<int>& nums, int threshold) {\n    int slow = 0;\n    for (int fast = 0; fast < nums.size(); fast++) {\n        if (nums[fast] >= threshold) nums[slow++] = nums[fast];\n    }\n    return slow;\n}`,
+      java: `int removeSmaller(int[] nums, int threshold) {\n    int slow = 0;\n    for (int fast = 0; fast < nums.length; fast++) {\n        if (nums[fast] >= threshold) nums[slow++] = nums[fast];\n    }\n    return slow;\n}`,
+      python: `def remove_smaller(nums, threshold):\n    slow = 0\n    for fast in range(len(nums)):\n        if nums[fast] >= threshold:\n            nums[slow] = nums[fast]\n            slow += 1\n    return slow`
+    },
+    testCases: [
+      { input: 'nums=[1,5,3,8,2,9], threshold=4', expectedOutput: '3, nums=[5,8,9,...]', description: '保留>=4的元素' }
+    ],
+    hints: ['双指针模板：slow指向下一个保留位置，fast遍历', '条件改为保留>=threshold的元素'],
+    explanation: '与移除元素思路相同，只是判断条件不同',
+    commonMistakes: ['条件写反（删除>=threshold而不是<threshold）']
+  },
+  {
+    id: 'exam-fb-two-pointer', category: '填空题', title: '【考试重点】双指针删除填空', difficulty: 'medium', type: 'fillblank',
+    description: '补全双指针法删除数组中指定元素的代码',
+    isExamFocus: true,
+    templates: {
+      cpp: `// 双指针法删除数组中等于val的元素\nint removeElement(int* nums, int n, int val) {\n    int slow = ___BLANK1___;  // 初始化慢指针\n    for (int fast = 0; fast < n; fast++) {\n        if (nums[fast] ___BLANK2___ val) {  // 判断条件\n            nums[slow] = nums[___BLANK3___];\n            slow++;\n        }\n    }\n    return ___BLANK4___;  // 返回新长度\n}`,
+      java: `// 同上`, python: `# 同上`
+    },
+    solutions: { cpp: `// 答案`, java: `// 答案`, python: `# 答案` },
+    testCases: [],
+    blanks: [
+      { id: 'BLANK1', answer: '0', hint: 'slow从0开始' },
+      { id: 'BLANK2', answer: '!=', hint: '保留不等于val的' },
+      { id: 'BLANK3', answer: 'fast', hint: '把fast位置的值复制过来' },
+      { id: 'BLANK4', answer: 'slow', hint: 'slow就是新长度' }
+    ],
+    hints: ['slow初始为0', '保留nums[fast]!=val的元素', '返回slow'],
+    explanation: '双指针法：slow=0，保留!=val的元素到slow位置，最后返回slow'
+  },
+];
+
 // 所有练习题汇总
 export const allExercises: Exercise[] = [
   ...linkedListExercises,
@@ -3830,6 +3984,7 @@ export const allExercises: Exercise[] = [
   ...moreGreedyExercises,
   ...moreDpExercises,
   ...extraFillBlankExercises,
+  ...examFocusExercises,  // 考试重点题目放在最后，便于优先显示
 ];
 
 // 导出递归分类供其他模块使用
@@ -3843,4 +3998,9 @@ export const getExercisesByCategory = (category: string): Exercise[] => {
 // 按难度获取练习题
 export const getExercisesByDifficulty = (difficulty: 'easy' | 'medium' | 'hard'): Exercise[] => {
   return allExercises.filter(e => e.difficulty === difficulty);
+};
+
+// 获取考试重点题目
+export const getExamFocusExercises = (): Exercise[] => {
+  return allExercises.filter(e => e.isExamFocus === true);
 };
