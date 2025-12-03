@@ -8,10 +8,10 @@ const CONFIG = {
   // 服务端口
   PORT: 3001,
   
-  // AI API 配置 (密钥只存在服务器端)
-  AI_API_KEY: process.env.AI_API_KEY || 'sk-vJy5jCgbzjksuW1njIbymPABzjK4UkuIVT3fD7MNLmmY570R',
-  AI_API_URL: process.env.AI_API_URL || 'https://api.aabao.top/v1/chat/completions',
-  AI_MODEL: process.env.AI_MODEL || 'deepseek-v3.2-exp-thinking',
+  // AI API 配置 (从环境变量读取，保护密钥安全)
+  AI_API_KEY: process.env.AI_API_KEY || '',  // 必须在服务器设置环境变量
+  AI_API_URL: process.env.AI_API_URL || '',
+  AI_MODEL: process.env.AI_MODEL || '',
   
   // 允许的来源域名 (CORS)
   ALLOWED_ORIGINS: [
