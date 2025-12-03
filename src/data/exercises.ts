@@ -3306,6 +3306,335 @@ export const moreGraphExercises: Exercise[] = [
   },
 ];
 
+// ==================== LeetCode高频经典 ====================
+export const leetcodeClassicExercises: Exercise[] = [
+  {
+    id: 'lc-two-sum', category: '哈希表', title: '两数之和', difficulty: 'easy', type: 'coding',
+    description: '给定数组和目标值，找出和为目标值的两个数的下标',
+    templates: {
+      c: `int* twoSum(int* nums, int n, int target, int* returnSize) {\n    // 请实现\n}`,
+      cpp: `vector<int> twoSum(vector<int>& nums, int target) {\n    // 请实现\n}`,
+      java: `int[] twoSum(int[] nums, int target) {\n    // 请实现\n}`,
+      python: `def two_sum(nums, target):\n    pass`
+    },
+    solutions: {
+      c: `// 简化版，实际需要哈希表\nint* twoSum(int* nums, int n, int target, int* returnSize) {\n    *returnSize = 2;\n    int* res = malloc(2 * sizeof(int));\n    for (int i = 0; i < n; i++)\n        for (int j = i + 1; j < n; j++)\n            if (nums[i] + nums[j] == target) { res[0] = i; res[1] = j; return res; }\n    return res;\n}`,
+      cpp: `vector<int> twoSum(vector<int>& nums, int target) {\n    unordered_map<int, int> mp;\n    for (int i = 0; i < nums.size(); i++) {\n        int complement = target - nums[i];\n        if (mp.count(complement)) return {mp[complement], i};\n        mp[nums[i]] = i;\n    }\n    return {};\n}`,
+      java: `int[] twoSum(int[] nums, int target) {\n    Map<Integer, Integer> mp = new HashMap<>();\n    for (int i = 0; i < nums.length; i++) {\n        int complement = target - nums[i];\n        if (mp.containsKey(complement)) return new int[]{mp.get(complement), i};\n        mp.put(nums[i], i);\n    }\n    return new int[0];\n}`,
+      python: `def two_sum(nums, target):\n    mp = {}\n    for i, num in enumerate(nums):\n        complement = target - num\n        if complement in mp:\n            return [mp[complement], i]\n        mp[num] = i\n    return []`
+    },
+    testCases: [{ input: 'nums=[2,7,11,15], target=9', expectedOutput: '[0,1]', description: '2+7=9' }],
+    hints: ['哈希表存已遍历的数及其下标', '查找target-nums[i]是否存在'],
+    explanation: '用哈希表O(1)查找补数，一次遍历O(n)解决'
+  },
+  {
+    id: 'lc-three-sum', category: '双指针', title: '三数之和', difficulty: 'medium', type: 'coding',
+    description: '找出数组中所有和为0的三元组，不能重复',
+    templates: {
+      c: `int** threeSum(int* nums, int n, int* returnSize, int** returnColumnSizes) {\n    // 请实现\n}`,
+      cpp: `vector<vector<int>> threeSum(vector<int>& nums) {\n    // 请实现\n}`,
+      java: `List<List<Integer>> threeSum(int[] nums) {\n    // 请实现\n}`,
+      python: `def three_sum(nums):\n    pass`
+    },
+    solutions: {
+      c: `// 排序+双指针，实现较长省略`,
+      cpp: `vector<vector<int>> threeSum(vector<int>& nums) {\n    vector<vector<int>> res;\n    sort(nums.begin(), nums.end());\n    int n = nums.size();\n    for (int i = 0; i < n - 2; i++) {\n        if (i > 0 && nums[i] == nums[i-1]) continue;  // 去重\n        int l = i + 1, r = n - 1;\n        while (l < r) {\n            int sum = nums[i] + nums[l] + nums[r];\n            if (sum == 0) {\n                res.push_back({nums[i], nums[l], nums[r]});\n                while (l < r && nums[l] == nums[l+1]) l++;  // 去重\n                while (l < r && nums[r] == nums[r-1]) r--;\n                l++; r--;\n            } else if (sum < 0) l++;\n            else r--;\n        }\n    }\n    return res;\n}`,
+      java: `List<List<Integer>> threeSum(int[] nums) {\n    List<List<Integer>> res = new ArrayList<>();\n    Arrays.sort(nums);\n    for (int i = 0; i < nums.length - 2; i++) {\n        if (i > 0 && nums[i] == nums[i-1]) continue;\n        int l = i + 1, r = nums.length - 1;\n        while (l < r) {\n            int sum = nums[i] + nums[l] + nums[r];\n            if (sum == 0) {\n                res.add(Arrays.asList(nums[i], nums[l], nums[r]));\n                while (l < r && nums[l] == nums[l+1]) l++;\n                while (l < r && nums[r] == nums[r-1]) r--;\n                l++; r--;\n            } else if (sum < 0) l++;\n            else r--;\n        }\n    }\n    return res;\n}`,
+      python: `def three_sum(nums):\n    nums.sort()\n    res = []\n    for i in range(len(nums) - 2):\n        if i > 0 and nums[i] == nums[i-1]: continue\n        l, r = i + 1, len(nums) - 1\n        while l < r:\n            s = nums[i] + nums[l] + nums[r]\n            if s == 0:\n                res.append([nums[i], nums[l], nums[r]])\n                while l < r and nums[l] == nums[l+1]: l += 1\n                while l < r and nums[r] == nums[r-1]: r -= 1\n                l += 1; r -= 1\n            elif s < 0: l += 1\n            else: r -= 1\n    return res`
+    },
+    testCases: [{ input: 'nums=[-1,0,1,2,-1,-4]', expectedOutput: '[[-1,-1,2],[-1,0,1]]', description: '两个三元组' }],
+    hints: ['排序后固定一个数，双指针找另两个', '跳过重复元素去重'],
+    explanation: '排序O(nlogn) + 固定i遍历O(n) × 双指针O(n) = O(n²)'
+  },
+  {
+    id: 'lc-trap-rain', category: '双指针', title: '接雨水', difficulty: 'hard', type: 'coding',
+    description: '给定柱子高度数组，计算能接多少雨水',
+    templates: {
+      c: `int trap(int* height, int n) {\n    // 请实现\n}`,
+      cpp: `int trap(vector<int>& height) {\n    // 请实现\n}`,
+      java: `int trap(int[] height) {\n    // 请实现\n}`,
+      python: `def trap(height):\n    pass`
+    },
+    solutions: {
+      c: `int trap(int* height, int n) {\n    if (n == 0) return 0;\n    int l = 0, r = n - 1, lmax = 0, rmax = 0, res = 0;\n    while (l < r) {\n        if (height[l] < height[r]) {\n            if (height[l] >= lmax) lmax = height[l];\n            else res += lmax - height[l];\n            l++;\n        } else {\n            if (height[r] >= rmax) rmax = height[r];\n            else res += rmax - height[r];\n            r--;\n        }\n    }\n    return res;\n}`,
+      cpp: `int trap(vector<int>& height) {\n    int l = 0, r = height.size() - 1;\n    int lmax = 0, rmax = 0, res = 0;\n    while (l < r) {\n        if (height[l] < height[r]) {\n            height[l] >= lmax ? lmax = height[l] : res += lmax - height[l];\n            l++;\n        } else {\n            height[r] >= rmax ? rmax = height[r] : res += rmax - height[r];\n            r--;\n        }\n    }\n    return res;\n}`,
+      java: `int trap(int[] height) {\n    int l = 0, r = height.length - 1;\n    int lmax = 0, rmax = 0, res = 0;\n    while (l < r) {\n        if (height[l] < height[r]) {\n            if (height[l] >= lmax) lmax = height[l];\n            else res += lmax - height[l];\n            l++;\n        } else {\n            if (height[r] >= rmax) rmax = height[r];\n            else res += rmax - height[r];\n            r--;\n        }\n    }\n    return res;\n}`,
+      python: `def trap(height):\n    l, r = 0, len(height) - 1\n    lmax = rmax = res = 0\n    while l < r:\n        if height[l] < height[r]:\n            if height[l] >= lmax: lmax = height[l]\n            else: res += lmax - height[l]\n            l += 1\n        else:\n            if height[r] >= rmax: rmax = height[r]\n            else: res += rmax - height[r]\n            r -= 1\n    return res`
+    },
+    testCases: [{ input: 'height=[0,1,0,2,1,0,1,3,2,1,2,1]', expectedOutput: '6', description: '能接6单位水' }],
+    hints: ['每个位置能接的水 = min(左边最高, 右边最高) - 当前高度', '双指针：矮的一边决定水量'],
+    explanation: `【双指针】O(n) O(1)
+左右指针向中间移动，矮的一边先处理
+因为水量由较矮一边的最高柱子决定`
+  },
+  {
+    id: 'lc-container-water', category: '双指针', title: '盛最多水的容器', difficulty: 'medium', type: 'coding',
+    description: '找出两条线，使得与x轴构成的容器能容纳最多的水',
+    templates: {
+      c: `int maxArea(int* height, int n) {\n    // 请实现\n}`,
+      cpp: `int maxArea(vector<int>& height) {\n    // 请实现\n}`,
+      java: `int maxArea(int[] height) {\n    // 请实现\n}`,
+      python: `def max_area(height):\n    pass`
+    },
+    solutions: {
+      c: `int maxArea(int* height, int n) {\n    int l = 0, r = n - 1, maxA = 0;\n    while (l < r) {\n        int h = height[l] < height[r] ? height[l] : height[r];\n        int area = h * (r - l);\n        if (area > maxA) maxA = area;\n        if (height[l] < height[r]) l++;\n        else r--;\n    }\n    return maxA;\n}`,
+      cpp: `int maxArea(vector<int>& height) {\n    int l = 0, r = height.size() - 1, maxA = 0;\n    while (l < r) {\n        maxA = max(maxA, min(height[l], height[r]) * (r - l));\n        height[l] < height[r] ? l++ : r--;\n    }\n    return maxA;\n}`,
+      java: `int maxArea(int[] height) {\n    int l = 0, r = height.length - 1, maxA = 0;\n    while (l < r) {\n        maxA = Math.max(maxA, Math.min(height[l], height[r]) * (r - l));\n        if (height[l] < height[r]) l++;\n        else r--;\n    }\n    return maxA;\n}`,
+      python: `def max_area(height):\n    l, r = 0, len(height) - 1\n    max_a = 0\n    while l < r:\n        max_a = max(max_a, min(height[l], height[r]) * (r - l))\n        if height[l] < height[r]: l += 1\n        else: r -= 1\n    return max_a`
+    },
+    testCases: [{ input: 'height=[1,8,6,2,5,4,8,3,7]', expectedOutput: '49', description: '8和7之间' }],
+    hints: ['面积 = min(左高,右高) × 宽度', '移动较矮的一边才可能增大面积'],
+    explanation: '双指针从两端向中间，移动较矮的指针（保留高的才可能找到更大面积）'
+  },
+  {
+    id: 'lc-longest-substring', category: '滑动窗口', title: '无重复字符的最长子串', difficulty: 'medium', type: 'coding',
+    description: '找出字符串中不含重复字符的最长子串的长度',
+    templates: {
+      c: `int lengthOfLongestSubstring(char* s) {\n    // 请实现\n}`,
+      cpp: `int lengthOfLongestSubstring(string s) {\n    // 请实现\n}`,
+      java: `int lengthOfLongestSubstring(String s) {\n    // 请实现\n}`,
+      python: `def length_of_longest_substring(s):\n    pass`
+    },
+    solutions: {
+      c: `int lengthOfLongestSubstring(char* s) {\n    int idx[128] = {0};  // 字符最后出现位置+1\n    int maxLen = 0, left = 0;\n    for (int i = 0; s[i]; i++) {\n        if (idx[s[i]] > left) left = idx[s[i]];\n        int len = i - left + 1;\n        if (len > maxLen) maxLen = len;\n        idx[s[i]] = i + 1;\n    }\n    return maxLen;\n}`,
+      cpp: `int lengthOfLongestSubstring(string s) {\n    unordered_map<char, int> mp;\n    int maxLen = 0, left = 0;\n    for (int i = 0; i < s.size(); i++) {\n        if (mp.count(s[i]) && mp[s[i]] >= left)\n            left = mp[s[i]] + 1;\n        maxLen = max(maxLen, i - left + 1);\n        mp[s[i]] = i;\n    }\n    return maxLen;\n}`,
+      java: `int lengthOfLongestSubstring(String s) {\n    Map<Character, Integer> mp = new HashMap<>();\n    int maxLen = 0, left = 0;\n    for (int i = 0; i < s.length(); i++) {\n        char c = s.charAt(i);\n        if (mp.containsKey(c) && mp.get(c) >= left)\n            left = mp.get(c) + 1;\n        maxLen = Math.max(maxLen, i - left + 1);\n        mp.put(c, i);\n    }\n    return maxLen;\n}`,
+      python: `def length_of_longest_substring(s):\n    mp = {}\n    max_len = left = 0\n    for i, c in enumerate(s):\n        if c in mp and mp[c] >= left:\n            left = mp[c] + 1\n        max_len = max(max_len, i - left + 1)\n        mp[c] = i\n    return max_len`
+    },
+    testCases: [{ input: 's="abcabcbb"', expectedOutput: '3', description: 'abc长度3' }],
+    hints: ['滑动窗口+哈希表记录字符位置', '遇到重复就移动左边界'],
+    explanation: '滑动窗口：右指针扩展，遇到重复字符时左指针跳到重复位置之后'
+  },
+  {
+    id: 'lc-valid-parentheses', category: '栈', title: '有效的括号', difficulty: 'easy', type: 'coding',
+    description: '判断括号字符串是否有效（正确配对和嵌套）',
+    templates: {
+      c: `int isValid(char* s) {\n    // 请实现\n}`,
+      cpp: `bool isValid(string s) {\n    // 请实现\n}`,
+      java: `boolean isValid(String s) {\n    // 请实现\n}`,
+      python: `def is_valid(s):\n    pass`
+    },
+    solutions: {
+      c: `int isValid(char* s) {\n    char stack[10001];\n    int top = 0;\n    for (int i = 0; s[i]; i++) {\n        if (s[i] == '(' || s[i] == '[' || s[i] == '{') stack[top++] = s[i];\n        else {\n            if (top == 0) return 0;\n            char c = stack[--top];\n            if ((s[i] == ')' && c != '(') || (s[i] == ']' && c != '[') || (s[i] == '}' && c != '{'))\n                return 0;\n        }\n    }\n    return top == 0;\n}`,
+      cpp: `bool isValid(string s) {\n    stack<char> st;\n    for (char c : s) {\n        if (c == '(' || c == '[' || c == '{') st.push(c);\n        else {\n            if (st.empty()) return false;\n            char top = st.top(); st.pop();\n            if ((c == ')' && top != '(') || (c == ']' && top != '[') || (c == '}' && top != '{'))\n                return false;\n        }\n    }\n    return st.empty();\n}`,
+      java: `boolean isValid(String s) {\n    Stack<Character> st = new Stack<>();\n    for (char c : s.toCharArray()) {\n        if (c == '(' || c == '[' || c == '{') st.push(c);\n        else {\n            if (st.isEmpty()) return false;\n            char top = st.pop();\n            if ((c == ')' && top != '(') || (c == ']' && top != '[') || (c == '}' && top != '{'))\n                return false;\n        }\n    }\n    return st.isEmpty();\n}`,
+      python: `def is_valid(s):\n    stack = []\n    pairs = {')': '(', ']': '[', '}': '{'}\n    for c in s:\n        if c in '([{':\n            stack.append(c)\n        else:\n            if not stack or stack.pop() != pairs[c]:\n                return False\n    return len(stack) == 0`
+    },
+    testCases: [{ input: 's="()[]{}"', expectedOutput: 'true', description: '有效' }],
+    hints: ['左括号入栈', '右括号时检查栈顶是否匹配'],
+    explanation: '经典栈应用：左括号入栈，右括号出栈匹配，最后栈空则有效'
+  },
+];
+
+// ==================== 经典DP问题 ====================
+export const classicDpProblems: Exercise[] = [
+  {
+    id: 'dp-stock-1', category: '动态规划', title: '买卖股票的最佳时机', difficulty: 'easy', type: 'coding',
+    description: '只能买卖一次，求最大利润',
+    templates: {
+      c: `int maxProfit(int* prices, int n) {\n    // 请实现\n}`,
+      cpp: `int maxProfit(vector<int>& prices) {\n    // 请实现\n}`,
+      java: `int maxProfit(int[] prices) {\n    // 请实现\n}`,
+      python: `def max_profit(prices):\n    pass`
+    },
+    solutions: {
+      c: `int maxProfit(int* prices, int n) {\n    int minPrice = prices[0], maxProfit = 0;\n    for (int i = 1; i < n; i++) {\n        if (prices[i] < minPrice) minPrice = prices[i];\n        else if (prices[i] - minPrice > maxProfit) maxProfit = prices[i] - minPrice;\n    }\n    return maxProfit;\n}`,
+      cpp: `int maxProfit(vector<int>& prices) {\n    int minPrice = INT_MAX, maxProfit = 0;\n    for (int p : prices) {\n        minPrice = min(minPrice, p);\n        maxProfit = max(maxProfit, p - minPrice);\n    }\n    return maxProfit;\n}`,
+      java: `int maxProfit(int[] prices) {\n    int minPrice = Integer.MAX_VALUE, maxProfit = 0;\n    for (int p : prices) {\n        minPrice = Math.min(minPrice, p);\n        maxProfit = Math.max(maxProfit, p - minPrice);\n    }\n    return maxProfit;\n}`,
+      python: `def max_profit(prices):\n    min_price = float('inf')\n    max_profit = 0\n    for p in prices:\n        min_price = min(min_price, p)\n        max_profit = max(max_profit, p - min_price)\n    return max_profit`
+    },
+    testCases: [{ input: 'prices=[7,1,5,3,6,4]', expectedOutput: '5', description: '1买6卖' }],
+    hints: ['记录历史最低价', '当前价-最低价=当前能获得的最大利润'],
+    explanation: '一次遍历：维护最低价和最大利润，每天更新'
+  },
+  {
+    id: 'dp-stock-2', category: '动态规划', title: '买卖股票II(多次交易)', difficulty: 'medium', type: 'coding',
+    description: '可以多次买卖，求最大利润',
+    templates: {
+      c: `int maxProfit(int* prices, int n) {\n    // 请实现\n}`,
+      cpp: `int maxProfit(vector<int>& prices) {\n    // 请实现\n}`,
+      java: `int maxProfit(int[] prices) {\n    // 请实现\n}`,
+      python: `def max_profit(prices):\n    pass`
+    },
+    solutions: {
+      c: `int maxProfit(int* prices, int n) {\n    int profit = 0;\n    for (int i = 1; i < n; i++)\n        if (prices[i] > prices[i-1])\n            profit += prices[i] - prices[i-1];\n    return profit;\n}`,
+      cpp: `int maxProfit(vector<int>& prices) {\n    int profit = 0;\n    for (int i = 1; i < prices.size(); i++)\n        if (prices[i] > prices[i-1])\n            profit += prices[i] - prices[i-1];\n    return profit;\n}`,
+      java: `int maxProfit(int[] prices) {\n    int profit = 0;\n    for (int i = 1; i < prices.length; i++)\n        if (prices[i] > prices[i-1])\n            profit += prices[i] - prices[i-1];\n    return profit;\n}`,
+      python: `def max_profit(prices):\n    return sum(max(0, prices[i] - prices[i-1]) for i in range(1, len(prices)))`
+    },
+    testCases: [{ input: 'prices=[7,1,5,3,6,4]', expectedOutput: '7', description: '1买5卖+3买6卖' }],
+    hints: ['贪心：只要后一天比前一天高就累加差价', '等价于捕获所有上涨段'],
+    explanation: '贪心：收集所有上涨的差价，等价于低买高卖多次'
+  },
+  {
+    id: 'dp-rob-1', category: '动态规划', title: '打家劫舍', difficulty: 'medium', type: 'coding',
+    description: '不能偷相邻房屋，求能偷到的最高金额',
+    templates: {
+      c: `int rob(int* nums, int n) {\n    // 请实现\n}`,
+      cpp: `int rob(vector<int>& nums) {\n    // 请实现\n}`,
+      java: `int rob(int[] nums) {\n    // 请实现\n}`,
+      python: `def rob(nums):\n    pass`
+    },
+    solutions: {
+      c: `int rob(int* nums, int n) {\n    if (n == 0) return 0;\n    if (n == 1) return nums[0];\n    int prev2 = nums[0], prev1 = nums[0] > nums[1] ? nums[0] : nums[1];\n    for (int i = 2; i < n; i++) {\n        int curr = prev1 > prev2 + nums[i] ? prev1 : prev2 + nums[i];\n        prev2 = prev1;\n        prev1 = curr;\n    }\n    return prev1;\n}`,
+      cpp: `int rob(vector<int>& nums) {\n    int n = nums.size();\n    if (n == 0) return 0;\n    if (n == 1) return nums[0];\n    int prev2 = nums[0], prev1 = max(nums[0], nums[1]);\n    for (int i = 2; i < n; i++) {\n        int curr = max(prev1, prev2 + nums[i]);\n        prev2 = prev1;\n        prev1 = curr;\n    }\n    return prev1;\n}`,
+      java: `int rob(int[] nums) {\n    if (nums.length == 0) return 0;\n    if (nums.length == 1) return nums[0];\n    int prev2 = nums[0], prev1 = Math.max(nums[0], nums[1]);\n    for (int i = 2; i < nums.length; i++) {\n        int curr = Math.max(prev1, prev2 + nums[i]);\n        prev2 = prev1;\n        prev1 = curr;\n    }\n    return prev1;\n}`,
+      python: `def rob(nums):\n    if not nums: return 0\n    if len(nums) == 1: return nums[0]\n    prev2, prev1 = nums[0], max(nums[0], nums[1])\n    for i in range(2, len(nums)):\n        prev2, prev1 = prev1, max(prev1, prev2 + nums[i])\n    return prev1`
+    },
+    testCases: [{ input: 'nums=[1,2,3,1]', expectedOutput: '4', description: '偷1和3号房' }],
+    hints: ['dp[i] = max(dp[i-1], dp[i-2]+nums[i])', '偷或不偷当前房'],
+    explanation: `dp[i] = 到第i间房能偷的最大金额
+= max(不偷当前dp[i-1], 偷当前dp[i-2]+nums[i])`
+  },
+  {
+    id: 'dp-jump-game', category: '动态规划', title: '跳跃游戏', difficulty: 'medium', type: 'coding',
+    description: '数组元素表示最大跳跃长度，判断能否到达最后位置',
+    templates: {
+      c: `int canJump(int* nums, int n) {\n    // 请实现\n}`,
+      cpp: `bool canJump(vector<int>& nums) {\n    // 请实现\n}`,
+      java: `boolean canJump(int[] nums) {\n    // 请实现\n}`,
+      python: `def can_jump(nums):\n    pass`
+    },
+    solutions: {
+      c: `int canJump(int* nums, int n) {\n    int maxReach = 0;\n    for (int i = 0; i < n && i <= maxReach; i++) {\n        if (i + nums[i] > maxReach) maxReach = i + nums[i];\n        if (maxReach >= n - 1) return 1;\n    }\n    return 0;\n}`,
+      cpp: `bool canJump(vector<int>& nums) {\n    int maxReach = 0;\n    for (int i = 0; i < nums.size() && i <= maxReach; i++) {\n        maxReach = max(maxReach, i + nums[i]);\n        if (maxReach >= nums.size() - 1) return true;\n    }\n    return false;\n}`,
+      java: `boolean canJump(int[] nums) {\n    int maxReach = 0;\n    for (int i = 0; i < nums.length && i <= maxReach; i++) {\n        maxReach = Math.max(maxReach, i + nums[i]);\n        if (maxReach >= nums.length - 1) return true;\n    }\n    return false;\n}`,
+      python: `def can_jump(nums):\n    max_reach = 0\n    for i, jump in enumerate(nums):\n        if i > max_reach: return False\n        max_reach = max(max_reach, i + jump)\n        if max_reach >= len(nums) - 1: return True\n    return True`
+    },
+    testCases: [{ input: 'nums=[2,3,1,1,4]', expectedOutput: 'true', description: '能到达' }],
+    hints: ['贪心：维护能到达的最远位置', '若当前位置超过最远位置则不可达'],
+    explanation: '贪心：遍历时更新能到达的最远位置，若能覆盖终点则可达'
+  },
+  {
+    id: 'dp-climb-stairs', category: '动态规划', title: '爬楼梯', difficulty: 'easy', type: 'coding',
+    description: '每次爬1或2阶，有多少种方法爬到第n阶',
+    templates: {
+      c: `int climbStairs(int n) {\n    // 请实现\n}`,
+      cpp: `int climbStairs(int n) {\n    // 请实现\n}`,
+      java: `int climbStairs(int n) {\n    // 请实现\n}`,
+      python: `def climb_stairs(n):\n    pass`
+    },
+    solutions: {
+      c: `int climbStairs(int n) {\n    if (n <= 2) return n;\n    int a = 1, b = 2;\n    for (int i = 3; i <= n; i++) {\n        int c = a + b;\n        a = b;\n        b = c;\n    }\n    return b;\n}`,
+      cpp: `int climbStairs(int n) {\n    if (n <= 2) return n;\n    int a = 1, b = 2;\n    for (int i = 3; i <= n; i++) {\n        int c = a + b;\n        a = b; b = c;\n    }\n    return b;\n}`,
+      java: `int climbStairs(int n) {\n    if (n <= 2) return n;\n    int a = 1, b = 2;\n    for (int i = 3; i <= n; i++) {\n        int c = a + b;\n        a = b; b = c;\n    }\n    return b;\n}`,
+      python: `def climb_stairs(n):\n    if n <= 2: return n\n    a, b = 1, 2\n    for _ in range(3, n + 1):\n        a, b = b, a + b\n    return b`
+    },
+    testCases: [{ input: 'n=3', expectedOutput: '3', description: '1+1+1,1+2,2+1' }],
+    hints: ['dp[n] = dp[n-1] + dp[n-2]', '斐波那契数列'],
+    explanation: '到第n阶 = 从n-1阶爬1阶 + 从n-2阶爬2阶，即斐波那契'
+  },
+];
+
+// ==================== 设计类题目 ====================
+export const designExercises: Exercise[] = [
+  {
+    id: 'design-lru', category: '设计', title: 'LRU缓存', difficulty: 'medium', type: 'coding',
+    description: '实现LRU(最近最少使用)缓存，get和put操作O(1)',
+    templates: {
+      c: `// 需要哈希表+双向链表`,
+      cpp: `class LRUCache {\npublic:\n    LRUCache(int capacity) {\n        // 初始化\n    }\n    int get(int key) {\n        // 获取并更新为最近使用\n    }\n    void put(int key, int value) {\n        // 插入或更新\n    }\n};`,
+      java: `class LRUCache {\n    public LRUCache(int capacity) {\n        // 初始化\n    }\n    public int get(int key) {\n        // 获取\n    }\n    public void put(int key, int value) {\n        // 插入或更新\n    }\n}`,
+      python: `class LRUCache:\n    def __init__(self, capacity):\n        pass\n    def get(self, key):\n        pass\n    def put(self, key, value):\n        pass`
+    },
+    solutions: {
+      c: `// 实现较长，需要手写哈希表和双向链表`,
+      cpp: `class LRUCache {\n    int cap;\n    list<pair<int, int>> lst;  // 双向链表\n    unordered_map<int, list<pair<int,int>>::iterator> mp;  // key到节点的映射\npublic:\n    LRUCache(int capacity) : cap(capacity) {}\n    int get(int key) {\n        if (!mp.count(key)) return -1;\n        lst.splice(lst.begin(), lst, mp[key]);  // 移到头部\n        return mp[key]->second;\n    }\n    void put(int key, int value) {\n        if (mp.count(key)) {\n            mp[key]->second = value;\n            lst.splice(lst.begin(), lst, mp[key]);\n        } else {\n            if (lst.size() == cap) {\n                mp.erase(lst.back().first);\n                lst.pop_back();\n            }\n            lst.push_front({key, value});\n            mp[key] = lst.begin();\n        }\n    }\n};`,
+      java: `class LRUCache extends LinkedHashMap<Integer, Integer> {\n    private int capacity;\n    public LRUCache(int capacity) {\n        super(capacity, 0.75f, true);\n        this.capacity = capacity;\n    }\n    public int get(int key) {\n        return super.getOrDefault(key, -1);\n    }\n    public void put(int key, int value) {\n        super.put(key, value);\n    }\n    @Override\n    protected boolean removeEldestEntry(Map.Entry<Integer, Integer> eldest) {\n        return size() > capacity;\n    }\n}`,
+      python: `class LRUCache:\n    def __init__(self, capacity):\n        from collections import OrderedDict\n        self.cache = OrderedDict()\n        self.cap = capacity\n    def get(self, key):\n        if key not in self.cache: return -1\n        self.cache.move_to_end(key)\n        return self.cache[key]\n    def put(self, key, value):\n        if key in self.cache:\n            self.cache.move_to_end(key)\n        self.cache[key] = value\n        if len(self.cache) > self.cap:\n            self.cache.popitem(last=False)`
+    },
+    testCases: [{ input: 'LRUCache(2), put(1,1), put(2,2), get(1), put(3,3), get(2)', expectedOutput: '1, -1', description: '2被淘汰' }],
+    hints: ['哈希表O(1)查找', '双向链表O(1)增删和移动'],
+    explanation: `【哈希表+双向链表】
+- 哈希表: key → 链表节点
+- 双向链表: 最近使用的在头部
+- get: 存在则移到头部
+- put: 满则删尾部，新/更新放头部`
+  },
+  {
+    id: 'design-min-stack', category: '设计', title: '最小栈', difficulty: 'medium', type: 'coding',
+    description: '实现支持O(1)获取最小值的栈',
+    templates: {
+      c: `typedef struct {\n    // 定义结构\n} MinStack;`,
+      cpp: `class MinStack {\npublic:\n    MinStack() {}\n    void push(int val) {}\n    void pop() {}\n    int top() {}\n    int getMin() {}\n};`,
+      java: `class MinStack {\n    public MinStack() {}\n    public void push(int val) {}\n    public void pop() {}\n    public int top() {}\n    public int getMin() {}\n}`,
+      python: `class MinStack:\n    def __init__(self):\n        pass\n    def push(self, val):\n        pass\n    def pop(self):\n        pass\n    def top(self):\n        pass\n    def get_min(self):\n        pass`
+    },
+    solutions: {
+      c: `typedef struct {\n    int* data;\n    int* minStack;\n    int top;\n    int minTop;\n} MinStack;\n// 实现省略`,
+      cpp: `class MinStack {\n    stack<int> st, minSt;\npublic:\n    void push(int val) {\n        st.push(val);\n        if (minSt.empty() || val <= minSt.top())\n            minSt.push(val);\n    }\n    void pop() {\n        if (st.top() == minSt.top()) minSt.pop();\n        st.pop();\n    }\n    int top() { return st.top(); }\n    int getMin() { return minSt.top(); }\n};`,
+      java: `class MinStack {\n    Stack<Integer> st = new Stack<>();\n    Stack<Integer> minSt = new Stack<>();\n    public void push(int val) {\n        st.push(val);\n        if (minSt.isEmpty() || val <= minSt.peek())\n            minSt.push(val);\n    }\n    public void pop() {\n        if (st.pop().equals(minSt.peek())) minSt.pop();\n    }\n    public int top() { return st.peek(); }\n    public int getMin() { return minSt.peek(); }\n}`,
+      python: `class MinStack:\n    def __init__(self):\n        self.st = []\n        self.min_st = []\n    def push(self, val):\n        self.st.append(val)\n        if not self.min_st or val <= self.min_st[-1]:\n            self.min_st.append(val)\n    def pop(self):\n        if self.st.pop() == self.min_st[-1]:\n            self.min_st.pop()\n    def top(self):\n        return self.st[-1]\n    def get_min(self):\n        return self.min_st[-1]`
+    },
+    testCases: [{ input: 'push(-2), push(0), push(-3), getMin(), pop(), getMin()', expectedOutput: '-3, -2', description: '最小值变化' }],
+    hints: ['辅助栈存储当前最小值', 'push时若≤当前最小则也入辅助栈'],
+    explanation: '用辅助栈同步存储每个状态的最小值，空间换时间'
+  },
+];
+
+// ==================== 更多字符串题 ====================
+export const moreStringExercises: Exercise[] = [
+  {
+    id: 'str-palindrome', category: '字符串', title: '验证回文串', difficulty: 'easy', type: 'coding',
+    description: '判断字符串是否是回文（只考虑字母数字，忽略大小写）',
+    templates: {
+      c: `int isPalindrome(char* s) {\n    // 请实现\n}`,
+      cpp: `bool isPalindrome(string s) {\n    // 请实现\n}`,
+      java: `boolean isPalindrome(String s) {\n    // 请实现\n}`,
+      python: `def is_palindrome(s):\n    pass`
+    },
+    solutions: {
+      c: `int isAlnum(char c) { return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9'); }\nchar toLower(char c) { return c >= 'A' && c <= 'Z' ? c + 32 : c; }\nint isPalindrome(char* s) {\n    int l = 0, r = strlen(s) - 1;\n    while (l < r) {\n        while (l < r && !isAlnum(s[l])) l++;\n        while (l < r && !isAlnum(s[r])) r--;\n        if (toLower(s[l]) != toLower(s[r])) return 0;\n        l++; r--;\n    }\n    return 1;\n}`,
+      cpp: `bool isPalindrome(string s) {\n    int l = 0, r = s.size() - 1;\n    while (l < r) {\n        while (l < r && !isalnum(s[l])) l++;\n        while (l < r && !isalnum(s[r])) r--;\n        if (tolower(s[l]) != tolower(s[r])) return false;\n        l++; r--;\n    }\n    return true;\n}`,
+      java: `boolean isPalindrome(String s) {\n    int l = 0, r = s.length() - 1;\n    while (l < r) {\n        while (l < r && !Character.isLetterOrDigit(s.charAt(l))) l++;\n        while (l < r && !Character.isLetterOrDigit(s.charAt(r))) r--;\n        if (Character.toLowerCase(s.charAt(l)) != Character.toLowerCase(s.charAt(r)))\n            return false;\n        l++; r--;\n    }\n    return true;\n}`,
+      python: `def is_palindrome(s):\n    s = ''.join(c.lower() for c in s if c.isalnum())\n    return s == s[::-1]`
+    },
+    testCases: [{ input: 's="A man, a plan, a canal: Panama"', expectedOutput: 'true', description: '是回文' }],
+    hints: ['双指针从两端向中间', '跳过非字母数字，忽略大小写比较'],
+    explanation: '双指针：跳过非字母数字字符，比较时忽略大小写'
+  },
+  {
+    id: 'str-longest-palindrome', category: '字符串', title: '最长回文子串', difficulty: 'medium', type: 'coding',
+    description: '返回字符串中最长的回文子串',
+    templates: {
+      c: `char* longestPalindrome(char* s) {\n    // 请实现\n}`,
+      cpp: `string longestPalindrome(string s) {\n    // 请实现\n}`,
+      java: `String longestPalindrome(String s) {\n    // 请实现\n}`,
+      python: `def longest_palindrome(s):\n    pass`
+    },
+    solutions: {
+      c: `// 中心扩展法，实现较长`,
+      cpp: `string longestPalindrome(string s) {\n    int n = s.size(), start = 0, maxLen = 1;\n    auto expand = [&](int l, int r) {\n        while (l >= 0 && r < n && s[l] == s[r]) { l--; r++; }\n        return r - l - 1;\n    };\n    for (int i = 0; i < n; i++) {\n        int len1 = expand(i, i);      // 奇数长度\n        int len2 = expand(i, i + 1);  // 偶数长度\n        int len = max(len1, len2);\n        if (len > maxLen) {\n            maxLen = len;\n            start = i - (len - 1) / 2;\n        }\n    }\n    return s.substr(start, maxLen);\n}`,
+      java: `String longestPalindrome(String s) {\n    int start = 0, maxLen = 1;\n    for (int i = 0; i < s.length(); i++) {\n        int len1 = expand(s, i, i);\n        int len2 = expand(s, i, i + 1);\n        int len = Math.max(len1, len2);\n        if (len > maxLen) {\n            maxLen = len;\n            start = i - (len - 1) / 2;\n        }\n    }\n    return s.substring(start, start + maxLen);\n}\nint expand(String s, int l, int r) {\n    while (l >= 0 && r < s.length() && s.charAt(l) == s.charAt(r)) { l--; r++; }\n    return r - l - 1;\n}`,
+      python: `def longest_palindrome(s):\n    def expand(l, r):\n        while l >= 0 and r < len(s) and s[l] == s[r]:\n            l -= 1; r += 1\n        return s[l+1:r]\n    res = ''\n    for i in range(len(s)):\n        p1 = expand(i, i)\n        p2 = expand(i, i + 1)\n        res = max(res, p1, p2, key=len)\n    return res`
+    },
+    testCases: [{ input: 's="babad"', expectedOutput: '"bab"或"aba"', description: '两个答案都对' }],
+    hints: ['中心扩展法', '分别考虑奇数长度和偶数长度'],
+    explanation: `【中心扩展】O(n²)
+以每个位置为中心向两边扩展
+注意分奇偶：单字符中心 vs 双字符中心`
+  },
+  {
+    id: 'str-group-anagrams', category: '字符串', title: '字母异位词分组', difficulty: 'medium', type: 'coding',
+    description: '将字母异位词（字母相同但顺序不同）分组',
+    templates: {
+      c: `char*** groupAnagrams(char** strs, int n, int* returnSize, int** returnColumnSizes) {\n    // 请实现\n}`,
+      cpp: `vector<vector<string>> groupAnagrams(vector<string>& strs) {\n    // 请实现\n}`,
+      java: `List<List<String>> groupAnagrams(String[] strs) {\n    // 请实现\n}`,
+      python: `def group_anagrams(strs):\n    pass`
+    },
+    solutions: {
+      c: `// 需要哈希表，实现较长`,
+      cpp: `vector<vector<string>> groupAnagrams(vector<string>& strs) {\n    unordered_map<string, vector<string>> mp;\n    for (auto& s : strs) {\n        string key = s;\n        sort(key.begin(), key.end());\n        mp[key].push_back(s);\n    }\n    vector<vector<string>> res;\n    for (auto& [k, v] : mp) res.push_back(v);\n    return res;\n}`,
+      java: `List<List<String>> groupAnagrams(String[] strs) {\n    Map<String, List<String>> mp = new HashMap<>();\n    for (String s : strs) {\n        char[] arr = s.toCharArray();\n        Arrays.sort(arr);\n        String key = new String(arr);\n        mp.computeIfAbsent(key, k -> new ArrayList<>()).add(s);\n    }\n    return new ArrayList<>(mp.values());\n}`,
+      python: `def group_anagrams(strs):\n    from collections import defaultdict\n    mp = defaultdict(list)\n    for s in strs:\n        key = ''.join(sorted(s))\n        mp[key].append(s)\n    return list(mp.values())`
+    },
+    testCases: [{ input: 'strs=["eat","tea","tan","ate","nat","bat"]', expectedOutput: '[["bat"],["nat","tan"],["ate","eat","tea"]]', description: '三组' }],
+    hints: ['排序后的字符串作为key', '相同key的放一组'],
+    explanation: '字母异位词排序后相同，用排序后的字符串作为哈希表的key'
+  },
+];
+
 // 所有练习题汇总
 export const allExercises: Exercise[] = [
   ...linkedListExercises,
@@ -3335,6 +3664,10 @@ export const allExercises: Exercise[] = [
   ...matrixExercises,
   ...intervalExercises,
   ...moreGraphExercises,
+  ...leetcodeClassicExercises,
+  ...classicDpProblems,
+  ...designExercises,
+  ...moreStringExercises,
 ];
 
 // 导出递归分类供其他模块使用
