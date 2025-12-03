@@ -2522,6 +2522,466 @@ tails[i] = 长度为i+1的LIS的最小结尾元素
   },
 ];
 
+// ==================== 数学运算 ====================
+export const mathExercises: Exercise[] = [
+  {
+    id: 'math-gcd', category: '数学', title: '最大公约数', difficulty: 'easy', type: 'coding',
+    description: '使用辗转相除法求两个正整数的最大公约数',
+    templates: {
+      c: `int gcd(int a, int b) {\n    // 请实现辗转相除法\n}`,
+      cpp: `int gcd(int a, int b) {\n    // 请实现\n}`,
+      java: `int gcd(int a, int b) {\n    // 请实现\n}`,
+      python: `def gcd(a, b):\n    pass`
+    },
+    solutions: {
+      c: `int gcd(int a, int b) {\n    while (b != 0) {\n        int t = b;\n        b = a % b;\n        a = t;\n    }\n    return a;\n}`,
+      cpp: `int gcd(int a, int b) {\n    return b == 0 ? a : gcd(b, a % b);\n}`,
+      java: `int gcd(int a, int b) {\n    return b == 0 ? a : gcd(b, a % b);\n}`,
+      python: `def gcd(a, b):\n    return a if b == 0 else gcd(b, a % b)`
+    },
+    testCases: [{ input: 'a=12, b=18', expectedOutput: '6', description: '12和18的GCD' }],
+    hints: ['gcd(a,b) = gcd(b, a%b)', '当b为0时返回a'],
+    explanation: '辗转相除法：gcd(a,b) = gcd(b, a mod b)，直到b=0'
+  },
+  {
+    id: 'math-lcm', category: '数学', title: '最小公倍数', difficulty: 'easy', type: 'coding',
+    description: '求两个正整数的最小公倍数',
+    templates: {
+      c: `int lcm(int a, int b) {\n    // 提示：lcm = a*b/gcd(a,b)\n}`,
+      cpp: `long long lcm(int a, int b) {\n    // 请实现\n}`,
+      java: `long lcm(int a, int b) {\n    // 请实现\n}`,
+      python: `def lcm(a, b):\n    pass`
+    },
+    solutions: {
+      c: `int gcd(int a, int b) { return b == 0 ? a : gcd(b, a % b); }\nint lcm(int a, int b) {\n    return a / gcd(a, b) * b;  // 先除后乘防溢出\n}`,
+      cpp: `long long lcm(int a, int b) {\n    auto gcd = [](int a, int b) { while(b) { int t=b; b=a%b; a=t; } return a; };\n    return (long long)a / gcd(a, b) * b;\n}`,
+      java: `long lcm(int a, int b) {\n    return (long)a / gcd(a, b) * b;\n}\nint gcd(int a, int b) { return b == 0 ? a : gcd(b, a % b); }`,
+      python: `def lcm(a, b):\n    from math import gcd\n    return a // gcd(a, b) * b`
+    },
+    testCases: [{ input: 'a=4, b=6', expectedOutput: '12', description: '4和6的LCM' }],
+    hints: ['lcm(a,b) = a * b / gcd(a,b)', '先除后乘防止溢出'],
+    explanation: '最小公倍数公式：lcm(a,b) = a×b÷gcd(a,b)'
+  },
+  {
+    id: 'math-fast-pow', category: '数学', title: '快速幂', difficulty: 'medium', type: 'coding',
+    description: '计算 a^n mod m，要求时间复杂度O(log n)',
+    templates: {
+      c: `long long fastPow(long long a, long long n, long long m) {\n    // 请实现快速幂\n}`,
+      cpp: `long long fastPow(long long a, long long n, long long m) {\n    // 请实现\n}`,
+      java: `long fastPow(long a, long n, long m) {\n    // 请实现\n}`,
+      python: `def fast_pow(a, n, m):\n    pass`
+    },
+    solutions: {
+      c: `long long fastPow(long long a, long long n, long long m) {\n    long long res = 1;\n    a %= m;\n    while (n > 0) {\n        if (n & 1) res = res * a % m;\n        a = a * a % m;\n        n >>= 1;\n    }\n    return res;\n}`,
+      cpp: `long long fastPow(long long a, long long n, long long m) {\n    long long res = 1;\n    a %= m;\n    while (n > 0) {\n        if (n & 1) res = res * a % m;\n        a = a * a % m;\n        n >>= 1;\n    }\n    return res;\n}`,
+      java: `long fastPow(long a, long n, long m) {\n    long res = 1;\n    a %= m;\n    while (n > 0) {\n        if ((n & 1) == 1) res = res * a % m;\n        a = a * a % m;\n        n >>= 1;\n    }\n    return res;\n}`,
+      python: `def fast_pow(a, n, m):\n    res = 1\n    a %= m\n    while n > 0:\n        if n & 1:\n            res = res * a % m\n        a = a * a % m\n        n >>= 1\n    return res`
+    },
+    testCases: [{ input: 'a=2, n=10, m=1000', expectedOutput: '24', description: '2^10 mod 1000 = 1024 mod 1000' }],
+    hints: ['n为奇数时乘a', '每次a自乘，n右移一位'],
+    explanation: `【快速幂】O(log n)
+a^n = (a^(n/2))^2 × a^(n%2)
+二进制思想：将n拆成二进制，每位对应a的某次幂`
+  },
+  {
+    id: 'math-is-prime', category: '数学', title: '素数判断', difficulty: 'easy', type: 'coding',
+    description: '判断一个正整数是否为素数',
+    templates: {
+      c: `int isPrime(int n) {\n    // 返回1表示素数，0表示非素数\n}`,
+      cpp: `bool isPrime(int n) {\n    // 请实现\n}`,
+      java: `boolean isPrime(int n) {\n    // 请实现\n}`,
+      python: `def is_prime(n):\n    pass`
+    },
+    solutions: {
+      c: `int isPrime(int n) {\n    if (n < 2) return 0;\n    if (n == 2) return 1;\n    if (n % 2 == 0) return 0;\n    for (int i = 3; i * i <= n; i += 2) {\n        if (n % i == 0) return 0;\n    }\n    return 1;\n}`,
+      cpp: `bool isPrime(int n) {\n    if (n < 2) return false;\n    if (n == 2) return true;\n    if (n % 2 == 0) return false;\n    for (int i = 3; i * i <= n; i += 2)\n        if (n % i == 0) return false;\n    return true;\n}`,
+      java: `boolean isPrime(int n) {\n    if (n < 2) return false;\n    if (n == 2) return true;\n    if (n % 2 == 0) return false;\n    for (int i = 3; i * i <= n; i += 2)\n        if (n % i == 0) return false;\n    return true;\n}`,
+      python: `def is_prime(n):\n    if n < 2: return False\n    if n == 2: return True\n    if n % 2 == 0: return False\n    for i in range(3, int(n**0.5) + 1, 2):\n        if n % i == 0: return False\n    return True`
+    },
+    testCases: [{ input: 'n=17', expectedOutput: 'true', description: '17是素数' }],
+    hints: ['只需检查到√n', '跳过偶数可优化'],
+    explanation: '素数判断只需检查2到√n，因为如果n=a×b，必有一个≤√n'
+  },
+  {
+    id: 'math-sieve', category: '数学', title: '埃氏筛法', difficulty: 'medium', type: 'coding',
+    description: '使用埃拉托斯特尼筛法找出n以内的所有素数',
+    templates: {
+      c: `int* sieve(int n, int* count) {\n    // 返回素数数组，count存素数个数\n}`,
+      cpp: `vector<int> sieve(int n) {\n    // 返回n以内所有素数\n}`,
+      java: `List<Integer> sieve(int n) {\n    // 返回n以内所有素数\n}`,
+      python: `def sieve(n):\n    # 返回n以内所有素数\n    pass`
+    },
+    solutions: {
+      c: `int* sieve(int n, int* count) {\n    int* isPrime = calloc(n + 1, sizeof(int));\n    for (int i = 2; i <= n; i++) isPrime[i] = 1;\n    for (int i = 2; i * i <= n; i++) {\n        if (isPrime[i]) {\n            for (int j = i * i; j <= n; j += i)\n                isPrime[j] = 0;\n        }\n    }\n    *count = 0;\n    for (int i = 2; i <= n; i++) if (isPrime[i]) (*count)++;\n    int* primes = malloc(*count * sizeof(int));\n    int idx = 0;\n    for (int i = 2; i <= n; i++) if (isPrime[i]) primes[idx++] = i;\n    return primes;\n}`,
+      cpp: `vector<int> sieve(int n) {\n    vector<bool> isPrime(n + 1, true);\n    isPrime[0] = isPrime[1] = false;\n    for (int i = 2; i * i <= n; i++) {\n        if (isPrime[i]) {\n            for (int j = i * i; j <= n; j += i)\n                isPrime[j] = false;\n        }\n    }\n    vector<int> primes;\n    for (int i = 2; i <= n; i++)\n        if (isPrime[i]) primes.push_back(i);\n    return primes;\n}`,
+      java: `List<Integer> sieve(int n) {\n    boolean[] isPrime = new boolean[n + 1];\n    Arrays.fill(isPrime, true);\n    isPrime[0] = isPrime[1] = false;\n    for (int i = 2; i * i <= n; i++) {\n        if (isPrime[i]) {\n            for (int j = i * i; j <= n; j += i)\n                isPrime[j] = false;\n        }\n    }\n    List<Integer> primes = new ArrayList<>();\n    for (int i = 2; i <= n; i++)\n        if (isPrime[i]) primes.add(i);\n    return primes;\n}`,
+      python: `def sieve(n):\n    is_prime = [True] * (n + 1)\n    is_prime[0] = is_prime[1] = False\n    for i in range(2, int(n**0.5) + 1):\n        if is_prime[i]:\n            for j in range(i*i, n + 1, i):\n                is_prime[j] = False\n    return [i for i in range(2, n + 1) if is_prime[i]]`
+    },
+    testCases: [{ input: 'n=20', expectedOutput: '[2,3,5,7,11,13,17,19]', description: '20以内的素数' }],
+    hints: ['从i*i开始筛（更小的倍数已被筛过）', '只需遍历到√n'],
+    explanation: `【埃氏筛】O(n log log n)
+从2开始，标记所有倍数为合数
+优化：从i²开始筛（2i,3i...已被2,3...筛过）`
+  },
+  {
+    id: 'math-fibonacci', category: '数学', title: '斐波那契数列', difficulty: 'easy', type: 'coding',
+    description: '求斐波那契数列第n项（n从0开始），要求O(n)时间O(1)空间',
+    templates: {
+      c: `int fib(int n) {\n    // F(0)=0, F(1)=1, F(n)=F(n-1)+F(n-2)\n}`,
+      cpp: `int fib(int n) {\n    // 请实现\n}`,
+      java: `int fib(int n) {\n    // 请实现\n}`,
+      python: `def fib(n):\n    pass`
+    },
+    solutions: {
+      c: `int fib(int n) {\n    if (n < 2) return n;\n    int a = 0, b = 1;\n    for (int i = 2; i <= n; i++) {\n        int c = a + b;\n        a = b;\n        b = c;\n    }\n    return b;\n}`,
+      cpp: `int fib(int n) {\n    if (n < 2) return n;\n    int a = 0, b = 1;\n    for (int i = 2; i <= n; i++) {\n        int c = a + b;\n        a = b; b = c;\n    }\n    return b;\n}`,
+      java: `int fib(int n) {\n    if (n < 2) return n;\n    int a = 0, b = 1;\n    for (int i = 2; i <= n; i++) {\n        int c = a + b;\n        a = b; b = c;\n    }\n    return b;\n}`,
+      python: `def fib(n):\n    if n < 2: return n\n    a, b = 0, 1\n    for _ in range(2, n + 1):\n        a, b = b, a + b\n    return b`
+    },
+    testCases: [{ input: 'n=10', expectedOutput: '55', description: 'F(10)=55' }],
+    hints: ['用两个变量滚动更新', '不需要数组存储'],
+    explanation: '空间优化：只保留前两个数，滚动更新'
+  },
+];
+
+// ==================== 更多链表题 ====================
+export const moreLinkedListExercises: Exercise[] = [
+  {
+    id: 'll-merge-sorted', category: '链表', title: '合并两个有序链表', difficulty: 'easy', type: 'coding',
+    description: '将两个升序链表合并为一个新的升序链表',
+    templates: {
+      c: `Node* mergeTwoLists(Node* l1, Node* l2) {\n    // 请实现\n}`,
+      cpp: `Node* mergeTwoLists(Node* l1, Node* l2) {\n    // 请实现\n}`,
+      java: `Node mergeTwoLists(Node l1, Node l2) {\n    // 请实现\n}`,
+      python: `def merge_two_lists(l1, l2):\n    pass`
+    },
+    solutions: {
+      c: `Node* mergeTwoLists(Node* l1, Node* l2) {\n    Node dummy = {0, NULL};\n    Node* tail = &dummy;\n    while (l1 && l2) {\n        if (l1->val <= l2->val) {\n            tail->next = l1; l1 = l1->next;\n        } else {\n            tail->next = l2; l2 = l2->next;\n        }\n        tail = tail->next;\n    }\n    tail->next = l1 ? l1 : l2;\n    return dummy.next;\n}`,
+      cpp: `Node* mergeTwoLists(Node* l1, Node* l2) {\n    Node dummy(0);\n    Node* tail = &dummy;\n    while (l1 && l2) {\n        if (l1->val <= l2->val) {\n            tail->next = l1; l1 = l1->next;\n        } else {\n            tail->next = l2; l2 = l2->next;\n        }\n        tail = tail->next;\n    }\n    tail->next = l1 ? l1 : l2;\n    return dummy.next;\n}`,
+      java: `Node mergeTwoLists(Node l1, Node l2) {\n    Node dummy = new Node(0);\n    Node tail = dummy;\n    while (l1 != null && l2 != null) {\n        if (l1.val <= l2.val) {\n            tail.next = l1; l1 = l1.next;\n        } else {\n            tail.next = l2; l2 = l2.next;\n        }\n        tail = tail.next;\n    }\n    tail.next = l1 != null ? l1 : l2;\n    return dummy.next;\n}`,
+      python: `def merge_two_lists(l1, l2):\n    dummy = Node(0)\n    tail = dummy\n    while l1 and l2:\n        if l1.val <= l2.val:\n            tail.next = l1; l1 = l1.next\n        else:\n            tail.next = l2; l2 = l2.next\n        tail = tail.next\n    tail.next = l1 or l2\n    return dummy.next`
+    },
+    testCases: [{ input: 'l1=[1,2,4], l2=[1,3,4]', expectedOutput: '[1,1,2,3,4,4]', description: '合并两个有序链表' }],
+    hints: ['使用哑节点简化边界处理', '比较节点值，小的接入结果链表'],
+    explanation: '双指针遍历两个链表，每次选较小的节点接入结果'
+  },
+  {
+    id: 'll-has-cycle', category: '链表', title: '环形链表检测', difficulty: 'easy', type: 'coding',
+    description: '判断链表中是否有环，要求O(1)空间',
+    templates: {
+      c: `int hasCycle(Node* head) {\n    // 返回1有环，0无环\n}`,
+      cpp: `bool hasCycle(Node* head) {\n    // 请实现\n}`,
+      java: `boolean hasCycle(Node head) {\n    // 请实现\n}`,
+      python: `def has_cycle(head):\n    pass`
+    },
+    solutions: {
+      c: `int hasCycle(Node* head) {\n    Node *slow = head, *fast = head;\n    while (fast && fast->next) {\n        slow = slow->next;\n        fast = fast->next->next;\n        if (slow == fast) return 1;\n    }\n    return 0;\n}`,
+      cpp: `bool hasCycle(Node* head) {\n    Node *slow = head, *fast = head;\n    while (fast && fast->next) {\n        slow = slow->next;\n        fast = fast->next->next;\n        if (slow == fast) return true;\n    }\n    return false;\n}`,
+      java: `boolean hasCycle(Node head) {\n    Node slow = head, fast = head;\n    while (fast != null && fast.next != null) {\n        slow = slow.next;\n        fast = fast.next.next;\n        if (slow == fast) return true;\n    }\n    return false;\n}`,
+      python: `def has_cycle(head):\n    slow = fast = head\n    while fast and fast.next:\n        slow = slow.next\n        fast = fast.next.next\n        if slow == fast:\n            return True\n    return False`
+    },
+    testCases: [{ input: 'head=[3,2,0,-4], pos=1', expectedOutput: 'true', description: '尾连接到索引1' }],
+    hints: ['快慢指针', '快指针每次走2步，慢指针走1步'],
+    explanation: '快慢指针：有环必相遇，无环快指针先到达null'
+  },
+  {
+    id: 'll-find-middle', category: '链表', title: '链表中间节点', difficulty: 'easy', type: 'coding',
+    description: '返回链表的中间节点，如有两个中间节点返回第二个',
+    templates: {
+      c: `Node* middleNode(Node* head) {\n    // 请实现\n}`,
+      cpp: `Node* middleNode(Node* head) {\n    // 请实现\n}`,
+      java: `Node middleNode(Node head) {\n    // 请实现\n}`,
+      python: `def middle_node(head):\n    pass`
+    },
+    solutions: {
+      c: `Node* middleNode(Node* head) {\n    Node *slow = head, *fast = head;\n    while (fast && fast->next) {\n        slow = slow->next;\n        fast = fast->next->next;\n    }\n    return slow;\n}`,
+      cpp: `Node* middleNode(Node* head) {\n    Node *slow = head, *fast = head;\n    while (fast && fast->next) {\n        slow = slow->next;\n        fast = fast->next->next;\n    }\n    return slow;\n}`,
+      java: `Node middleNode(Node head) {\n    Node slow = head, fast = head;\n    while (fast != null && fast.next != null) {\n        slow = slow.next;\n        fast = fast.next.next;\n    }\n    return slow;\n}`,
+      python: `def middle_node(head):\n    slow = fast = head\n    while fast and fast.next:\n        slow = slow.next\n        fast = fast.next.next\n    return slow`
+    },
+    testCases: [{ input: 'head=[1,2,3,4,5]', expectedOutput: '节点3', description: '中间节点' }],
+    hints: ['快慢指针', '快指针到末尾时慢指针在中间'],
+    explanation: '快指针走两步，慢指针走一步，快指针到末尾时慢指针正好在中间'
+  },
+  {
+    id: 'll-remove-nth-from-end', category: '链表', title: '删除倒数第N个节点', difficulty: 'medium', type: 'coding',
+    description: '删除链表的倒数第n个节点，只遍历一次',
+    templates: {
+      c: `Node* removeNthFromEnd(Node* head, int n) {\n    // 请实现\n}`,
+      cpp: `Node* removeNthFromEnd(Node* head, int n) {\n    // 请实现\n}`,
+      java: `Node removeNthFromEnd(Node head, int n) {\n    // 请实现\n}`,
+      python: `def remove_nth_from_end(head, n):\n    pass`
+    },
+    solutions: {
+      c: `Node* removeNthFromEnd(Node* head, int n) {\n    Node dummy = {0, head};\n    Node *fast = &dummy, *slow = &dummy;\n    for (int i = 0; i <= n; i++) fast = fast->next;\n    while (fast) {\n        slow = slow->next;\n        fast = fast->next;\n    }\n    Node* del = slow->next;\n    slow->next = slow->next->next;\n    free(del);\n    return dummy.next;\n}`,
+      cpp: `Node* removeNthFromEnd(Node* head, int n) {\n    Node dummy(0); dummy.next = head;\n    Node *fast = &dummy, *slow = &dummy;\n    for (int i = 0; i <= n; i++) fast = fast->next;\n    while (fast) {\n        slow = slow->next;\n        fast = fast->next;\n    }\n    Node* del = slow->next;\n    slow->next = slow->next->next;\n    delete del;\n    return dummy.next;\n}`,
+      java: `Node removeNthFromEnd(Node head, int n) {\n    Node dummy = new Node(0); dummy.next = head;\n    Node fast = dummy, slow = dummy;\n    for (int i = 0; i <= n; i++) fast = fast.next;\n    while (fast != null) {\n        slow = slow.next;\n        fast = fast.next;\n    }\n    slow.next = slow.next.next;\n    return dummy.next;\n}`,
+      python: `def remove_nth_from_end(head, n):\n    dummy = Node(0); dummy.next = head\n    fast = slow = dummy\n    for _ in range(n + 1):\n        fast = fast.next\n    while fast:\n        slow = slow.next\n        fast = fast.next\n    slow.next = slow.next.next\n    return dummy.next`
+    },
+    testCases: [{ input: 'head=[1,2,3,4,5], n=2', expectedOutput: '[1,2,3,5]', description: '删除倒数第2个' }],
+    hints: ['快指针先走n+1步', '然后同步移动，快指针到末尾时慢指针在目标前'],
+    explanation: '快指针先走n+1步，然后同步移动，这样快指针到null时，慢指针正好在待删节点前面'
+  },
+];
+
+// ==================== 更多二叉树题 ====================
+export const moreTreeExercises: Exercise[] = [
+  {
+    id: 'tree-max-depth', category: '二叉树', title: '二叉树最大深度', difficulty: 'easy', type: 'coding',
+    description: '返回二叉树的最大深度（根节点深度为1）',
+    templates: {
+      c: `int maxDepth(TreeNode* root) {\n    // 请实现\n}`,
+      cpp: `int maxDepth(TreeNode* root) {\n    // 请实现\n}`,
+      java: `int maxDepth(TreeNode root) {\n    // 请实现\n}`,
+      python: `def max_depth(root):\n    pass`
+    },
+    solutions: {
+      c: `int maxDepth(TreeNode* root) {\n    if (!root) return 0;\n    int left = maxDepth(root->left);\n    int right = maxDepth(root->right);\n    return 1 + (left > right ? left : right);\n}`,
+      cpp: `int maxDepth(TreeNode* root) {\n    if (!root) return 0;\n    return 1 + max(maxDepth(root->left), maxDepth(root->right));\n}`,
+      java: `int maxDepth(TreeNode root) {\n    if (root == null) return 0;\n    return 1 + Math.max(maxDepth(root.left), maxDepth(root.right));\n}`,
+      python: `def max_depth(root):\n    if not root: return 0\n    return 1 + max(max_depth(root.left), max_depth(root.right))`
+    },
+    testCases: [{ input: 'root=[3,9,20,null,null,15,7]', expectedOutput: '3', description: '最大深度为3' }],
+    hints: ['递归：1 + max(左子树深度, 右子树深度)', '空节点深度为0'],
+    explanation: '递归计算左右子树深度，取较大值加1'
+  },
+  {
+    id: 'tree-is-symmetric', category: '二叉树', title: '对称二叉树', difficulty: 'easy', type: 'coding',
+    description: '判断一棵二叉树是否轴对称',
+    templates: {
+      c: `int isSymmetric(TreeNode* root) {\n    // 返回1对称，0不对称\n}`,
+      cpp: `bool isSymmetric(TreeNode* root) {\n    // 请实现\n}`,
+      java: `boolean isSymmetric(TreeNode root) {\n    // 请实现\n}`,
+      python: `def is_symmetric(root):\n    pass`
+    },
+    solutions: {
+      c: `int check(TreeNode* l, TreeNode* r) {\n    if (!l && !r) return 1;\n    if (!l || !r) return 0;\n    return l->val == r->val && check(l->left, r->right) && check(l->right, r->left);\n}\nint isSymmetric(TreeNode* root) {\n    return check(root, root);\n}`,
+      cpp: `bool isSymmetric(TreeNode* root) {\n    function<bool(TreeNode*, TreeNode*)> check = [&](TreeNode* l, TreeNode* r) {\n        if (!l && !r) return true;\n        if (!l || !r) return false;\n        return l->val == r->val && check(l->left, r->right) && check(l->right, r->left);\n    };\n    return check(root, root);\n}`,
+      java: `boolean isSymmetric(TreeNode root) {\n    return check(root, root);\n}\nboolean check(TreeNode l, TreeNode r) {\n    if (l == null && r == null) return true;\n    if (l == null || r == null) return false;\n    return l.val == r.val && check(l.left, r.right) && check(l.right, r.left);\n}`,
+      python: `def is_symmetric(root):\n    def check(l, r):\n        if not l and not r: return True\n        if not l or not r: return False\n        return l.val == r.val and check(l.left, r.right) and check(l.right, r.left)\n    return check(root, root)`
+    },
+    testCases: [{ input: 'root=[1,2,2,3,4,4,3]', expectedOutput: 'true', description: '对称' }],
+    hints: ['比较左子树和右子树的镜像关系', '左的左对应右的右，左的右对应右的左'],
+    explanation: '递归比较：左子树的左 vs 右子树的右，左子树的右 vs 右子树的左'
+  },
+  {
+    id: 'tree-invert', category: '二叉树', title: '翻转二叉树', difficulty: 'easy', type: 'coding',
+    description: '将二叉树左右翻转',
+    templates: {
+      c: `TreeNode* invertTree(TreeNode* root) {\n    // 请实现\n}`,
+      cpp: `TreeNode* invertTree(TreeNode* root) {\n    // 请实现\n}`,
+      java: `TreeNode invertTree(TreeNode root) {\n    // 请实现\n}`,
+      python: `def invert_tree(root):\n    pass`
+    },
+    solutions: {
+      c: `TreeNode* invertTree(TreeNode* root) {\n    if (!root) return NULL;\n    TreeNode* temp = root->left;\n    root->left = invertTree(root->right);\n    root->right = invertTree(temp);\n    return root;\n}`,
+      cpp: `TreeNode* invertTree(TreeNode* root) {\n    if (!root) return nullptr;\n    swap(root->left, root->right);\n    invertTree(root->left);\n    invertTree(root->right);\n    return root;\n}`,
+      java: `TreeNode invertTree(TreeNode root) {\n    if (root == null) return null;\n    TreeNode temp = root.left;\n    root.left = invertTree(root.right);\n    root.right = invertTree(temp);\n    return root;\n}`,
+      python: `def invert_tree(root):\n    if not root: return None\n    root.left, root.right = invert_tree(root.right), invert_tree(root.left)\n    return root`
+    },
+    testCases: [{ input: 'root=[4,2,7,1,3,6,9]', expectedOutput: '[4,7,2,9,6,3,1]', description: '翻转' }],
+    hints: ['交换每个节点的左右子节点', '递归处理'],
+    explanation: '递归交换每个节点的左右子树'
+  },
+  {
+    id: 'tree-path-sum', category: '二叉树', title: '路径总和', difficulty: 'easy', type: 'coding',
+    description: '判断是否存在根到叶子的路径，使得节点值之和等于目标值',
+    templates: {
+      c: `int hasPathSum(TreeNode* root, int sum) {\n    // 请实现\n}`,
+      cpp: `bool hasPathSum(TreeNode* root, int sum) {\n    // 请实现\n}`,
+      java: `boolean hasPathSum(TreeNode root, int sum) {\n    // 请实现\n}`,
+      python: `def has_path_sum(root, target_sum):\n    pass`
+    },
+    solutions: {
+      c: `int hasPathSum(TreeNode* root, int sum) {\n    if (!root) return 0;\n    if (!root->left && !root->right) return root->val == sum;\n    return hasPathSum(root->left, sum - root->val) || hasPathSum(root->right, sum - root->val);\n}`,
+      cpp: `bool hasPathSum(TreeNode* root, int sum) {\n    if (!root) return false;\n    if (!root->left && !root->right) return root->val == sum;\n    return hasPathSum(root->left, sum - root->val) || hasPathSum(root->right, sum - root->val);\n}`,
+      java: `boolean hasPathSum(TreeNode root, int sum) {\n    if (root == null) return false;\n    if (root.left == null && root.right == null) return root.val == sum;\n    return hasPathSum(root.left, sum - root.val) || hasPathSum(root.right, sum - root.val);\n}`,
+      python: `def has_path_sum(root, target_sum):\n    if not root: return False\n    if not root.left and not root.right:\n        return root.val == target_sum\n    return has_path_sum(root.left, target_sum - root.val) or has_path_sum(root.right, target_sum - root.val)`
+    },
+    testCases: [{ input: 'root=[5,4,8,11,null,13,4,7,2,null,null,null,1], sum=22', expectedOutput: 'true', description: '5→4→11→2' }],
+    hints: ['递归时减去当前节点值', '叶子节点时判断剩余值是否为节点值'],
+    explanation: '递归减去节点值，到叶子时判断是否正好等于节点值'
+  },
+];
+
+// ==================== 更多填空题 ====================
+export const moreFillBlankExercises: Exercise[] = [
+  {
+    id: 'fb-quick-sort', category: '排序', title: '快速排序填空', difficulty: 'medium', type: 'fillblank',
+    description: '完成快速排序的核心分区操作',
+    codeTemplate: {
+      c: `int partition(int arr[], int low, int high) {
+    int pivot = arr[high];  // 选最后一个为基准
+    int i = low - 1;  // i指向小于pivot的区域边界
+    for (int j = low; j < high; j++) {
+        if (arr[j] < pivot) {
+            i++;
+            ___BLANK1___;  // 交换arr[i]和arr[j]
+        }
+    }
+    ___BLANK2___;  // 将pivot放到正确位置
+    return i + 1;
+}`,
+      cpp: `int partition(vector<int>& arr, int low, int high) {
+    int pivot = arr[high];
+    int i = low - 1;
+    for (int j = low; j < high; j++) {
+        if (arr[j] < pivot) {
+            i++;
+            ___BLANK1___;
+        }
+    }
+    ___BLANK2___;
+    return i + 1;
+}`,
+      java: `int partition(int[] arr, int low, int high) {
+    int pivot = arr[high];
+    int i = low - 1;
+    for (int j = low; j < high; j++) {
+        if (arr[j] < pivot) {
+            i++;
+            ___BLANK1___;
+        }
+    }
+    ___BLANK2___;
+    return i + 1;
+}`,
+      python: `def partition(arr, low, high):
+    pivot = arr[high]
+    i = low - 1
+    for j in range(low, high):
+        if arr[j] < pivot:
+            i += 1
+            ___BLANK1___
+    ___BLANK2___
+    return i + 1`
+    },
+    blanks: [
+      { id: 'BLANK1', answer: 'swap(arr[i], arr[j])', hint: '交换当前元素和边界元素' },
+      { id: 'BLANK2', answer: 'swap(arr[i+1], arr[high])', hint: '将pivot放到边界后一位' }
+    ],
+    explanation: '分区：小于pivot的放左边，大于的放右边，最后pivot归位'
+  },
+  {
+    id: 'fb-binary-search', category: '查找', title: '二分查找填空', difficulty: 'easy', type: 'fillblank',
+    description: '完成二分查找的核心逻辑',
+    codeTemplate: {
+      c: `int binarySearch(int arr[], int n, int target) {
+    int left = 0, right = n - 1;
+    while (___BLANK1___) {  // 循环条件
+        int mid = left + (right - left) / 2;
+        if (arr[mid] == target) return mid;
+        else if (arr[mid] < target) ___BLANK2___;
+        else ___BLANK3___;
+    }
+    return -1;
+}`,
+      cpp: `int binarySearch(vector<int>& arr, int target) {
+    int left = 0, right = arr.size() - 1;
+    while (___BLANK1___) {
+        int mid = left + (right - left) / 2;
+        if (arr[mid] == target) return mid;
+        else if (arr[mid] < target) ___BLANK2___;
+        else ___BLANK3___;
+    }
+    return -1;
+}`,
+      java: `int binarySearch(int[] arr, int target) {
+    int left = 0, right = arr.length - 1;
+    while (___BLANK1___) {
+        int mid = left + (right - left) / 2;
+        if (arr[mid] == target) return mid;
+        else if (arr[mid] < target) ___BLANK2___;
+        else ___BLANK3___;
+    }
+    return -1;
+}`,
+      python: `def binary_search(arr, target):
+    left, right = 0, len(arr) - 1
+    while ___BLANK1___:
+        mid = left + (right - left) // 2
+        if arr[mid] == target: return mid
+        elif arr[mid] < target: ___BLANK2___
+        else: ___BLANK3___
+    return -1`
+    },
+    blanks: [
+      { id: 'BLANK1', answer: 'left <= right', hint: '区间有效的条件' },
+      { id: 'BLANK2', answer: 'left = mid + 1', hint: '目标在右半部分' },
+      { id: 'BLANK3', answer: 'right = mid - 1', hint: '目标在左半部分' }
+    ],
+    explanation: '二分查找：每次排除一半，left<=right表示区间有效'
+  },
+  {
+    id: 'fb-bfs', category: '图', title: 'BFS遍历填空', difficulty: 'medium', type: 'fillblank',
+    description: '完成图的广度优先搜索',
+    codeTemplate: {
+      cpp: `void bfs(vector<vector<int>>& graph, int start) {
+    int n = graph.size();
+    vector<bool> visited(n, false);
+    queue<int> q;
+    
+    ___BLANK1___;  // 起点入队并标记
+    visited[start] = true;
+    
+    while (!q.empty()) {
+        int cur = ___BLANK2___;  // 取队首
+        cout << cur << " ";
+        
+        for (int next : graph[cur]) {
+            if (!visited[next]) {
+                ___BLANK3___;  // 邻居入队并标记
+                visited[next] = true;
+            }
+        }
+    }
+}`,
+      java: `void bfs(List<List<Integer>> graph, int start) {
+    int n = graph.size();
+    boolean[] visited = new boolean[n];
+    Queue<Integer> q = new LinkedList<>();
+    
+    ___BLANK1___;
+    visited[start] = true;
+    
+    while (!q.isEmpty()) {
+        int cur = ___BLANK2___;
+        System.out.print(cur + " ");
+        
+        for (int next : graph.get(cur)) {
+            if (!visited[next]) {
+                ___BLANK3___;
+                visited[next] = true;
+            }
+        }
+    }
+}`,
+      python: `def bfs(graph, start):
+    n = len(graph)
+    visited = [False] * n
+    q = deque()
+    
+    ___BLANK1___
+    visited[start] = True
+    
+    while q:
+        cur = ___BLANK2___
+        print(cur, end=' ')
+        
+        for next_node in graph[cur]:
+            if not visited[next_node]:
+                ___BLANK3___
+                visited[next_node] = True`
+    },
+    blanks: [
+      { id: 'BLANK1', answer: 'q.push(start)', hint: '起点入队' },
+      { id: 'BLANK2', answer: 'q.front(); q.pop()', hint: '取出队首元素' },
+      { id: 'BLANK3', answer: 'q.push(next)', hint: '邻居节点入队' }
+    ],
+    explanation: 'BFS使用队列，先入先出保证层序遍历'
+  },
+];
+
 // 所有练习题汇总
 export const allExercises: Exercise[] = [
   ...linkedListExercises,
@@ -2542,6 +3002,10 @@ export const allExercises: Exercise[] = [
   ...backtrackExercises,
   ...classicDpExercises,
   ...allClassicExercises,
+  ...mathExercises,
+  ...moreLinkedListExercises,
+  ...moreTreeExercises,
+  ...moreFillBlankExercises,
 ];
 
 // 导出递归分类供其他模块使用
