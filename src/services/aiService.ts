@@ -50,12 +50,12 @@ export interface AIConfig {
   model?: string;
 }
 
-// 默认配置 - 用户可以在设置中修改
+// 默认配置 - 用户需要自行配置API密钥
 let aiConfig: AIConfig = {
   provider: 'custom',
-  apiKey: 'sk-vJy5jCgbzjksuW1njIbymPABzjK4UkuIVT3fD7MNLmmY570R',
-  baseUrl: 'https://api.aabao.top/v1/chat/completions',
-  model: 'deepseek-v3.2-exp-thinking'
+  apiKey: '', // 请自行配置API密钥
+  baseUrl: '',
+  model: ''
 };
 
 // 获取/设置AI配置
