@@ -50,11 +50,14 @@ export interface AIConfig {
   model?: string;
 }
 
-// 默认配置 - 用户需要自行配置API密钥
+// 代理服务地址 (API密钥存储在服务器端，前端不暴露)
+const AI_PROXY_URL = import.meta.env.VITE_AI_PROXY_URL || 'https://lingma.cornna.xyz/api/ai';
+
+// 默认配置 - 通过代理服务调用，无需在前端配置密钥
 let aiConfig: AIConfig = {
   provider: 'custom',
-  apiKey: '', // 请自行配置API密钥
-  baseUrl: '',
+  apiKey: '', // 密钥存储在代理服务器端
+  baseUrl: AI_PROXY_URL,
   model: ''
 };
 
@@ -78,65 +81,15 @@ export const loadAIConfig = () => {
   }
 };
 
-// 获取API端点
-const getApiEndpoint = (config: AIConfig): string => {
-  switch (config.provider) {
-    case 'openai':
-      return config.baseUrl || 'https://api.openai.com/v1';
-    case 'deepseek':
-      return config.baseUrl || 'https://api.deepseek.com/v1';
-    case 'zhipu':
-      return config.baseUrl || 'https://open.bigmodel.cn/api/paas/v4';
-    case 'custom':
-      return config.baseUrl || '';
-    default:
-      return '';
-  }
-};
-
-// 获取默认模型
-const getDefaultModel = (config: AIConfig): string => {
-  switch (config.provider) {
-    case 'openai':
-      return config.model || 'gpt-3.5-turbo';
-    case 'deepseek':
-      return config.model || 'deepseek-chat';
-    case 'zhipu':
-      return config.model || 'glm-4';
-    case 'custom':
-      return config.model || '';
-    default:
-      return '';
-  }
-};
-
-// 调用AI API
+// 调用AI API (通过代理服务，无需前端密钥)
 async function callAI(prompt: string): Promise<string> {
-  const config = aiConfig;
+  const proxyUrl = AI_PROXY_URL;
+  console.log('Calling AI Proxy:', proxyUrl);
   
-  if (!config.apiKey) {
-    throw new Error('请先配置AI API密钥');
-  }
-
-  const endpoint = getApiEndpoint(config);
-  const model = getDefaultModel(config);
-
-  // 如果endpoint已包含完整路径则直接使用，否则拼接
-  const url = endpoint.includes('/chat/completions') ? endpoint : `${endpoint}/chat/completions`;
-  console.log('Calling API:', url, 'Model:', model);
-  
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${config.apiKey}`,
-    },
-    body: JSON.stringify({
-      model,
-      messages: [
-        {
-          role: 'system',
-          content: `你是一个专业的数据结构与算法教学助手，专门生成高质量的编程练习题。
+  const messages = [
+    {
+      role: 'system',
+      content: `你是一个专业的数据结构与算法教学助手，专门生成高质量的编程练习题。
 
 【重要要求】
 1. 所有题目必须是实际可运行的代码题，不要出概念填空题
@@ -144,14 +97,19 @@ async function callAI(prompt: string): Promise<string> {
 3. 填空题填的必须是代码片段（如变量名、表达式、语句），不是概念词汇
 4. 代码必须语法正确、可编译运行
 5. 严格按照JSON格式输出，不要包含任何其他文字说明`
-        },
-        {
-          role: 'user',
-          content: prompt
-        }
-      ],
-      temperature: 0.7,
-    }),
+    },
+    {
+      role: 'user',
+      content: prompt
+    }
+  ];
+  
+  const response = await fetch(proxyUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ messages }),
   });
 
   if (!response.ok) {

@@ -1,0 +1,12 @@
+{
+  "name": "lingma-ai-proxy",
+  "version": "1.0.0",
+  "description": "AI API 代理服务，保护API密钥",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "author": "LingMa Team",
+  "license": "MIT"
+}
