@@ -40,8 +40,8 @@ export async function runTestCases(
   language: 'c' | 'cpp' | 'java' | 'python',
   testCases: TestCase[]
 ): Promise<TestResult[]> {
-  // cpp暂时用c的编译器，后续可扩展
-  const lang = language === 'cpp' ? 'c' : language;
+  // 直接使用语言标识，后端已支持cpp
+  const lang = language;
   
   const response = await fetch(`${API_BASE}/judge`, {
     method: 'POST',
@@ -68,7 +68,7 @@ export async function quickRun(
   language: 'c' | 'cpp' | 'java' | 'python',
   input: string = ''
 ): Promise<RunResponse> {
-  const lang = language === 'cpp' ? 'c' : language;
+  const lang = language;
   
   const response = await fetch(`${API_BASE}/run`, {
     method: 'POST',

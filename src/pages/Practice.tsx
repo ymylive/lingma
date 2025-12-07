@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from 'react';
+import { useState, useMemo, useRef, useCallback } from 'react';
 import { AIExerciseGenerator, CodingExercise, FillInBlank } from '../components/tutorials/TutorialPanel';
 import { allExercises, type Exercise } from '../data/exercises';
 import { useTheme } from '../contexts/ThemeContext';
@@ -19,6 +19,7 @@ const CATEGORY_GROUPS = [
       { id: '二叉树', name: '二叉树', icon: '🌳' },
       { id: '图', name: '图', icon: '🕸️' },
       { id: '哈希表', name: '哈希表', icon: '#️⃣' },
+      { id: '结构体', name: '结构体', icon: '📋' },
     ]
   },
   {
@@ -46,9 +47,38 @@ const CATEGORY_GROUPS = [
     group: '入门',
     items: [
       { id: '基础概念', name: '基础概念', icon: '📖' },
+      { id: '基础编程', name: '基础编程', icon: '💻' },
     ]
   },
 ];
+
+// 模糊搜索函数：支持拼音首字母、部分匹配
+function fuzzyMatch(text: string, query: string): boolean {
+  if (!query.trim()) return true;
+  const lowerText = text.toLowerCase();
+  const lowerQuery = query.toLowerCase().trim();
+  
+  // 直接包含
+  if (lowerText.includes(lowerQuery)) return true;
+  
+  // 分词匹配（空格分隔的多个关键词都要匹配）
+  const keywords = lowerQuery.split(/\s+/).filter(k => k.length > 0);
+  if (keywords.length > 1) {
+    return keywords.every(k => lowerText.includes(k));
+  }
+  
+  // 首字母匹配（针对中文）
+  const chars = lowerText.split('');
+  let queryIdx = 0;
+  for (const char of chars) {
+    if (char === lowerQuery[queryIdx]) {
+      queryIdx++;
+      if (queryIdx === lowerQuery.length) return true;
+    }
+  }
+  
+  return false;
+}
 
 export default function Practice() {
   const { theme } = useTheme();
@@ -58,19 +88,22 @@ export default function Practice() {
   const [difficulty, setDifficulty] = useState<'all' | 'easy' | 'medium' | 'hard'>('all');
   const [selectedExercise, setSelectedExercise] = useState<Exercise | null>(null);
   const [typeFilter, setTypeFilter] = useState<'all' | 'coding' | 'fillblank'>('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showCompleted, setShowCompleted] = useState<'all' | 'completed' | 'incomplete'>('all');
   const exerciseAreaRef = useRef<HTMLDivElement>(null);
 
-  // 选择题目并滚动到练习区
+  // 选择题目并滚动到代码编辑区（页面底部）
   const handleSelectExercise = (exercise: Exercise) => {
     setSelectedExercise(exercise);
-    // 延迟滚动，等待DOM更新
+    // 延迟滚动，等待DOM更新后滚动到页面底部
     setTimeout(() => {
-      exerciseAreaRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 100);
+      window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+    }, 150);
   };
 
   // 统计信息
   const stats = useMemo(() => {
+    console.log('【调试】allExercises总数:', allExercises.length);
     const total = allExercises.length;
     const coding = allExercises.filter(e => e.type === 'coding').length;
     const fillblank = allExercises.filter(e => e.type === 'fillblank').length;
@@ -82,12 +115,51 @@ export default function Practice() {
     return { total, coding, fillblank, easy, medium, hard, completed };
   }, [progress.completedExercises.length]);
 
-  const filteredExercises = allExercises.filter(e => {
-    if (category !== 'all' && e.category !== category) return false;
-    if (difficulty !== 'all' && e.difficulty !== difficulty) return false;
-    if (typeFilter !== 'all' && e.type !== typeFilter) return false;
-    return true;
-  });
+  // 重构后的过滤逻辑：支持模糊搜索、分类、难度、题型、完成状态
+  const filteredExercises = useMemo(() => {
+    return allExercises.filter(e => {
+      // 分类过滤（修复bug：精确匹配分类名）
+      if (category !== 'all' && e.category !== category) return false;
+      
+      // 难度过滤
+      if (difficulty !== 'all' && e.difficulty !== difficulty) return false;
+      
+      // 题型过滤
+      if (typeFilter !== 'all' && e.type !== typeFilter) return false;
+      
+      // 完成状态过滤
+      if (showCompleted === 'completed' && !isExerciseCompleted(e.id)) return false;
+      if (showCompleted === 'incomplete' && isExerciseCompleted(e.id)) return false;
+      
+      // 模糊搜索（标题 + 描述 + 分类）
+      if (searchQuery.trim()) {
+        const searchText = `${e.title} ${e.description} ${e.category}`;
+        if (!fuzzyMatch(searchText, searchQuery)) return false;
+      }
+      
+      return true;
+    });
+  }, [category, difficulty, typeFilter, showCompleted, searchQuery, isExerciseCompleted]);
+  
+  // 清除所有筛选条件
+  const clearFilters = useCallback(() => {
+    setCategory('all');
+    setDifficulty('all');
+    setTypeFilter('all');
+    setShowCompleted('all');
+    setSearchQuery('');
+  }, []);
+  
+  // 统计当前筛选条件数量
+  const activeFilterCount = useMemo(() => {
+    let count = 0;
+    if (category !== 'all') count++;
+    if (difficulty !== 'all') count++;
+    if (typeFilter !== 'all') count++;
+    if (showCompleted !== 'all') count++;
+    if (searchQuery.trim()) count++;
+    return count;
+  }, [category, difficulty, typeFilter, showCompleted, searchQuery]);
 
   const difficultyConfig = {
     easy: { text: '简单', color: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400', stars: '⭐' },
@@ -155,6 +227,45 @@ export default function Practice() {
           <AIExerciseGenerator />
         ) : (
           <>
+            {/* 搜索框 */}
+            <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 mb-4">
+              <div className="flex flex-col md:flex-row gap-3">
+                <div className="flex-1 relative">
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="🔍 搜索题目（支持标题、描述、分类，多关键词用空格分隔）"
+                    className="w-full px-4 py-3 pl-4 pr-10 rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-800 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                  />
+                  {searchQuery && (
+                    <button
+                      onClick={() => setSearchQuery('')}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+                {activeFilterCount > 0 && (
+                  <button
+                    onClick={clearFilters}
+                    className="px-4 py-2 rounded-xl bg-rose-100 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400 hover:bg-rose-200 dark:hover:bg-rose-900/50 transition-all flex items-center gap-2 whitespace-nowrap"
+                  >
+                    <span>清除筛选</span>
+                    <span className="bg-rose-200 dark:bg-rose-800 px-2 py-0.5 rounded-full text-xs">{activeFilterCount}</span>
+                  </button>
+                )}
+              </div>
+              {/* 搜索结果统计 */}
+              <div className="mt-3 flex items-center justify-between text-sm text-slate-500 dark:text-slate-400">
+                <span>
+                  找到 <span className="font-bold text-indigo-600 dark:text-indigo-400">{filteredExercises.length}</span> 道题目
+                  {searchQuery && <span className="ml-2">（搜索: "{searchQuery}"）</span>}
+                </span>
+              </div>
+            </div>
+
             {/* 筛选器 */}
             <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 mb-6">
               <div className="space-y-4">
@@ -230,6 +341,29 @@ export default function Practice() {
                         }`}
                       >
                         {t.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                {/* 完成状态筛选 */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">完成状态</label>
+                  <div className="flex gap-1">
+                    {[
+                      { id: 'all', label: '全部' },
+                      { id: 'incomplete', label: '⬜未完成' },
+                      { id: 'completed', label: '✅已完成' },
+                    ].map(s => (
+                      <button
+                        key={s.id}
+                        onClick={() => setShowCompleted(s.id as 'all' | 'completed' | 'incomplete')}
+                        className={`px-3 py-1.5 rounded-lg text-sm transition-all ${
+                          showCompleted === s.id
+                            ? 'bg-indigo-600 text-white'
+                            : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
+                        }`}
+                      >
+                        {s.label}
                       </button>
                     ))}
                   </div>

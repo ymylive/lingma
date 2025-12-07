@@ -12,6 +12,7 @@ import {
 import CodingExercise, { FillInBlank } from './CodingExercise';
 
 const PROVIDERS = [
+  { id: 'aabao', name: 'AABao AI', baseUrl: 'https://api.aabao.top/v1/chat/completions', model: 'deepseek-v3.2-thinking' },
   { id: 'deepseek', name: 'DeepSeek', baseUrl: 'https://api.deepseek.com/v1', model: 'deepseek-chat' },
   { id: 'openai', name: 'OpenAI', baseUrl: 'https://api.openai.com/v1', model: 'gpt-3.5-turbo' },
   { id: 'zhipu', name: '智谱AI', baseUrl: 'https://open.bigmodel.cn/api/paas/v4', model: 'glm-4' },

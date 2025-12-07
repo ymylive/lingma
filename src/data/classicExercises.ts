@@ -801,6 +801,430 @@ dfs(0, [], [False] * n, a, n)`
 
 【时间复杂度】O(n! × n)
 【排列数量】n! 个`
+  },
+  {
+    id: 'rec-factorial', category: '递归', title: '递归求阶乘', difficulty: 'easy', type: 'coding',
+    description: `用递归计算n!。\n\n输入：整数n(0≤n≤12)\n输出：n!`,
+    templates: { c: `#include <stdio.h>\nlong long f(int n) { /* TODO */ }\nint main() { int n; scanf("%d",&n); printf("%lld\\n",f(n)); }`,
+      cpp: `#include <iostream>\nusing namespace std;\nlong long f(int n) { /* TODO */ }\nint main() { int n; cin>>n; cout<<f(n)<<endl; }`,
+      java: `import java.util.*;\npublic class Main { static long f(int n) { /* TODO */ return 0; } public static void main(String[] a) { Scanner sc=new Scanner(System.in); System.out.println(f(sc.nextInt())); }}`,
+      python: `def f(n):\n    pass\nprint(f(int(input())))`
+    },
+    solutions: { c: `#include <stdio.h>\nlong long f(int n) { return n<=1?1:n*f(n-1); }\nint main() { int n; scanf("%d",&n); printf("%lld\\n",f(n)); return 0; }`,
+      cpp: `#include <iostream>\nusing namespace std;\nlong long f(int n) { return n<=1?1:n*f(n-1); }\nint main() { int n; cin>>n; cout<<f(n)<<endl; }`,
+      java: `import java.util.*;\npublic class Main { static long f(int n) { return n<=1?1:n*f(n-1); } public static void main(String[] a) { System.out.println(f(new Scanner(System.in).nextInt())); }}`,
+      python: `def f(n): return 1 if n<=1 else n*f(n-1)\nprint(f(int(input())))`
+    },
+    testCases: [{ input: '5', expectedOutput: '120', description: '5!=120' }, { input: '0', expectedOutput: '1', description: '0!=1' }],
+    hints: ['基准：n<=1返回1', '递归：n*f(n-1)'], explanation: '递归阶乘：f(n)=n*f(n-1)'
+  },
+  {
+    id: 'rec-hanoi', category: '递归', title: '汉诺塔', difficulty: 'medium', type: 'coding',
+    description: `汉诺塔：n个盘子从A移到C，借助B，大盘不能放小盘上。\n\n输入：n(1≤n≤10)\n输出：移动步骤`,
+    templates: { c: `#include <stdio.h>\nvoid h(int n,char a,char b,char c) { /* TODO */ }\nint main() { int n; scanf("%d",&n); h(n,'A','B','C'); }`,
+      cpp: `#include <iostream>\nusing namespace std;\nvoid h(int n,char a,char b,char c) { /* TODO */ }\nint main() { int n; cin>>n; h(n,'A','B','C'); }`,
+      java: `import java.util.*;\npublic class Main { static void h(int n,char a,char b,char c) { /* TODO */ } public static void main(String[] x) { h(new Scanner(System.in).nextInt(),'A','B','C'); }}`,
+      python: `def h(n,a,b,c):\n    pass\nh(int(input()),'A','B','C')`
+    },
+    solutions: { c: `#include <stdio.h>\nvoid h(int n,char a,char b,char c) { if(n==1){printf("%c->%c\\n",a,c);return;} h(n-1,a,c,b); printf("%c->%c\\n",a,c); h(n-1,b,a,c); }\nint main() { int n; scanf("%d",&n); h(n,'A','B','C'); return 0; }`,
+      cpp: `#include <iostream>\nusing namespace std;\nvoid h(int n,char a,char b,char c) { if(n==1){cout<<a<<"->"<<c<<endl;return;} h(n-1,a,c,b); cout<<a<<"->"<<c<<endl; h(n-1,b,a,c); }\nint main() { int n; cin>>n; h(n,'A','B','C'); }`,
+      java: `import java.util.*;\npublic class Main { static void h(int n,char a,char b,char c) { if(n==1){System.out.println(a+"->"+c);return;} h(n-1,a,c,b); System.out.println(a+"->"+c); h(n-1,b,a,c); } public static void main(String[] x) { h(new Scanner(System.in).nextInt(),'A','B','C'); }}`,
+      python: `def h(n,a,b,c):\n    if n==1: print(f"{a}->{c}"); return\n    h(n-1,a,c,b); print(f"{a}->{c}"); h(n-1,b,a,c)\nh(int(input()),'A','B','C')`
+    },
+    testCases: [{ input: '2', expectedOutput: 'A->B\\nA->C\\nB->C', description: '2盘3步' }],
+    hints: ['n-1从A到B', '最大从A到C', 'n-1从B到C'], explanation: '分治：移n-1到辅助柱，移最大到目标，再移n-1到目标。步数2^n-1'
+  },
+  {
+    id: 'rec-fib', category: '递归', title: '递归斐波那契', difficulty: 'easy', type: 'coding',
+    description: `递归求F(n)。F(0)=0,F(1)=1,F(n)=F(n-1)+F(n-2)\n\n输入：n(0≤n≤40)\n输出：F(n)`,
+    templates: { c: `#include <stdio.h>\nlong long memo[50];\nlong long f(int n) { /* TODO */ }\nint main() { int n; scanf("%d",&n); printf("%lld\\n",f(n)); }`,
+      cpp: `#include <iostream>\nusing namespace std;\nlong long memo[50];\nlong long f(int n) { /* TODO */ }\nint main() { int n; cin>>n; cout<<f(n)<<endl; }`,
+      java: `import java.util.*;\npublic class Main { static long[] m=new long[50]; static long f(int n) { /* TODO */ return 0; } public static void main(String[] a) { System.out.println(f(new Scanner(System.in).nextInt())); }}`,
+      python: `from functools import lru_cache\n@lru_cache\ndef f(n):\n    pass\nprint(f(int(input())))`
+    },
+    solutions: { c: `#include <stdio.h>\nlong long m[50];\nlong long f(int n) { if(n<=1)return n; if(m[n])return m[n]; return m[n]=f(n-1)+f(n-2); }\nint main() { int n; scanf("%d",&n); printf("%lld\\n",f(n)); return 0; }`,
+      cpp: `#include <iostream>\nusing namespace std;\nlong long m[50];\nlong long f(int n) { if(n<=1)return n; if(m[n])return m[n]; return m[n]=f(n-1)+f(n-2); }\nint main() { int n; cin>>n; cout<<f(n)<<endl; }`,
+      java: `import java.util.*;\npublic class Main { static long[] m=new long[50]; static long f(int n) { if(n<=1)return n; if(m[n]!=0)return m[n]; return m[n]=f(n-1)+f(n-2); } public static void main(String[] a) { System.out.println(f(new Scanner(System.in).nextInt())); }}`,
+      python: `from functools import lru_cache\n@lru_cache\ndef f(n): return n if n<=1 else f(n-1)+f(n-2)\nprint(f(int(input())))`
+    },
+    testCases: [{ input: '10', expectedOutput: '55', description: 'F(10)=55' }, { input: '0', expectedOutput: '0', description: 'F(0)=0' }],
+    hints: ['基准：n<=1返回n', '记忆化避免重复'], explanation: '记忆化递归O(n)，朴素递归O(2^n)'
+  },
+  {
+    id: 'rec-reverse-str', category: '递归', title: '递归反转字符串', difficulty: 'easy', type: 'coding',
+    description: `递归反转字符串\n\n输入：字符串\n输出：反转后`,
+    templates: { cpp: `#include <iostream>\nusing namespace std;\nstring r(string s) { /* TODO */ }\nint main() { string s; cin>>s; cout<<r(s)<<endl; }`,
+      java: `import java.util.*;\npublic class Main { static String r(String s) { /* TODO */ return ""; } public static void main(String[] a) { System.out.println(r(new Scanner(System.in).next())); }}`,
+      python: `def r(s):\n    pass\nprint(r(input()))`
+    },
+    solutions: { cpp: `#include <iostream>\nusing namespace std;\nstring r(string s) { return s.size()<=1?s:r(s.substr(1))+s[0]; }\nint main() { string s; cin>>s; cout<<r(s)<<endl; }`,
+      java: `import java.util.*;\npublic class Main { static String r(String s) { return s.length()<=1?s:r(s.substring(1))+s.charAt(0); } public static void main(String[] a) { System.out.println(r(new Scanner(System.in).next())); }}`,
+      python: `def r(s): return s if len(s)<=1 else r(s[1:])+s[0]\nprint(r(input()))`
+    },
+    testCases: [{ input: 'hello', expectedOutput: 'olleh', description: '反转' }],
+    hints: ['r(s)=r(s[1:])+s[0]'], explanation: '首字符移到末尾'
+  },
+  {
+    id: 'rec-sum', category: '递归', title: '递归数组求和', difficulty: 'easy', type: 'coding',
+    description: `递归求数组和\n\n输入：n个整数\n输出：和`,
+    templates: { cpp: `#include <iostream>\nusing namespace std;\nint s(int a[],int n) { /* TODO */ }\nint main() { int n; cin>>n; int a[1005]; for(int i=0;i<n;i++)cin>>a[i]; cout<<s(a,n)<<endl; }`,
+      java: `import java.util.*;\npublic class Main { static int s(int[] a,int n) { /* TODO */ return 0; } public static void main(String[] x) { Scanner sc=new Scanner(System.in); int n=sc.nextInt(); int[] a=new int[n]; for(int i=0;i<n;i++)a[i]=sc.nextInt(); System.out.println(s(a,n)); }}`,
+      python: `def s(a,n):\n    pass\nn=int(input())\na=list(map(int,input().split()))\nprint(s(a,n))`
+    },
+    solutions: { cpp: `#include <iostream>\nusing namespace std;\nint s(int a[],int n) { return n==0?0:a[n-1]+s(a,n-1); }\nint main() { int n; cin>>n; int a[1005]; for(int i=0;i<n;i++)cin>>a[i]; cout<<s(a,n)<<endl; }`,
+      java: `import java.util.*;\npublic class Main { static int s(int[] a,int n) { return n==0?0:a[n-1]+s(a,n-1); } public static void main(String[] x) { Scanner sc=new Scanner(System.in); int n=sc.nextInt(); int[] a=new int[n]; for(int i=0;i<n;i++)a[i]=sc.nextInt(); System.out.println(s(a,n)); }}`,
+      python: `def s(a,n): return 0 if n==0 else a[n-1]+s(a,n-1)\nn=int(input())\na=list(map(int,input().split()))\nprint(s(a,n))`
+    },
+    testCases: [{ input: '5\\n1 2 3 4 5', expectedOutput: '15', description: '和15' }],
+    hints: ['s(a,n)=a[n-1]+s(a,n-1)'], explanation: 'O(n)时间，O(n)栈'
+  },
+  {
+    id: 'rec-power', category: '递归', title: '递归快速幂', difficulty: 'medium', type: 'coding',
+    description: `递归快速幂a^n mod m\n\n输入：a n m\n输出：结果`,
+    templates: { cpp: `#include <iostream>\nusing namespace std;\ntypedef long long ll;\nll p(ll a,ll n,ll m) { /* TODO */ }\nint main() { ll a,n,m; cin>>a>>n>>m; cout<<p(a%m,n,m)<<endl; }`,
+      java: `import java.util.*;\npublic class Main { static long p(long a,long n,long m) { /* TODO */ return 0; } public static void main(String[] x) { Scanner sc=new Scanner(System.in); System.out.println(p(sc.nextLong()%sc.nextLong(),sc.nextLong(),sc.nextLong())); }}`,
+      python: `def p(a,n,m):\n    pass\na,n,m=map(int,input().split())\nprint(p(a%m,n,m))`
+    },
+    solutions: { cpp: `#include <iostream>\nusing namespace std;\ntypedef long long ll;\nll p(ll a,ll n,ll m) { if(n==0)return 1; if(n%2==0){ll h=p(a,n/2,m);return h*h%m;} return a*p(a,n-1,m)%m; }\nint main() { ll a,n,m; cin>>a>>n>>m; cout<<p(a%m,n,m)<<endl; }`,
+      java: `import java.util.*;\npublic class Main { static long p(long a,long n,long m) { if(n==0)return 1; if(n%2==0){long h=p(a,n/2,m);return h*h%m;} return a*p(a,n-1,m)%m; } public static void main(String[] x) { Scanner sc=new Scanner(System.in); long a=sc.nextLong(),n=sc.nextLong(),m=sc.nextLong(); System.out.println(p(a%m,n,m)); }}`,
+      python: `def p(a,n,m):\n    if n==0: return 1\n    if n%2==0: h=p(a,n//2,m); return h*h%m\n    return a*p(a,n-1,m)%m\na,n,m=map(int,input().split())\nprint(p(a%m,n,m))`
+    },
+    testCases: [{ input: '2 10 1000', expectedOutput: '24', description: '2^10 mod 1000' }],
+    hints: ['偶数：(a^(n/2))^2', '奇数：a*a^(n-1)'], explanation: 'O(log n)'
+  },
+  {
+    id: 'rec-palindrome', category: '递归', title: '递归判断回文', difficulty: 'easy', type: 'coding',
+    description: `递归判断回文串\n\n输入：字符串\n输出：true/false`,
+    templates: { cpp: `#include <iostream>\nusing namespace std;\nbool p(string& s,int l,int r) { /* TODO */ }\nint main() { string s; cin>>s; cout<<(p(s,0,s.size()-1)?"true":"false")<<endl; }`,
+      java: `import java.util.*;\npublic class Main { static boolean p(String s,int l,int r) { /* TODO */ return true; } public static void main(String[] a) { String s=new Scanner(System.in).next(); System.out.println(p(s,0,s.length()-1)?"true":"false"); }}`,
+      python: `def p(s,l,r):\n    pass\ns=input()\nprint("true" if p(s,0,len(s)-1) else "false")`
+    },
+    solutions: { cpp: `#include <iostream>\nusing namespace std;\nbool p(string& s,int l,int r) { if(l>=r)return true; if(s[l]!=s[r])return false; return p(s,l+1,r-1); }\nint main() { string s; cin>>s; cout<<(p(s,0,s.size()-1)?"true":"false")<<endl; }`,
+      java: `import java.util.*;\npublic class Main { static boolean p(String s,int l,int r) { if(l>=r)return true; if(s.charAt(l)!=s.charAt(r))return false; return p(s,l+1,r-1); } public static void main(String[] a) { String s=new Scanner(System.in).next(); System.out.println(p(s,0,s.length()-1)?"true":"false"); }}`,
+      python: `def p(s,l,r):\n    if l>=r: return True\n    if s[l]!=s[r]: return False\n    return p(s,l+1,r-1)\ns=input()\nprint("true" if p(s,0,len(s)-1) else "false")`
+    },
+    testCases: [{ input: 'abcba', expectedOutput: 'true', description: '是回文' }, { input: 'abc', expectedOutput: 'false', description: '非回文' }],
+    hints: ['比较首尾，递归中间'], explanation: '左右指针向中间收缩'
+  },
+  {
+    id: 'rec-max', category: '递归', title: '递归求最大值', difficulty: 'easy', type: 'coding',
+    description: `递归求数组最大值\n\n输入：n个整数\n输出：最大值`,
+    templates: { cpp: `#include <iostream>\nusing namespace std;\nint mx(int a[],int n) { /* TODO */ }\nint main() { int n; cin>>n; int a[1005]; for(int i=0;i<n;i++)cin>>a[i]; cout<<mx(a,n)<<endl; }`,
+      java: `import java.util.*;\npublic class Main { static int mx(int[] a,int n) { /* TODO */ return 0; } public static void main(String[] x) { Scanner sc=new Scanner(System.in); int n=sc.nextInt(); int[] a=new int[n]; for(int i=0;i<n;i++)a[i]=sc.nextInt(); System.out.println(mx(a,n)); }}`,
+      python: `def mx(a,n):\n    pass\nn=int(input())\na=list(map(int,input().split()))\nprint(mx(a,n))`
+    },
+    solutions: { cpp: `#include <iostream>\nusing namespace std;\nint mx(int a[],int n) { if(n==1)return a[0]; return max(a[n-1],mx(a,n-1)); }\nint main() { int n; cin>>n; int a[1005]; for(int i=0;i<n;i++)cin>>a[i]; cout<<mx(a,n)<<endl; }`,
+      java: `import java.util.*;\npublic class Main { static int mx(int[] a,int n) { if(n==1)return a[0]; return Math.max(a[n-1],mx(a,n-1)); } public static void main(String[] x) { Scanner sc=new Scanner(System.in); int n=sc.nextInt(); int[] a=new int[n]; for(int i=0;i<n;i++)a[i]=sc.nextInt(); System.out.println(mx(a,n)); }}`,
+      python: `def mx(a,n): return a[0] if n==1 else max(a[n-1],mx(a,n-1))\nn=int(input())\na=list(map(int,input().split()))\nprint(mx(a,n))`
+    },
+    testCases: [{ input: '5\\n3 1 4 1 5', expectedOutput: '5', description: '最大5' }],
+    hints: ['mx=max(最后,前n-1最大)'], explanation: 'O(n)'
+  },
+  {
+    id: 'rec-bsearch', category: '递归', title: '递归二分查找', difficulty: 'easy', type: 'coding',
+    description: `递归二分查找\n\n输入：n target，n个升序数\n输出：下标或-1`,
+    templates: { cpp: `#include <iostream>\nusing namespace std;\nint bs(int a[],int l,int r,int t) { /* TODO */ }\nint main() { int n,t; cin>>n>>t; int a[100005]; for(int i=0;i<n;i++)cin>>a[i]; cout<<bs(a,0,n-1,t)<<endl; }`,
+      java: `import java.util.*;\npublic class Main { static int bs(int[] a,int l,int r,int t) { /* TODO */ return -1; } public static void main(String[] x) { Scanner sc=new Scanner(System.in); int n=sc.nextInt(),t=sc.nextInt(); int[] a=new int[n]; for(int i=0;i<n;i++)a[i]=sc.nextInt(); System.out.println(bs(a,0,n-1,t)); }}`,
+      python: `def bs(a,l,r,t):\n    pass\nn,t=map(int,input().split())\na=list(map(int,input().split()))\nprint(bs(a,0,n-1,t))`
+    },
+    solutions: { cpp: `#include <iostream>\nusing namespace std;\nint bs(int a[],int l,int r,int t) { if(l>r)return -1; int m=l+(r-l)/2; if(a[m]==t)return m; if(a[m]>t)return bs(a,l,m-1,t); return bs(a,m+1,r,t); }\nint main() { int n,t; cin>>n>>t; int a[100005]; for(int i=0;i<n;i++)cin>>a[i]; cout<<bs(a,0,n-1,t)<<endl; }`,
+      java: `import java.util.*;\npublic class Main { static int bs(int[] a,int l,int r,int t) { if(l>r)return -1; int m=l+(r-l)/2; if(a[m]==t)return m; if(a[m]>t)return bs(a,l,m-1,t); return bs(a,m+1,r,t); } public static void main(String[] x) { Scanner sc=new Scanner(System.in); int n=sc.nextInt(),t=sc.nextInt(); int[] a=new int[n]; for(int i=0;i<n;i++)a[i]=sc.nextInt(); System.out.println(bs(a,0,n-1,t)); }}`,
+      python: `def bs(a,l,r,t):\n    if l>r: return -1\n    m=l+(r-l)//2\n    if a[m]==t: return m\n    if a[m]>t: return bs(a,l,m-1,t)\n    return bs(a,m+1,r,t)\nn,t=map(int,input().split())\na=list(map(int,input().split()))\nprint(bs(a,0,n-1,t))`
+    },
+    testCases: [{ input: '5 4\\n1 2 3 4 5', expectedOutput: '3', description: '下标3' }, { input: '5 6\\n1 2 3 4 5', expectedOutput: '-1', description: '未找到' }],
+    hints: ['l>r返回-1', '中点比较决定方向'], explanation: 'O(log n)'
+  },
+  {
+    id: 'rec-gcd', category: '递归', title: '递归求GCD', difficulty: 'easy', type: 'coding',
+    description: `欧几里得算法求GCD\n\n输入：a b\n输出：gcd(a,b)`,
+    templates: { cpp: `#include <iostream>\nusing namespace std;\nint g(int a,int b) { /* TODO */ }\nint main() { int a,b; cin>>a>>b; cout<<g(a,b)<<endl; }`,
+      java: `import java.util.*;\npublic class Main { static int g(int a,int b) { /* TODO */ return 0; } public static void main(String[] x) { Scanner sc=new Scanner(System.in); System.out.println(g(sc.nextInt(),sc.nextInt())); }}`,
+      python: `def g(a,b):\n    pass\na,b=map(int,input().split())\nprint(g(a,b))`
+    },
+    solutions: { cpp: `#include <iostream>\nusing namespace std;\nint g(int a,int b) { return b==0?a:g(b,a%b); }\nint main() { int a,b; cin>>a>>b; cout<<g(a,b)<<endl; }`,
+      java: `import java.util.*;\npublic class Main { static int g(int a,int b) { return b==0?a:g(b,a%b); } public static void main(String[] x) { Scanner sc=new Scanner(System.in); System.out.println(g(sc.nextInt(),sc.nextInt())); }}`,
+      python: `def g(a,b): return a if b==0 else g(b,a%b)\na,b=map(int,input().split())\nprint(g(a,b))`
+    },
+    testCases: [{ input: '48 18', expectedOutput: '6', description: 'gcd=6' }],
+    hints: ['gcd(a,b)=gcd(b,a%b)'], explanation: 'O(log min(a,b))'
+  },
+  // ==================== 考试递归专题 ====================
+  {
+    id: 'rec-combination', category: '递归', title: '排列组合C(m,n)', difficulty: 'medium', type: 'coding',
+    description: `【题目描述】
+编写程序求组合数 C(m, n) 的值。函数由分段递归公式定义：
+C(m,n) = 0        当 n < 0
+C(m,n) = 1        当 n = 0
+C(m,n) = m        当 n = 1
+C(m,n) = C(m, m-n)    当 m < 2n
+C(m,n) = C(m-1, n-1) + C(m-1, n)  当 m >= 2n
+
+【输入格式】
+两个自然数 m 和 n（m >= n，m <= 20）
+
+【输出格式】
+C(m, n) 的值`,
+    templates: {
+      c: `#include <stdio.h>\nlong long C(int m, int n) {\n    // TODO: 实现递归\n}\nint main() {\n    int m, n;\n    scanf("%d %d", &m, &n);\n    printf("%lld\\n", C(m, n));\n    return 0;\n}`,
+      cpp: `#include <iostream>\nusing namespace std;\nlong long C(int m, int n) {\n    // TODO\n}\nint main() {\n    int m, n;\n    cin >> m >> n;\n    cout << C(m, n) << endl;\n}`,
+      java: `import java.util.*;\npublic class Main {\n    static long C(int m, int n) {\n        // TODO\n        return 0;\n    }\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        System.out.println(C(sc.nextInt(), sc.nextInt()));\n    }\n}`,
+      python: `def C(m, n):\n    # TODO\n    pass\nm, n = map(int, input().split())\nprint(C(m, n))`
+    },
+    solutions: {
+      c: `#include <stdio.h>\nlong long C(int m, int n) {\n    if (n < 0) return 0;\n    if (n == 0) return 1;\n    if (n == 1) return m;\n    if (m < 2 * n) return C(m, m - n);\n    return C(m - 1, n - 1) + C(m - 1, n);\n}\nint main() {\n    int m, n;\n    scanf("%d %d", &m, &n);\n    printf("%lld\\n", C(m, n));\n    return 0;\n}`,
+      cpp: `#include <iostream>\nusing namespace std;\nlong long C(int m, int n) {\n    if (n < 0) return 0;\n    if (n == 0) return 1;\n    if (n == 1) return m;\n    if (m < 2 * n) return C(m, m - n);\n    return C(m - 1, n - 1) + C(m - 1, n);\n}\nint main() {\n    int m, n;\n    cin >> m >> n;\n    cout << C(m, n) << endl;\n}`,
+      java: `import java.util.*;\npublic class Main {\n    static long C(int m, int n) {\n        if (n < 0) return 0;\n        if (n == 0) return 1;\n        if (n == 1) return m;\n        if (m < 2 * n) return C(m, m - n);\n        return C(m - 1, n - 1) + C(m - 1, n);\n    }\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        System.out.println(C(sc.nextInt(), sc.nextInt()));\n    }\n}`,
+      python: `def C(m, n):\n    if n < 0: return 0\n    if n == 0: return 1\n    if n == 1: return m\n    if m < 2 * n: return C(m, m - n)\n    return C(m - 1, n - 1) + C(m - 1, n)\nm, n = map(int, input().split())\nprint(C(m, n))`
+    },
+    testCases: [
+      { input: '5 2', expectedOutput: '10', description: 'C(5,2)=10' },
+      { input: '10 3', expectedOutput: '120', description: 'C(10,3)=120' }
+    ],
+    hints: ['注意分段条件的判断顺序', 'C(m,m-n)利用对称性减少计算'],
+    explanation: '组合数递归公式：C(m,n) = C(m-1,n-1) + C(m-1,n)，利用对称性C(m,n)=C(m,m-n)优化'
+  },
+  {
+    id: 'rec-hermite', category: '递归', title: 'Hermite多项式', difficulty: 'medium', type: 'coding',
+    description: `【题目描述】
+用递归方法求解 Hermite 多项式值。多项式 H_n(x) 定义如下：
+H_n(x) = 1                           当 n = 0
+H_n(x) = 2x                          当 n = 1
+H_n(x) = 2x * H_{n-1}(x) - 2(n-1) * H_{n-2}(x)  当 n > 1
+
+【输入格式】
+一个非负整数 n 和一个实数 x
+
+【输出格式】
+H_n(x) 的值，精确到小数点后 2 位`,
+    templates: {
+      c: `#include <stdio.h>\ndouble H(int n, double x) {\n    // TODO\n}\nint main() {\n    int n; double x;\n    scanf("%d %lf", &n, &x);\n    printf("%.2f\\n", H(n, x));\n    return 0;\n}`,
+      cpp: `#include <iostream>\n#include <iomanip>\nusing namespace std;\ndouble H(int n, double x) {\n    // TODO\n}\nint main() {\n    int n; double x;\n    cin >> n >> x;\n    cout << fixed << setprecision(2) << H(n, x) << endl;\n}`,
+      java: `import java.util.*;\npublic class Main {\n    static double H(int n, double x) {\n        // TODO\n        return 0;\n    }\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        System.out.printf("%.2f\\n", H(sc.nextInt(), sc.nextDouble()));\n    }\n}`,
+      python: `def H(n, x):\n    # TODO\n    pass\nn, x = input().split()\nprint(f"{H(int(n), float(x)):.2f}")`
+    },
+    solutions: {
+      c: `#include <stdio.h>\ndouble H(int n, double x) {\n    if (n == 0) return 1;\n    if (n == 1) return 2 * x;\n    return 2 * x * H(n - 1, x) - 2 * (n - 1) * H(n - 2, x);\n}\nint main() {\n    int n; double x;\n    scanf("%d %lf", &n, &x);\n    printf("%.2f\\n", H(n, x));\n    return 0;\n}`,
+      cpp: `#include <iostream>\n#include <iomanip>\nusing namespace std;\ndouble H(int n, double x) {\n    if (n == 0) return 1;\n    if (n == 1) return 2 * x;\n    return 2 * x * H(n - 1, x) - 2 * (n - 1) * H(n - 2, x);\n}\nint main() {\n    int n; double x;\n    cin >> n >> x;\n    cout << fixed << setprecision(2) << H(n, x) << endl;\n}`,
+      java: `import java.util.*;\npublic class Main {\n    static double H(int n, double x) {\n        if (n == 0) return 1;\n        if (n == 1) return 2 * x;\n        return 2 * x * H(n - 1, x) - 2 * (n - 1) * H(n - 2, x);\n    }\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        System.out.printf("%.2f\\n", H(sc.nextInt(), sc.nextDouble()));\n    }\n}`,
+      python: `def H(n, x):\n    if n == 0: return 1\n    if n == 1: return 2 * x\n    return 2 * x * H(n - 1, x) - 2 * (n - 1) * H(n - 2, x)\nn, x = input().split()\nprint(f"{H(int(n), float(x)):.2f}")`
+    },
+    testCases: [
+      { input: '2 1.5', expectedOutput: '7.00', description: 'H(2,1.5)=7.00' },
+      { input: '3 2.0', expectedOutput: '40.00', description: 'H(3,2)=40.00' }
+    ],
+    hints: ['基准情况：n=0返回1，n=1返回2x', '递归：2x*H(n-1) - 2(n-1)*H(n-2)'],
+    explanation: 'Hermite多项式是物理数学中重要的正交多项式'
+  },
+  {
+    id: 'rec-ackerman', category: '递归', title: 'Ackerman函数', difficulty: 'hard', type: 'coding',
+    description: `【题目描述】
+计算 Ackerman 函数值。函数定义如下：
+Ack(m, n) = n + 1                    当 m = 0
+Ack(m, n) = Ack(m - 1, 1)           当 m > 0 且 n = 0
+Ack(m, n) = Ack(m - 1, Ack(m, n - 1))  当 m > 0 且 n > 0
+
+【输入格式】
+两个非负整数 m 和 n（m ≤ 3，n ≤ 10）
+
+【输出格式】
+Ack(m, n) 的值`,
+    templates: {
+      c: `#include <stdio.h>\nint Ack(int m, int n) {\n    // TODO\n}\nint main() {\n    int m, n;\n    scanf("%d %d", &m, &n);\n    printf("%d\\n", Ack(m, n));\n    return 0;\n}`,
+      cpp: `#include <iostream>\nusing namespace std;\nint Ack(int m, int n) {\n    // TODO\n}\nint main() {\n    int m, n;\n    cin >> m >> n;\n    cout << Ack(m, n) << endl;\n}`,
+      java: `import java.util.*;\npublic class Main {\n    static int Ack(int m, int n) {\n        // TODO\n        return 0;\n    }\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        System.out.println(Ack(sc.nextInt(), sc.nextInt()));\n    }\n}`,
+      python: `import sys\nsys.setrecursionlimit(100000)\ndef Ack(m, n):\n    # TODO\n    pass\nm, n = map(int, input().split())\nprint(Ack(m, n))`
+    },
+    solutions: {
+      c: `#include <stdio.h>\nint Ack(int m, int n) {\n    if (m == 0) return n + 1;\n    if (n == 0) return Ack(m - 1, 1);\n    return Ack(m - 1, Ack(m, n - 1));\n}\nint main() {\n    int m, n;\n    scanf("%d %d", &m, &n);\n    printf("%d\\n", Ack(m, n));\n    return 0;\n}`,
+      cpp: `#include <iostream>\nusing namespace std;\nint Ack(int m, int n) {\n    if (m == 0) return n + 1;\n    if (n == 0) return Ack(m - 1, 1);\n    return Ack(m - 1, Ack(m, n - 1));\n}\nint main() {\n    int m, n;\n    cin >> m >> n;\n    cout << Ack(m, n) << endl;\n}`,
+      java: `import java.util.*;\npublic class Main {\n    static int Ack(int m, int n) {\n        if (m == 0) return n + 1;\n        if (n == 0) return Ack(m - 1, 1);\n        return Ack(m - 1, Ack(m, n - 1));\n    }\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        System.out.println(Ack(sc.nextInt(), sc.nextInt()));\n    }\n}`,
+      python: `import sys\nsys.setrecursionlimit(100000)\ndef Ack(m, n):\n    if m == 0: return n + 1\n    if n == 0: return Ack(m - 1, 1)\n    return Ack(m - 1, Ack(m, n - 1))\nm, n = map(int, input().split())\nprint(Ack(m, n))`
+    },
+    testCases: [
+      { input: '2 3', expectedOutput: '9', description: 'Ack(2,3)=9' },
+      { input: '3 2', expectedOutput: '29', description: 'Ack(3,2)=29' }
+    ],
+    hints: ['注意嵌套递归的执行顺序', 'm=0时直接返回n+1', 'Ackerman函数增长极快，注意栈溢出'],
+    explanation: 'Ackerman函数是经典的双递归函数，增长速度超过任何原始递归函数'
+  },
+  {
+    id: 'rec-seq-search', category: '递归', title: '递归顺序检索', difficulty: 'easy', type: 'coding',
+    description: `【题目描述】
+用递归方法在整型数组中进行顺序检索。
+
+【输入格式】
+第一行：正整数 n（0 < n ≤ 100），数组元素个数
+第二行：n 个整数，数组元素
+第三行：待检索的关键字
+
+【输出格式】
+关键字首次出现的下标位置（从0开始），若不存在输出 NULL`,
+    templates: {
+      c: `#include <stdio.h>\nint search(int a[], int n, int key, int i) {\n    // TODO: i为当前检索位置\n}\nint main() {\n    int n, a[105], key;\n    scanf("%d", &n);\n    for (int i = 0; i < n; i++) scanf("%d", &a[i]);\n    scanf("%d", &key);\n    int pos = search(a, n, key, 0);\n    if (pos == -1) printf("NULL\\n");\n    else printf("%d\\n", pos);\n    return 0;\n}`,
+      cpp: `#include <iostream>\nusing namespace std;\nint search(int a[], int n, int key, int i) {\n    // TODO\n}\nint main() {\n    int n, a[105], key;\n    cin >> n;\n    for (int i = 0; i < n; i++) cin >> a[i];\n    cin >> key;\n    int pos = search(a, n, key, 0);\n    if (pos == -1) cout << "NULL" << endl;\n    else cout << pos << endl;\n}`,
+      java: `import java.util.*;\npublic class Main {\n    static int search(int[] a, int n, int key, int i) {\n        // TODO\n        return -1;\n    }\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        int n = sc.nextInt();\n        int[] a = new int[n];\n        for (int i = 0; i < n; i++) a[i] = sc.nextInt();\n        int key = sc.nextInt();\n        int pos = search(a, n, key, 0);\n        System.out.println(pos == -1 ? "NULL" : pos);\n    }\n}`,
+      python: `def search(a, n, key, i):\n    # TODO\n    pass\nn = int(input())\na = list(map(int, input().split()))\nkey = int(input())\npos = search(a, n, key, 0)\nprint("NULL" if pos == -1 else pos)`
+    },
+    solutions: {
+      c: `#include <stdio.h>\nint search(int a[], int n, int key, int i) {\n    if (i >= n) return -1;\n    if (a[i] == key) return i;\n    return search(a, n, key, i + 1);\n}\nint main() {\n    int n, a[105], key;\n    scanf("%d", &n);\n    for (int i = 0; i < n; i++) scanf("%d", &a[i]);\n    scanf("%d", &key);\n    int pos = search(a, n, key, 0);\n    if (pos == -1) printf("NULL\\n");\n    else printf("%d\\n", pos);\n    return 0;\n}`,
+      cpp: `#include <iostream>\nusing namespace std;\nint search(int a[], int n, int key, int i) {\n    if (i >= n) return -1;\n    if (a[i] == key) return i;\n    return search(a, n, key, i + 1);\n}\nint main() {\n    int n, a[105], key;\n    cin >> n;\n    for (int i = 0; i < n; i++) cin >> a[i];\n    cin >> key;\n    int pos = search(a, n, key, 0);\n    if (pos == -1) cout << "NULL" << endl;\n    else cout << pos << endl;\n}`,
+      java: `import java.util.*;\npublic class Main {\n    static int search(int[] a, int n, int key, int i) {\n        if (i >= n) return -1;\n        if (a[i] == key) return i;\n        return search(a, n, key, i + 1);\n    }\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        int n = sc.nextInt();\n        int[] a = new int[n];\n        for (int i = 0; i < n; i++) a[i] = sc.nextInt();\n        int key = sc.nextInt();\n        int pos = search(a, n, key, 0);\n        System.out.println(pos == -1 ? "NULL" : pos);\n    }\n}`,
+      python: `def search(a, n, key, i):\n    if i >= n: return -1\n    if a[i] == key: return i\n    return search(a, n, key, i + 1)\nn = int(input())\na = list(map(int, input().split()))\nkey = int(input())\npos = search(a, n, key, 0)\nprint("NULL" if pos == -1 else pos)`
+    },
+    testCases: [
+      { input: '5\\n1 3 5 7 9\\n5', expectedOutput: '2', description: '找到5在下标2' },
+      { input: '5\\n1 3 5 7 9\\n4', expectedOutput: 'NULL', description: '未找到' }
+    ],
+    hints: ['从下标0开始顺序检索', '找到返回下标，越界返回-1'],
+    explanation: '递归顺序检索：依次检查每个元素，时间复杂度O(n)'
+  },
+  {
+    id: 'rec-array-reverse', category: '递归', title: '递归数组反序', difficulty: 'easy', type: 'coding',
+    description: `【题目描述】
+用递归方法将数组反序（逆序）。
+
+【输入格式】
+第一行：正整数 n（0 < n ≤ 100），数组元素个数
+第二行：n 个整数，数组元素
+
+【输出格式】
+顺次输出逆序后数组中元素，元素间以一个空格间隔，最后一个元素后无字符`,
+    templates: {
+      c: `#include <stdio.h>\nvoid reverse(int a[], int l, int r) {\n    // TODO: l为左端，r为右端\n}\nint main() {\n    int n, a[105];\n    scanf("%d", &n);\n    for (int i = 0; i < n; i++) scanf("%d", &a[i]);\n    reverse(a, 0, n - 1);\n    for (int i = 0; i < n; i++) printf("%d%c", a[i], i < n-1 ? ' ' : '\\n');\n    return 0;\n}`,
+      cpp: `#include <iostream>\nusing namespace std;\nvoid reverse(int a[], int l, int r) {\n    // TODO\n}\nint main() {\n    int n, a[105];\n    cin >> n;\n    for (int i = 0; i < n; i++) cin >> a[i];\n    reverse(a, 0, n - 1);\n    for (int i = 0; i < n; i++) cout << a[i] << (i < n-1 ? " " : "\\n");\n}`,
+      java: `import java.util.*;\npublic class Main {\n    static void reverse(int[] a, int l, int r) {\n        // TODO\n    }\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        int n = sc.nextInt();\n        int[] a = new int[n];\n        for (int i = 0; i < n; i++) a[i] = sc.nextInt();\n        reverse(a, 0, n - 1);\n        StringBuilder sb = new StringBuilder();\n        for (int i = 0; i < n; i++) sb.append(a[i]).append(i < n-1 ? " " : "");\n        System.out.println(sb);\n    }\n}`,
+      python: `def reverse(a, l, r):\n    # TODO\n    pass\nn = int(input())\na = list(map(int, input().split()))\nreverse(a, 0, n - 1)\nprint(' '.join(map(str, a)))`
+    },
+    solutions: {
+      c: `#include <stdio.h>\nvoid reverse(int a[], int l, int r) {\n    if (l >= r) return;\n    int t = a[l]; a[l] = a[r]; a[r] = t;\n    reverse(a, l + 1, r - 1);\n}\nint main() {\n    int n, a[105];\n    scanf("%d", &n);\n    for (int i = 0; i < n; i++) scanf("%d", &a[i]);\n    reverse(a, 0, n - 1);\n    for (int i = 0; i < n; i++) printf("%d%c", a[i], i < n-1 ? ' ' : '\\n');\n    return 0;\n}`,
+      cpp: `#include <iostream>\nusing namespace std;\nvoid reverse(int a[], int l, int r) {\n    if (l >= r) return;\n    swap(a[l], a[r]);\n    reverse(a, l + 1, r - 1);\n}\nint main() {\n    int n, a[105];\n    cin >> n;\n    for (int i = 0; i < n; i++) cin >> a[i];\n    reverse(a, 0, n - 1);\n    for (int i = 0; i < n; i++) cout << a[i] << (i < n-1 ? " " : "\\n");\n}`,
+      java: `import java.util.*;\npublic class Main {\n    static void reverse(int[] a, int l, int r) {\n        if (l >= r) return;\n        int t = a[l]; a[l] = a[r]; a[r] = t;\n        reverse(a, l + 1, r - 1);\n    }\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        int n = sc.nextInt();\n        int[] a = new int[n];\n        for (int i = 0; i < n; i++) a[i] = sc.nextInt();\n        reverse(a, 0, n - 1);\n        StringBuilder sb = new StringBuilder();\n        for (int i = 0; i < n; i++) sb.append(a[i]).append(i < n-1 ? " " : "");\n        System.out.println(sb);\n    }\n}`,
+      python: `def reverse(a, l, r):\n    if l >= r: return\n    a[l], a[r] = a[r], a[l]\n    reverse(a, l + 1, r - 1)\nn = int(input())\na = list(map(int, input().split()))\nreverse(a, 0, n - 1)\nprint(' '.join(map(str, a)))`
+    },
+    testCases: [
+      { input: '5\\n1 2 3 4 5', expectedOutput: '5 4 3 2 1', description: '反序' },
+      { input: '4\\n1 2 3 4', expectedOutput: '4 3 2 1', description: '偶数个' }
+    ],
+    hints: ['交换首尾，递归处理中间部分', 'l >= r 时终止'],
+    explanation: '双指针递归：交换a[l]和a[r]，递归处理[l+1, r-1]'
+  },
+  {
+    id: 'rec-cut-stick', category: '递归', title: '截木条', difficulty: 'medium', type: 'coding',
+    description: `【题目描述】
+给定一个长度为 n 的木条，在约 2/5 的位置截断。短木条长度四舍五入为正整数，长木条长度为总长减去短木条长度。若新木条长度仍 > k，则继续按此法处理，直到所有木条长度都 ≤ k。
+求最终得到的木条根数。
+
+【输入格式】
+两个正整数 n 和 k
+
+【输出格式】
+木条根数`,
+    templates: {
+      c: `#include <stdio.h>\n#include <math.h>\nint cut(int n, int k) {\n    // TODO\n}\nint main() {\n    int n, k;\n    scanf("%d %d", &n, &k);\n    printf("%d\\n", cut(n, k));\n    return 0;\n}`,
+      cpp: `#include <iostream>\n#include <cmath>\nusing namespace std;\nint cut(int n, int k) {\n    // TODO\n}\nint main() {\n    int n, k;\n    cin >> n >> k;\n    cout << cut(n, k) << endl;\n}`,
+      java: `import java.util.*;\npublic class Main {\n    static int cut(int n, int k) {\n        // TODO\n        return 0;\n    }\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        System.out.println(cut(sc.nextInt(), sc.nextInt()));\n    }\n}`,
+      python: `def cut(n, k):\n    # TODO\n    pass\nn, k = map(int, input().split())\nprint(cut(n, k))`
+    },
+    solutions: {
+      c: `#include <stdio.h>\n#include <math.h>\nint cut(int n, int k) {\n    if (n <= k) return 1;\n    int shorter = (int)round(n * 0.4);\n    int longer = n - shorter;\n    return cut(shorter, k) + cut(longer, k);\n}\nint main() {\n    int n, k;\n    scanf("%d %d", &n, &k);\n    printf("%d\\n", cut(n, k));\n    return 0;\n}`,
+      cpp: `#include <iostream>\n#include <cmath>\nusing namespace std;\nint cut(int n, int k) {\n    if (n <= k) return 1;\n    int shorter = round(n * 0.4);\n    int longer = n - shorter;\n    return cut(shorter, k) + cut(longer, k);\n}\nint main() {\n    int n, k;\n    cin >> n >> k;\n    cout << cut(n, k) << endl;\n}`,
+      java: `import java.util.*;\npublic class Main {\n    static int cut(int n, int k) {\n        if (n <= k) return 1;\n        int shorter = (int)Math.round(n * 0.4);\n        int longer = n - shorter;\n        return cut(shorter, k) + cut(longer, k);\n    }\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        System.out.println(cut(sc.nextInt(), sc.nextInt()));\n    }\n}`,
+      python: `def cut(n, k):\n    if n <= k: return 1\n    shorter = round(n * 0.4)\n    longer = n - shorter\n    return cut(shorter, k) + cut(longer, k)\nn, k = map(int, input().split())\nprint(cut(n, k))`
+    },
+    testCases: [
+      { input: '100 20', expectedOutput: '7', description: '100截成7根' },
+      { input: '50 10', expectedOutput: '5', description: '50截成5根' }
+    ],
+    hints: ['n <= k 时返回1', '短木条 = round(n*0.4)，长木条 = n - 短木条'],
+    explanation: '分治递归：每次截成两段，分别递归处理'
+  },
+  {
+    id: 'rec-base-convert', category: '递归', title: '十进制转任意进制', difficulty: 'medium', type: 'coding',
+    description: `【题目描述】
+用递归方法将十进制的非负整数 N 转换为 b 进制数（2 ≤ b ≤ 36）。
+10以上的数位用大写字母A-Z表示。
+
+【输入格式】
+一行输入两个非负整数：十进制的 N 和 b
+
+【输出格式】
+N 的 b 进制数`,
+    templates: {
+      c: `#include <stdio.h>\nvoid convert(unsigned long n, int b) {\n    // TODO\n}\nint main() {\n    unsigned long n; int b;\n    scanf("%lu %d", &n, &b);\n    if (n == 0) printf("0");\n    else convert(n, b);\n    printf("\\n");\n    return 0;\n}`,
+      cpp: `#include <iostream>\nusing namespace std;\nvoid convert(unsigned long n, int b) {\n    // TODO\n}\nint main() {\n    unsigned long n; int b;\n    cin >> n >> b;\n    if (n == 0) cout << 0;\n    else convert(n, b);\n    cout << endl;\n}`,
+      java: `import java.util.*;\npublic class Main {\n    static void convert(long n, int b) {\n        // TODO\n    }\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        long n = sc.nextLong(); int b = sc.nextInt();\n        if (n == 0) System.out.print(0);\n        else convert(n, b);\n        System.out.println();\n    }\n}`,
+      python: `def convert(n, b):\n    # TODO\n    pass\nn, b = map(int, input().split())\nif n == 0: print(0)\nelse: convert(n, b); print()`
+    },
+    solutions: {
+      c: `#include <stdio.h>\nchar digits[] = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";\nvoid convert(unsigned long n, int b) {\n    if (n == 0) return;\n    convert(n / b, b);\n    printf("%c", digits[n % b]);\n}\nint main() {\n    unsigned long n; int b;\n    scanf("%lu %d", &n, &b);\n    if (n == 0) printf("0");\n    else convert(n, b);\n    printf("\\n");\n    return 0;\n}`,
+      cpp: `#include <iostream>\nusing namespace std;\nstring digits = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";\nvoid convert(unsigned long n, int b) {\n    if (n == 0) return;\n    convert(n / b, b);\n    cout << digits[n % b];\n}\nint main() {\n    unsigned long n; int b;\n    cin >> n >> b;\n    if (n == 0) cout << 0;\n    else convert(n, b);\n    cout << endl;\n}`,
+      java: `import java.util.*;\npublic class Main {\n    static String digits = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";\n    static void convert(long n, int b) {\n        if (n == 0) return;\n        convert(n / b, b);\n        System.out.print(digits.charAt((int)(n % b)));\n    }\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        long n = sc.nextLong(); int b = sc.nextInt();\n        if (n == 0) System.out.print(0);\n        else convert(n, b);\n        System.out.println();\n    }\n}`,
+      python: `digits = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"\ndef convert(n, b):\n    if n == 0: return\n    convert(n // b, b)\n    print(digits[n % b], end='')\nn, b = map(int, input().split())\nif n == 0: print(0)\nelse: convert(n, b); print()`
+    },
+    testCases: [
+      { input: '255 16', expectedOutput: 'FF', description: '255转16进制' },
+      { input: '10 2', expectedOutput: '1010', description: '10转2进制' }
+    ],
+    hints: ['先递归处理高位(n/b)，再输出当前位(n%b)', '注意n=0的特殊情况'],
+    explanation: '递归进制转换：先处理高位再处理低位，利用递归栈逆序输出'
+  },
+  {
+    id: 'rec-print-digits', category: '递归', title: '递归求正整数各位数字', difficulty: 'easy', type: 'coding',
+    description: `【题目描述】
+编写递归函数，把正整数的各位数字依次打印输出。
+
+【输入格式】
+任意一个 int 范围内的正整数
+
+【输出格式】
+依次输出正整数的各位数字，从高位向低位依次输出、相邻数字用1个空格隔开、最后1个数字后面也有一个空格`,
+    templates: {
+      c: `#include <stdio.h>\nvoid printDigits(int n) {\n    // TODO\n}\nint main() {\n    int n;\n    scanf("%d", &n);\n    printDigits(n);\n    return 0;\n}`,
+      cpp: `#include <iostream>\nusing namespace std;\nvoid printDigits(int n) {\n    // TODO\n}\nint main() {\n    int n;\n    cin >> n;\n    printDigits(n);\n}`,
+      java: `import java.util.*;\npublic class Main {\n    static void printDigits(int n) {\n        // TODO\n    }\n    public static void main(String[] args) {\n        printDigits(new Scanner(System.in).nextInt());\n    }\n}`,
+      python: `def printDigits(n):\n    # TODO\n    pass\nprintDigits(int(input()))`
+    },
+    solutions: {
+      c: `#include <stdio.h>\nvoid printDigits(int n) {\n    if (n >= 10) printDigits(n / 10);\n    printf("%d ", n % 10);\n}\nint main() {\n    int n;\n    scanf("%d", &n);\n    printDigits(n);\n    return 0;\n}`,
+      cpp: `#include <iostream>\nusing namespace std;\nvoid printDigits(int n) {\n    if (n >= 10) printDigits(n / 10);\n    cout << n % 10 << " ";\n}\nint main() {\n    int n;\n    cin >> n;\n    printDigits(n);\n}`,
+      java: `import java.util.*;\npublic class Main {\n    static void printDigits(int n) {\n        if (n >= 10) printDigits(n / 10);\n        System.out.print(n % 10 + " ");\n    }\n    public static void main(String[] args) {\n        printDigits(new Scanner(System.in).nextInt());\n    }\n}`,
+      python: `def printDigits(n):\n    if n >= 10: printDigits(n // 10)\n    print(n % 10, end=' ')\nprintDigits(int(input()))`
+    },
+    testCases: [
+      { input: '12345', expectedOutput: '1 2 3 4 5 ', description: '输出各位' },
+      { input: '100', expectedOutput: '1 0 0 ', description: '包含0' }
+    ],
+    hints: ['先递归处理高位(n/10)，再输出当前位(n%10)', '递归终止条件：n<10'],
+    explanation: '利用递归栈的特性，先递归到最高位再输出'
+  },
+  {
+    id: 'rec-strlen', category: '递归', title: '递归求字符串长度', difficulty: 'easy', type: 'coding',
+    description: `【题目描述】
+编写递归函数，求给定字符串的长度。
+
+【输入格式】
+任意一个字符串（长度不超过100；字符串中可能包含空格）
+
+【输出格式】
+1 个整数，表示字符串的长度`,
+    templates: {
+      c: `#include <stdio.h>\nint myStrlen(char* s) {\n    // TODO\n}\nint main() {\n    char s[105];\n    fgets(s, 105, stdin);\n    // 去掉末尾换行\n    int len = myStrlen(s);\n    if (len > 0 && s[len-1] == '\\n') len--;\n    printf("%d\\n", len);\n    return 0;\n}`,
+      cpp: `#include <iostream>\n#include <string>\nusing namespace std;\nint myStrlen(const string& s, int i) {\n    // TODO: i为当前位置\n}\nint main() {\n    string s;\n    getline(cin, s);\n    cout << myStrlen(s, 0) << endl;\n}`,
+      java: `import java.util.*;\npublic class Main {\n    static int myStrlen(String s, int i) {\n        // TODO\n        return 0;\n    }\n    public static void main(String[] args) {\n        String s = new Scanner(System.in).nextLine();\n        System.out.println(myStrlen(s, 0));\n    }\n}`,
+      python: `def myStrlen(s):\n    # TODO\n    pass\nprint(myStrlen(input()))`
+    },
+    solutions: {
+      c: `#include <stdio.h>\nint myStrlen(char* s) {\n    if (*s == '\\0' || *s == '\\n') return 0;\n    return 1 + myStrlen(s + 1);\n}\nint main() {\n    char s[105];\n    fgets(s, 105, stdin);\n    printf("%d\\n", myStrlen(s));\n    return 0;\n}`,
+      cpp: `#include <iostream>\n#include <string>\nusing namespace std;\nint myStrlen(const string& s, int i) {\n    if (i >= s.size()) return 0;\n    return 1 + myStrlen(s, i + 1);\n}\nint main() {\n    string s;\n    getline(cin, s);\n    cout << myStrlen(s, 0) << endl;\n}`,
+      java: `import java.util.*;\npublic class Main {\n    static int myStrlen(String s, int i) {\n        if (i >= s.length()) return 0;\n        return 1 + myStrlen(s, i + 1);\n    }\n    public static void main(String[] args) {\n        String s = new Scanner(System.in).nextLine();\n        System.out.println(myStrlen(s, 0));\n    }\n}`,
+      python: `def myStrlen(s):\n    if s == '': return 0\n    return 1 + myStrlen(s[1:])\nprint(myStrlen(input()))`
+    },
+    testCases: [
+      { input: 'hello', expectedOutput: '5', description: '长度5' },
+      { input: 'hello world', expectedOutput: '11', description: '含空格' }
+    ],
+    hints: ['空字符串返回0', '否则返回1+剩余部分长度'],
+    explanation: '递归字符串长度：空串长度0，否则为1+子串长度'
   }
 ];
 
@@ -1592,7 +2016,7 @@ def detect_cycle(head):
 【空间复杂度】O(1)`
   },
   {
-    id: 'll-merge-sorted',
+    id: 'll-merge-sorted-classic',
     category: '链表',
     title: '合并两个有序链表',
     difficulty: 'easy',
@@ -1659,7 +2083,7 @@ def detect_cycle(head):
 // ==================== 动态规划进阶 ====================
 export const dpAdvancedExercises: Exercise[] = [
   {
-    id: 'dp-knapsack-01',
+    id: 'dp-knapsack-01-classic',
     category: '动态规划',
     title: '0-1背包问题',
     difficulty: 'medium',
@@ -1770,7 +2194,7 @@ dp[i][j] = max(dp[i-1][j], dp[i-1][j-v[i]] + w[i])
 【空间复杂度】O(V)`
   },
   {
-    id: 'dp-lcs',
+    id: 'dp-lcs-classic',
     category: '动态规划',
     title: '最长公共子序列',
     difficulty: 'medium',
