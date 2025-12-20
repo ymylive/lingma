@@ -19,9 +19,10 @@ def upload_dir(local_dir, remote_dir):
         local_path = os.path.join(local_dir, item)
         remote_path = f'{remote_dir}/{item}'
         if os.path.isfile(local_path):
-            print(f'📤 {item}')
+            print(f'📤 File: {item}')
             sftp.put(local_path, remote_path)
         elif os.path.isdir(local_path):
+            print(f'📁 Dir: {item}')
             upload_dir(local_path, remote_path)
 
 print('📤 上传前端文件...')

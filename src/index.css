@@ -21,36 +21,85 @@
   }
 }
 
-/* 自定义滚动条 */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --glass-border: rgba(255, 255, 255, 0.08);
+    --glass-surface: rgba(255, 255, 255, 0.03);
+  }
+
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    font-family: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    @apply bg-slate-50 text-slate-900 transition-colors duration-500 selection:bg-indigo-500/30 selection:text-indigo-600 dark:selection:bg-indigo-400/30 dark:selection:text-indigo-300;
+  }
+
+  .dark body {
+    @apply bg-[#030712] text-slate-50;
+  }
+}
+
+/* 优化后的滚动条 */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
 }
-
 ::-webkit-scrollbar-track {
-  background: #f1f1f1;
-  border-radius: 4px;
+  background: transparent;
 }
-
-.dark ::-webkit-scrollbar-track {
-  background: #1e293b;
-}
-
 ::-webkit-scrollbar-thumb {
-  background: #c1c1c1;
-  border-radius: 4px;
+  background: rgba(148, 163, 184, 0.3);
+  border-radius: 10px;
 }
-
-.dark ::-webkit-scrollbar-thumb {
-  background: #475569;
-}
-
 ::-webkit-scrollbar-thumb:hover {
-  background: #a1a1a1;
+  background: rgba(148, 163, 184, 0.5);
 }
 
-.dark ::-webkit-scrollbar-thumb:hover {
-  background: #64748b;
+/* 页面进入动画 - 开启硬件加速 */
+@keyframes pageEnter {
+  from { opacity: 0; transform: translateY(15px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@layer utilities {
+  /* 性能优化版玻璃拟态 */
+  .glass {
+    @apply bg-white/70 dark:bg-[#0B1120]/70 backdrop-blur-md border border-white/40 dark:border-white/5;
+  }
+  
+  .glass-card {
+    @apply bg-white/50 dark:bg-white/5 backdrop-blur-sm border border-white/50 dark:border-white/5 transition-transform duration-300 will-change-transform;
+  }
+  
+  .glass-card:hover {
+    @apply bg-white/70 dark:bg-white/10 border-indigo-500/30 dark:border-indigo-400/30 -translate-y-1;
+  }
+
+  /* 渐变文本 */
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-600 dark:from-indigo-400 dark:via-purple-400 dark:to-indigo-400 bg-[length:200%_auto] animate-gradient;
+  }
+
+  @keyframes gradient {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+
+  .animate-gradient {
+    animation: gradient 6s linear infinite;
+    will-change: background-position; /* 性能提示 */
+  }
 }
 
 /* 可视化画布样式 */

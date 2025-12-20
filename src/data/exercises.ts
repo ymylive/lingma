@@ -1,6 +1,8 @@
 // 预设练习题库 - 覆盖所有数据结构与算法知识点
 
 import { allClassicExercises, recursionExercises } from './classicExercises';
+import { digitalLogicExamExercises } from './digitalLogicExercises';
+import { moreArray2DExercises } from './moreArray2DExercises';
 
 export interface Exercise {
   id: string;
@@ -23,7 +25,7 @@ export interface Exercise {
 // ==================== 链表 ====================
 export const linkedListExercises: Exercise[] = [
   {
-    id: 'll-insert', category: '链表', title: '单链表插入', difficulty: 'easy', type: 'coding',
+    id: 'll-insert', category: '链表', title: '单链表插入', difficulty: 'easy', type: 'coding', isExamFocus: true,
     description: `【题目描述】
 在带头节点的单链表中，在第i个位置插入元素e。成功返回true，失败返回false。
 
@@ -56,7 +58,7 @@ export const linkedListExercises: Exercise[] = [
     commonMistakes: ['顺序错误：先执行p.next=s会导致后继节点丢失', '未处理插入位置无效(p为空)的情况', '计数器j的初始值或终止条件设置错误']
   },
   {
-    id: 'll-delete', category: '链表', title: '单链表删除', difficulty: 'easy', type: 'coding',
+    id: 'll-delete', category: '链表', title: '单链表删除', difficulty: 'easy', type: 'coding', isExamFocus: true,
     description: `【题目描述】
 在带头节点的单链表中，删除第i个位置的节点，返回被删除的元素值。
 
@@ -88,7 +90,7 @@ export const linkedListExercises: Exercise[] = [
     commonMistakes: ['忘记释放被删除节点的内存(C++)', '未检查待删除节点是否存在(p.next为空)', '删除头节点或尾节点时的边界处理不当']
   },
   {
-    id: 'll-reverse', category: '链表', title: '链表反转', difficulty: 'medium', type: 'coding',
+    id: 'll-reverse', category: '链表', title: '链表反转', difficulty: 'medium', type: 'coding', isExamFocus: true,
     description: `【题目描述】
 给定单链表的头节点head，反转链表，并返回反转后的链表头节点。
 
@@ -290,7 +292,7 @@ ___BLANK1___  # 核心操作`
     commonMistakes: ['循环条件写成fast->next->next', '对于偶数长度链表返回了错误的中间节点（偏左或偏右）']
   },
   {
-    id: 'll-merge', category: '链表', title: '合并两个有序链表', difficulty: 'easy', type: 'coding',
+    id: 'll-merge', category: '链表', title: '合并两个有序链表', difficulty: 'easy', type: 'coding', isExamFocus: true,
     description: `【题目描述】
 将两个升序链表合并为一个新的升序链表并返回。
 
@@ -11784,6 +11786,8 @@ export const allExercises: Exercise[] = [
   ...examFocusExercises,  // 考试重点题目放在最后，便于优先显示
   ...structExercises,     // 结构体题目
   ...basicProgrammingExercises,  // 基础编程题目
+  ...digitalLogicExamExercises,  // 数字逻辑电路考试题目
+  ...moreArray2DExercises,  // 更多二维数组题目
 ];
 // 注意: recursionExercises 已包含在 allClassicExercises 中，不要重复添加
 
