@@ -44,33 +44,41 @@ export interface GeneratedFillBlank {
 }
 
 export interface AIConfig {
-  provider: 'openai' | 'deepseek' | 'zhipu' | 'aabao' | 'custom';
+  provider: 'openai' | 'deepseek' | 'zhipu' | 'modelscope' | 'custom';
   apiKey: string;
   baseUrl?: string;
   model?: string;
 }
 
 // 代理服务地址 (API密钥存储在服务器端，前端不暴露)
-// 本地开发时使用 localhost:3001，生产环境使用远程服务器
-const AI_PROXY_URL = import.meta.env.DEV 
-  ? 'http://localhost:3001/api/ai' 
-  : (import.meta.env.VITE_AI_PROXY_URL || 'https://lingma.cornna.xyz/api/ai');
+const DEFAULT_PROXY_ORIGIN =
+  typeof window !== 'undefined' && window.location ? window.location.origin : 'https://lingma.cornna.xyz';
+
+const AI_PROXY_URL = import.meta.env.DEV
+  ? 'http://localhost:3001/api/ai'
+  : (import.meta.env.VITE_AI_PROXY_URL || `${DEFAULT_PROXY_ORIGIN}/api/ai`);
+
+// 流式API地址
+const AI_STREAM_URL = import.meta.env.DEV
+  ? 'http://localhost:3001/api/ai/stream'
+  : (import.meta.env.VITE_AI_PROXY_URL?.replace('/api/ai', '/api/ai/stream') || `${DEFAULT_PROXY_ORIGIN}/api/ai/stream`);
 
 // AI服务商列表
 export const PROVIDERS = [
+  { id: 'modelscope', name: 'ModelScope 魔搭', baseUrl: 'https://api-inference.modelscope.cn/v1', model: 'deepseek-ai/DeepSeek-V3.2' },
   { id: 'deepseek', name: 'DeepSeek', baseUrl: 'https://api.deepseek.com/v1', model: 'deepseek-chat' },
   { id: 'openai', name: 'OpenAI', baseUrl: 'https://api.openai.com/v1', model: 'gpt-3.5-turbo' },
   { id: 'zhipu', name: '智谱AI', baseUrl: 'https://open.bigmodel.cn/api/paas/v4', model: 'glm-4' },
-  { id: 'aabao', name: 'AABao AI', baseUrl: 'https://api.aabao.top', model: 'deepseek-v3.2-thinking' },
   { id: 'custom', name: '自定义', baseUrl: '', model: '' },
 ];
 
-// 默认配置 - 使用AABao AI服务
+// 默认配置 - 使用ModelScope魔搭平台
 let aiConfig: AIConfig = {
-  provider: 'aabao',
-  apiKey: 'sk-9vJdSQ3WTnQWwW02wJBoGepCZDE3QO5mLi2dIplmBxXxhgIg',
-  baseUrl: 'https://api.aabao.top/v1/chat/completions',
-  model: 'deepseek-v3.2-thinking'
+  provider: 'modelscope',
+  apiKey: 'ms-6750340c-ac7b-4bb9-af73-a5b25a5b386c',
+  baseUrl: 'https://api-inference.modelscope.cn/v1',
+  model: 'deepseek-ai/DeepSeek-V3.2'
+  // 备用模型: 'deepseek-ai/DeepSeek-V3.2'
 };
 
 // 获取/设置AI配置
@@ -93,12 +101,10 @@ export const loadAIConfig = () => {
   }
 };
 
-// 调用AI API
-async function callAI(prompt: string): Promise<string> {
-  // 优先使用配置的API，否则使用代理
-  const useDirectApi = aiConfig.apiKey && aiConfig.baseUrl;
-  const apiUrl = useDirectApi ? aiConfig.baseUrl! : AI_PROXY_URL;
-  console.log('Calling AI API:', apiUrl, 'Model:', aiConfig.model);
+// 调用AI API (流式输出)
+async function callAI(prompt: string, onProgress?: (text: string) => void): Promise<string> {
+  const apiUrl = onProgress ? AI_STREAM_URL : AI_PROXY_URL;
+  console.log('Calling AI API:', apiUrl, 'Stream:', !!onProgress);
   
   const messages = [
     {
@@ -144,41 +150,66 @@ async function callAI(prompt: string): Promise<string> {
 
 六、JSON输出：严格按照要求格式，不包含任何其他文字说明`
     },
-    {
-      role: 'user',
-      content: prompt
-    }
+    { role: 'user', content: prompt }
   ];
   
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-  };
-  
-  // 如果有API密钥，添加认证头
-  if (aiConfig.apiKey) {
-    headers['Authorization'] = `Bearer ${aiConfig.apiKey}`;
-  }
-  
-  const body = aiConfig.apiKey ? {
-    model: aiConfig.model || 'deepseek-v3.2-thinking',
-    messages,
-    max_tokens: 4096,
-    temperature: 0.7,
-  } : { messages };
-  
-  // thinking模型需要更长超时时间（5分钟）
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 300000);
   
-  let response: Response;
   try {
-    response = await fetch(apiUrl, {
+    const response = await fetch(apiUrl, {
       method: 'POST',
-      headers,
-      body: JSON.stringify(body),
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messages }),
       signal: controller.signal,
     });
     clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      throw new Error(`AI API 调用失败: ${response.status}`);
+    }
+
+    // 流式处理
+    if (onProgress && response.body) {
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let fullContent = '';
+      
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        
+        const chunk = decoder.decode(value, { stream: true });
+        const lines = chunk.split('\n');
+        
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const data = line.slice(6);
+            if (data === '[DONE]') continue;
+            try {
+              const json = JSON.parse(data);
+              const content = json.choices?.[0]?.delta?.content || '';
+              if (content) {
+                fullContent += content;
+                onProgress(fullContent);
+              }
+            } catch {}
+          }
+        }
+      }
+      return fullContent;
+    }
+
+    // 非流式处理
+    const data = await response.json();
+    let content = '';
+    if (data.choices?.[0]?.message) {
+      content = data.choices[0].message.content || '';
+    }
+    if (!content) {
+      throw new Error(`AI 返回内容为空`);
+    }
+    return content;
   } catch (error: unknown) {
     clearTimeout(timeoutId);
     if (error instanceof Error && error.name === 'AbortError') {
@@ -186,47 +217,14 @@ async function callAI(prompt: string): Promise<string> {
     }
     throw error;
   }
-
-  if (!response.ok) {
-    const error = await response.text();
-    console.error('API Error:', error);
-    throw new Error(`AI API 调用失败: ${response.status}`);
-  }
-
-  const data = await response.json();
-  console.log('AI Response:', data);
-  
-  // 处理不同的响应格式
-  let content = '';
-  if (data.choices && data.choices[0]) {
-    const choice = data.choices[0];
-    // 处理 thinking 模型的响应格式
-    if (choice.message) {
-      content = choice.message.content || '';
-      // 如果有 reasoning_content，取实际内容
-      if (choice.message.reasoning_content) {
-        content = choice.message.content || '';
-      }
-    } else if (choice.text) {
-      content = choice.text;
-    }
-  }
-  
-  if (!content) {
-    console.error('Empty content from API:', data);
-    // 显示完整的响应结构帮助调试
-    throw new Error(`AI 返回内容为空，响应结构: ${JSON.stringify(data).substring(0, 300)}`);
-  }
-  
-  console.log('AI content:', content.substring(0, 500));
-  return content;
 }
 
-// 生成编程题
+// 生成编程题 (支持流式输出)
 export async function generateCodingExercise(
   topic: string,
   difficulty: 'easy' | 'medium' | 'hard' = 'medium',
-  dataStructure: string = '链表'
+  dataStructure: string = '链表',
+  onProgress?: (text: string) => void
 ): Promise<GeneratedExercise> {
   const difficultyText = difficulty === 'easy' ? '简单' : difficulty === 'medium' ? '中等' : '困难';
   const prompt = `请生成一道严格符合ACM/OJ竞赛标准的"${dataStructure} - ${topic}"${difficultyText}难度编程题。
@@ -287,15 +285,16 @@ export async function generateCodingExercise(
   "explanation": "【解题思路】\\n分析...\\n\\n【算法设计】\\n1. ...\\n2. ...\\n\\n【时间复杂度】O(n)\\n【空间复杂度】O(1)"
 }`;
 
-  const response = await callAI(prompt);
+  const response = await callAI(prompt, onProgress);
   return parseAIJsonResponse(response, 'coding exercise');
 }
 
-// 生成填空题 - 函数实现填空格式
+// 生成填空题 (支持流式输出)
 export async function generateFillBlank(
   topic: string,
   difficulty: 'easy' | 'medium' | 'hard' = 'easy',
-  dataStructure: string = '链表'
+  dataStructure: string = '链表',
+  onProgress?: (text: string) => void
 ): Promise<GeneratedFillBlank> {
   const prompt = `生成一道关于"${dataStructure} - ${topic}"的${
     difficulty === 'easy' ? '简单' : difficulty === 'medium' ? '中等' : '困难'
@@ -348,7 +347,7 @@ int main() {
 4. 代码换行用\\n表示
 5. 只返回JSON，不要其他文字`;
 
-  const response = await callAI(prompt);
+  const response = await callAI(prompt, onProgress);
   return parseAIJsonResponse(response, 'fill blank');
 }
 

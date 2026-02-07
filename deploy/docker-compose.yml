@@ -1,0 +1,30 @@
+services:
+  frontend:
+    build:
+      context: ..
+      dockerfile: deploy/docker/frontend.Dockerfile
+    ports:
+      - "8080:80"
+    depends_on:
+      - api-proxy
+      - judge-server
+    restart: unless-stopped
+
+  api-proxy:
+    build:
+      context: ..
+      dockerfile: deploy/docker/api-proxy.Dockerfile
+    env_file:
+      - ./.env
+    volumes:
+      - api_proxy_data:/app/data
+    restart: unless-stopped
+
+  judge-server:
+    build:
+      context: ..
+      dockerfile: deploy/docker/judge-server.Dockerfile
+    restart: unless-stopped
+
+volumes:
+  api_proxy_data:

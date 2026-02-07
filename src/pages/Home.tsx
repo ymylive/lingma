@@ -73,10 +73,10 @@ export default function Home() {
           animate="visible"
           variants={containerVariants}
         >
-          <motion.div variants={itemVariants} className="inline-flex items-center gap-2 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-indigo-100 dark:border-indigo-900/30 text-indigo-600 dark:text-indigo-400 px-4 py-1.5 rounded-full text-sm font-medium mb-8 shadow-sm">
+          <motion.div variants={itemVariants} className="inline-flex items-center gap-2 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-klein-100 dark:border-klein-900/30 text-klein-600 dark:text-klein-400 px-4 py-1.5 rounded-full text-sm font-medium mb-8 shadow-sm">
             <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-klein-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-klein-500"></span>
             </span>
             交互式数据结构学习平台
           </motion.div>
@@ -95,13 +95,13 @@ export default function Home() {
           <motion.div variants={itemVariants} className="flex flex-wrap justify-center gap-5">
             <Link
               to="/book"
-              className="px-8 py-4 bg-indigo-600 text-white rounded-2xl font-semibold hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-600/20 hover:shadow-indigo-600/40 hover:-translate-y-1 flex items-center gap-2"
+              className="px-8 py-4 bg-klein-600 text-white rounded-2xl font-semibold hover:bg-klein-700 transition-all shadow-xl shadow-klein-600/20 hover:shadow-klein-600/40 hover:-translate-y-1 flex items-center gap-2"
             >
               <span>📚</span> 开始学习
             </Link>
             <Link
               to="/algorithms"
-              className="px-8 py-4 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm text-slate-700 dark:text-slate-200 rounded-2xl font-semibold border border-slate-200 dark:border-slate-700 hover:border-indigo-300 dark:hover:border-indigo-500 hover:text-indigo-600 dark:hover:text-indigo-400 transition-all shadow-lg shadow-slate-200/50 dark:shadow-slate-900/50 hover:-translate-y-1 flex items-center gap-2"
+              className="px-8 py-4 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm text-slate-700 dark:text-slate-200 rounded-2xl font-semibold border border-slate-200 dark:border-slate-700 hover:border-klein-300 dark:hover:border-pine-500 hover:text-klein-600 dark:hover:text-pine-400 transition-all shadow-lg shadow-slate-200/50 dark:shadow-slate-900/50 hover:-translate-y-1 flex items-center gap-2"
             >
               <span>🎬</span> 查看演示
             </Link>

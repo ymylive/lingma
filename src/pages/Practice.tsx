@@ -411,12 +411,12 @@ export default function Practice() {
               </div>
             ) : (
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {filteredExercises.map(exercise => {
+                {filteredExercises.map((exercise, index) => {
                   const dc = difficultyConfig[exercise.difficulty];
                   const completed = isExerciseCompleted(exercise.id);
                   return (
                     <div
-                      key={exercise.id}
+                      key={`${exercise.id}-${index}`}
                       onClick={() => handleSelectExercise(exercise)}
                       className={`rounded-xl border p-5 hover:shadow-lg transition-all cursor-pointer group active:scale-95 ${
                         completed 

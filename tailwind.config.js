@@ -8,17 +8,25 @@ export default {
   theme: {
     extend: {
       colors: {
+        klein: {
+          500: '#002FA7', // The Classic IKB
+          600: '#002585',
+        },
+        pine: {
+          400: '#FFF085',
+          500: '#FFE135', // Vivid Songhua
+        },
         primary: {
-          50: '#f0f4ff',
-          100: '#e0e9ff',
-          200: '#c7d6fe',
-          300: '#a3b9fd',
-          400: '#7c93fa',
-          500: '#5a6df5',
-          600: '#4451ea',
-          700: '#3840d6',
-          800: '#3036ad',
-          900: '#2c3389',
+          50: '#edf4ff',
+          100: '#dceaff',
+          200: '#b6d5ff',
+          300: '#80b3ff',
+          400: '#4685ff',
+          500: '#002FA7', // Replaced with Klein Blue base
+          600: '#002585',
+          700: '#001d6f',
+          800: '#00185c',
+          900: '#061649',
         },
       },
       animation: {

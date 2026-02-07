@@ -5,7 +5,7 @@ const categories = [
   {
     name: '线性表',
     icon: '📊',
-    color: 'blue',
+    color: 'klein',
     items: [
       { id: 'sequence', name: '顺序表' },
       { id: 'link-head-node', name: '单链表（带头结点）' },
@@ -16,7 +16,7 @@ const categories = [
   {
     name: '栈',
     icon: '📚',
-    color: 'indigo',
+    color: 'klein',
     items: [
       { id: 'stack-sequence', name: '顺序栈' },
       { id: 'stack-link', name: '链栈' },
@@ -25,7 +25,7 @@ const categories = [
   {
     name: '队列',
     icon: '🔄',
-    color: 'emerald',
+    color: 'klein',
     items: [
       { id: 'queue-sequence', name: '顺序队列' },
       { id: 'queue-link', name: '链队列' },
@@ -34,7 +34,7 @@ const categories = [
   {
     name: '树',
     icon: '🌳',
-    color: 'green',
+    color: 'pine',
     items: [
       { id: 'binary-tree', name: '二叉树遍历' },
       { id: 'bst', name: '二叉搜索树' },
@@ -43,7 +43,7 @@ const categories = [
   {
     name: '图',
     icon: '🕸️',
-    color: 'purple',
+    color: 'pine',
     items: [
       { id: 'bfs', name: 'BFS 广度优先' },
       { id: 'dfs', name: 'DFS 深度优先' },
@@ -52,7 +52,7 @@ const categories = [
   {
     name: '排序',
     icon: '⚡',
-    color: 'amber',
+    color: 'pine',
     items: [
       { id: 'sort-bubble', name: '冒泡排序' },
       { id: 'sort-insert', name: '插入排序' },
@@ -83,7 +83,7 @@ const itemVariants: Variants = {
 
 export default function Algorithms() {
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-[#0B1120] pt-28 pb-12 transition-colors duration-500">
+    <div className="min-h-screen pt-28 pb-12 transition-colors duration-500">
       <div className="max-w-5xl mx-auto px-6">
         <motion.div 
           initial={{ opacity: 0, x: -20 }}
@@ -91,7 +91,7 @@ export default function Algorithms() {
           className="mb-12"
         >
           <h1 className="text-4xl font-extrabold text-slate-900 dark:text-white mb-4 tracking-tight">
-            算法可视化
+            算法<span className="text-gradient">可视化</span>
           </h1>
           <p className="text-lg text-slate-600 dark:text-slate-400 max-w-2xl">
             通过交互式动画探索数据结构与算法的魅力。点击下方卡片开始你的学习旅程。
@@ -107,7 +107,11 @@ export default function Algorithms() {
           {categories.map((cat) => (
             <motion.div key={cat.name} variants={itemVariants}>
               <div className="flex items-center gap-3 mb-6">
-                <span className="text-2xl p-2 bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
+                <span className={`text-2xl p-2 rounded-xl shadow-sm border ${
+                  cat.color === 'klein' 
+                    ? 'bg-klein-50 dark:bg-klein-900/20 border-klein-100 dark:border-klein-800 text-klein-600 dark:text-klein-400' 
+                    : 'bg-pine-50 dark:bg-pine-900/20 border-pine-100 dark:border-pine-800 text-pine-600 dark:text-pine-400'
+                }`}>
                   {cat.icon}
                 </span>
                 <h2 className="text-xl font-bold text-slate-900 dark:text-white">
@@ -121,16 +125,20 @@ export default function Algorithms() {
                   <Link
                     key={item.id}
                     to={`/algorithms/${item.id}`}
-                    className="group relative p-5 bg-white dark:bg-slate-800/50 backdrop-blur-sm rounded-2xl border border-slate-200 dark:border-slate-700/50 hover:border-indigo-500/50 hover:shadow-xl hover:shadow-indigo-500/10 transition-all duration-300 overflow-hidden"
+                    className="glass-card group relative p-5 hover:bg-white dark:hover:bg-slate-800/80 overflow-hidden"
                   >
-                    <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-500/5 rounded-full blur-2xl -mr-12 -mt-12 transition-all group-hover:bg-indigo-500/10" />
+                    <div className={`absolute top-0 right-0 w-24 h-24 rounded-full blur-2xl -mr-12 -mt-12 transition-all opacity-0 group-hover:opacity-100 ${
+                       cat.color === 'klein' ? 'bg-klein-500/10' : 'bg-pine-500/10'
+                    }`} />
                     
                     <div className="relative z-10 flex items-center justify-between">
-                      <span className="font-semibold text-slate-800 dark:text-slate-200 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                      <span className="font-semibold text-slate-800 dark:text-slate-200 group-hover:text-klein-600 dark:group-hover:text-pine-400 transition-colors">
                         {item.name}
                       </span>
                       <svg 
-                        className="w-5 h-5 text-slate-300 dark:text-slate-600 group-hover:text-indigo-500 dark:group-hover:text-indigo-400 transform group-hover:translate-x-1 transition-all" 
+                        className={`w-5 h-5 transform group-hover:translate-x-1 transition-all ${
+                          cat.color === 'klein' ? 'text-klein-400' : 'text-pine-400'
+                        }`} 
                         fill="none" 
                         viewBox="0 0 24 24" 
                         stroke="currentColor"

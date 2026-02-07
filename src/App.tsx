@@ -9,6 +9,7 @@ import AlgorithmDetail from './pages/AlgorithmDetail';
 import Book from './pages/Book';
 import Lesson from './pages/Lesson';
 import Practice from './pages/Practice';
+import MindMap from './pages/MindMap';
 import Auth from './pages/Auth';
 import Dashboard from './pages/Dashboard';
 import PixelCat from './components/PixelCat';
@@ -26,6 +27,7 @@ function AnimatedRoutes() {
         <Route path="/book" element={<PageWrapper><ProtectedRoute><Book /></ProtectedRoute></PageWrapper>} />
         <Route path="/book/*" element={<PageWrapper><ProtectedRoute><Lesson /></ProtectedRoute></PageWrapper>} />
         <Route path="/practice" element={<PageWrapper><ProtectedRoute><Practice /></ProtectedRoute></PageWrapper>} />
+        <Route path="/mindmap" element={<PageWrapper><ProtectedRoute><MindMap /></ProtectedRoute></PageWrapper>} />
         <Route path="/auth" element={<PageWrapper><Auth /></PageWrapper>} />
         <Route path="/dashboard" element={<PageWrapper><ProtectedRoute><Dashboard /></ProtectedRoute></PageWrapper>} />
       </Routes>
@@ -36,11 +38,11 @@ function AnimatedRoutes() {
 function PageWrapper({ children }: { children: React.ReactNode }) {
   return (
     <motion.div
-      initial={{ opacity: 0, scale: 0.99 }} // Reduced scale effect for smoother entry
+      initial={{ opacity: 0, scale: 0.99 }}
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 1.01 }}
-      transition={{ duration: 0.3, ease: "easeOut" }} // Faster, simpler easing
-      className="relative z-10 will-change-transform" // Hardware acceleration hint
+      transition={{ duration: 0.3, ease: "easeOut" }}
+      className="relative z-10 will-change-transform"
     >
       {children}
     </motion.div>
@@ -52,29 +54,41 @@ function App() {
     <ThemeProvider>
       <UserProvider>
         <Router>
-          {/* Global Ambient Background - Optimized Performance */}
-          <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none bg-slate-50 dark:bg-[#030712]">
-             {/* Use radial gradients instead of blur filters for better FPS */}
-             <div className="absolute inset-0 opacity-30 dark:opacity-20"
+          {/* Global Aurora Background - Soft, Flowing, High-End */}
+          <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none bg-slate-50 dark:bg-[#000510] transition-colors duration-500">
+             {/* Static Base Gradients (Klein Blue & Pine Yellow) */}
+             <div className="absolute inset-0 opacity-40 dark:opacity-30"
                   style={{
                     background: `
-                      radial-gradient(circle at 15% 15%, rgba(99, 102, 241, 0.4) 0%, transparent 40%),
-                      radial-gradient(circle at 85% 85%, rgba(168, 85, 247, 0.4) 0%, transparent 40%),
-                      radial-gradient(circle at 50% 50%, rgba(16, 185, 129, 0.1) 0%, transparent 50%)
+                      radial-gradient(circle at 15% 15%, rgba(0, 47, 167, 0.35) 0%, transparent 50%), /* Klein Top-Left */
+                      radial-gradient(circle at 85% 85%, rgba(0, 47, 167, 0.3) 0%, transparent 50%), /* Klein Bottom-Right */
+                      radial-gradient(circle at 50% 50%, rgba(255, 225, 53, 0.1) 0%, transparent 60%) /* Pine Center */
                     `,
-                    filter: 'contrast(120%)', // Slight pop without heavy blur
+                    filter: 'contrast(120%) blur(20px)', // Soften edges
                   }}
              />
              
-             {/* Subtle animated overlay using transform instead of extensive blur */}
+             {/* Animated Floating Orb (Pine Yellow) */}
              <motion.div 
                animate={{ 
-                 transform: ['translate(0,0) scale(1)', 'translate(2%, 2%) scale(1.05)', 'translate(0,0) scale(1)']
+                 transform: ['translate(0,0) scale(1)', 'translate(5%, -5%) scale(1.1)', 'translate(-2%, 5%) scale(0.95)', 'translate(0,0) scale(1)']
                }}
-               transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-               className="absolute inset-0 opacity-40 dark:opacity-30 will-change-transform"
+               transition={{ duration: 20, repeat: Infinity, ease: "easeInOut" }}
+               className="absolute inset-0 opacity-30 dark:opacity-20 will-change-transform"
                style={{
-                 background: `radial-gradient(circle at 80% 20%, rgba(99, 102, 241, 0.25) 0%, transparent 35%)`
+                 background: `radial-gradient(circle at 70% 30%, rgba(255, 225, 53, 0.25) 0%, transparent 40%)`
+               }}
+             />
+
+             {/* Animated Floating Orb (Klein Blue) */}
+             <motion.div 
+               animate={{ 
+                 transform: ['translate(0,0) scale(1)', 'translate(-5%, 5%) scale(1.1)', 'translate(5%, -2%) scale(0.95)', 'translate(0,0) scale(1)']
+               }}
+               transition={{ duration: 25, repeat: Infinity, ease: "easeInOut", delay: 2 }}
+               className="absolute inset-0 opacity-30 dark:opacity-20 will-change-transform"
+               style={{
+                 background: `radial-gradient(circle at 20% 80%, rgba(0, 47, 167, 0.25) 0%, transparent 40%)`
                }}
              />
           </div>

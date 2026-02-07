@@ -1,15 +1,15 @@
 const express = require('express');
 const cors = require('cors');
-const { exec, spawn } = require('child_process');
+const { exec, execSync, spawn } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 const { v4: uuidv4 } = require('uuid');
 
 const app = express();
-const PORT = 3001;
+const PORT = 3002;  // 判题服务使用3002端口
 const TEMP_DIR = '/tmp/judge';
 const TIMEOUT = 5000; // 5秒超时
-const MAX_OUTPUT = 10000; // 最大输出字符数
+const MAX_OUTPUT = 65536; // 64KB最大输出
 
 // 确保临时目录存在
 if (!fs.existsSync(TEMP_DIR)) {
@@ -19,23 +19,29 @@ if (!fs.existsSync(TEMP_DIR)) {
 app.use(cors());
 app.use(express.json({ limit: '1mb' }));
 
-// 语言配置
+// ACM/OJ标准语言配置
 const LANG_CONFIG = {
   c: {
     ext: '.c',
-    compile: (file, out) => `gcc "${file}" -o "${out}" -lm 2>&1`,
-    run: (out, input) => `echo "${input.replace(/"/g, '\\"')}" | timeout ${TIMEOUT/1000}s "${out}"`,
+    compile: (file, out) => `gcc "${file}" -o "${out}" -O2 -lm -std=c11 -DONLINE_JUDGE 2>&1`,
+    run: (out) => out,
+    needCompile: true
+  },
+  cpp: {
+    ext: '.cpp',
+    compile: (file, out) => `g++ "${file}" -o "${out}" -O2 -std=c++17 -DONLINE_JUDGE 2>&1`,
+    run: (out) => out,
     needCompile: true
   },
   java: {
     ext: '.java',
     compile: (file, dir) => `javac "${file}" -d "${dir}" 2>&1`,
-    run: (dir, input, className) => `echo "${input.replace(/"/g, '\\"')}" | timeout ${TIMEOUT/1000}s java -cp "${dir}" ${className}`,
+    run: (dir, className) => `java -cp "${dir}" -Xmx256m ${className}`,
     needCompile: true
   },
   python: {
     ext: '.py',
-    run: (file, input) => `echo "${input.replace(/"/g, '\\"')}" | timeout ${TIMEOUT/1000}s python3 "${file}"`,
+    run: (file) => `python3 -u "${file}"`,
     needCompile: false
   }
 };
@@ -51,32 +57,120 @@ function cleanup(dir) {
   }
 }
 
-// 执行命令
-function execCommand(cmd, timeout = TIMEOUT) {
-  return new Promise((resolve) => {
-    const startTime = Date.now();
-    exec(cmd, { timeout, maxBuffer: 1024 * 1024 }, (error, stdout, stderr) => {
-      const time = Date.now() - startTime;
-      if (error) {
-        if (error.killed) {
-          resolve({ success: false, error: '运行超时', time });
-        } else {
-          resolve({ success: false, error: stderr || error.message, time });
-        }
-      } else {
-        resolve({ success: true, output: stdout, time });
-      }
-    });
-  });
-}
-
 // 从Java代码中提取类名
 function extractJavaClassName(code) {
   const match = code.match(/public\s+class\s+(\w+)/);
   return match ? match[1] : 'Main';
 }
 
-// 判题接口
+// ACM/OJ标准输出比较（忽略行尾空格和文件末尾空行）
+function compareOutput(expected, actual) {
+  // 标准化：按行分割，去除每行末尾空格，去除末尾空行
+  const normalize = (str) => {
+    return str
+      .split('\n')
+      .map(line => line.trimEnd())  // 去除行尾空格
+      .join('\n')
+      .trimEnd();  // 去除末尾空行
+  };
+  
+  return normalize(expected) === normalize(actual);
+}
+
+// 使用spawn运行程序（支持stdin输入）
+function runProgram(cmd, args, input, timeout) {
+  return new Promise((resolve) => {
+    const startTime = Date.now();
+    let stdout = '';
+    let stderr = '';
+    let killed = false;
+    
+    const proc = spawn(cmd, args, {
+      stdio: ['pipe', 'pipe', 'pipe'],
+      timeout: timeout
+    });
+    
+    // 设置超时
+    const timer = setTimeout(() => {
+      killed = true;
+      proc.kill('SIGKILL');
+    }, timeout);
+    
+    proc.stdout.on('data', (data) => {
+      stdout += data.toString();
+      if (stdout.length > MAX_OUTPUT) {
+        killed = true;
+        proc.kill('SIGKILL');
+      }
+    });
+    
+    proc.stderr.on('data', (data) => {
+      stderr += data.toString();
+    });
+    
+    proc.on('close', (code) => {
+      clearTimeout(timer);
+      const time = Date.now() - startTime;
+      
+      if (killed && stdout.length > MAX_OUTPUT) {
+        resolve({ success: false, error: '输出超限 (Output Limit Exceeded)', time, status: 'OLE' });
+      } else if (killed) {
+        resolve({ success: false, error: '运行超时 (Time Limit Exceeded)', time, status: 'TLE' });
+      } else if (code !== 0) {
+        resolve({ success: false, error: stderr || `运行错误 (Runtime Error, exit code: ${code})`, time, status: 'RE' });
+      } else {
+        resolve({ success: true, output: stdout, time });
+      }
+    });
+    
+    proc.on('error', (err) => {
+      clearTimeout(timer);
+      resolve({ success: false, error: err.message, time: Date.now() - startTime, status: 'RE' });
+    });
+    
+    // 写入输入
+    if (input) {
+      proc.stdin.write(input);
+    }
+    proc.stdin.end();
+  });
+}
+
+// 编译代码
+async function compileCode(language, code, workDir) {
+  const config = LANG_CONFIG[language];
+  let className = 'Main';
+  let sourceFile, executablePath;
+  
+  if (language === 'java') {
+    className = extractJavaClassName(code);
+    sourceFile = path.join(workDir, `${className}.java`);
+    fs.writeFileSync(sourceFile, code);
+    executablePath = workDir;
+  } else {
+    sourceFile = path.join(workDir, `main${config.ext}`);
+    fs.writeFileSync(sourceFile, code);
+    executablePath = path.join(workDir, 'main');
+  }
+  
+  if (config.needCompile) {
+    const compileCmd = language === 'java' 
+      ? config.compile(sourceFile, workDir)
+      : config.compile(sourceFile, executablePath);
+    
+    try {
+      execSync(compileCmd, { timeout: 30000, maxBuffer: 1024 * 1024 });
+      return { success: true, executablePath, className, sourceFile };
+    } catch (e) {
+      return { success: false, error: e.stderr?.toString() || e.message, status: 'CE' };
+    }
+  }
+  
+  return { success: true, executablePath: sourceFile, className, sourceFile };
+}
+
+
+// 判题接口 - ACM/OJ标准
 app.post('/api/judge', async (req, res) => {
   const { code, language, testCases } = req.body;
   
@@ -94,94 +188,90 @@ app.post('/api/judge', async (req, res) => {
   fs.mkdirSync(workDir, { recursive: true });
   
   try {
-    let executablePath;
-    let className;
-    
-    // 写入源代码
-    if (language === 'java') {
-      className = extractJavaClassName(code);
-      const sourceFile = path.join(workDir, `${className}.java`);
-      fs.writeFileSync(sourceFile, code);
-      
-      // 编译Java
-      const compileCmd = config.compile(sourceFile, workDir);
-      const compileResult = await execCommand(compileCmd, 30000);
-      if (!compileResult.success) {
-        cleanup(workDir);
-        return res.json({
-          success: false,
-          results: [{ passed: false, error: `编译错误: ${compileResult.error}` }]
-        });
-      }
-      executablePath = workDir;
-    } else {
-      const sourceFile = path.join(workDir, `main${config.ext}`);
-      fs.writeFileSync(sourceFile, code);
-      
-      if (config.needCompile) {
-        // 编译C
-        const execFile = path.join(workDir, 'main');
-        const compileCmd = config.compile(sourceFile, execFile);
-        const compileResult = await execCommand(compileCmd, 30000);
-        if (!compileResult.success) {
-          cleanup(workDir);
-          return res.json({
-            success: false,
-            results: [{ passed: false, error: `编译错误: ${compileResult.error}` }]
-          });
-        }
-        executablePath = execFile;
-      } else {
-        executablePath = sourceFile;
-      }
+    // 编译
+    const compileResult = await compileCode(language, code, workDir);
+    if (!compileResult.success) {
+      cleanup(workDir);
+      return res.json({
+        success: false,
+        results: [{
+          passed: false,
+          error: `编译错误 (Compilation Error):\n${compileResult.error}`,
+          status: 'CE'
+        }]
+      });
     }
+    
+    const { executablePath, className } = compileResult;
     
     // 运行测试用例
     const results = [];
-    for (const tc of testCases) {
+    let allPassed = true;
+    
+    for (let i = 0; i < testCases.length; i++) {
+      const tc = testCases[i];
       const input = tc.input || '';
-      const expected = (tc.expectedOutput || '').trim();
+      const expected = tc.expectedOutput || '';
       
-      let runCmd;
+      // 构建运行命令
+      let cmd, args;
       if (language === 'java') {
-        runCmd = config.run(executablePath, input, className);
+        cmd = 'java';
+        args = ['-cp', executablePath, '-Xmx256m', className];
       } else if (language === 'python') {
-        runCmd = config.run(executablePath, input);
+        cmd = 'python3';
+        args = ['-u', executablePath];
       } else {
-        runCmd = config.run(executablePath, input);
+        cmd = executablePath;
+        args = [];
       }
       
-      const runResult = await execCommand(runCmd, TIMEOUT);
+      const runResult = await runProgram(cmd, args, input, TIMEOUT);
       
       if (!runResult.success) {
+        allPassed = false;
         results.push({
           passed: false,
-          input,
-          expectedOutput: expected,
+          testCase: i + 1,
+          input: input.length > 200 ? input.substring(0, 200) + '...' : input,
+          expectedOutput: expected.length > 200 ? expected.substring(0, 200) + '...' : expected,
           actualOutput: '',
           error: runResult.error,
           time: runResult.time,
-          status: '运行错误'
+          status: runResult.status
         });
       } else {
-        const actual = (runResult.output || '').trim().substring(0, MAX_OUTPUT);
-        const passed = actual === expected;
+        const actual = runResult.output;
+        const passed = compareOutput(expected, actual);
+        
+        if (!passed) allPassed = false;
+        
         results.push({
           passed,
-          input,
-          expectedOutput: expected,
-          actualOutput: actual,
+          testCase: i + 1,
+          input: input.length > 200 ? input.substring(0, 200) + '...' : input,
+          expectedOutput: expected.length > 200 ? expected.substring(0, 200) + '...' : expected,
+          actualOutput: actual.length > 200 ? actual.substring(0, 200) + '...' : actual,
           time: runResult.time,
-          status: passed ? '通过' : '答案错误'
+          status: passed ? 'AC' : 'WA'  // Accepted / Wrong Answer
         });
       }
     }
     
     cleanup(workDir);
+    
+    // ACM/OJ标准结果格式
+    const passedCount = results.filter(r => r.passed).length;
     res.json({
       success: true,
       results,
-      allPassed: results.every(r => r.passed)
+      allPassed,
+      summary: {
+        total: testCases.length,
+        passed: passedCount,
+        failed: testCases.length - passedCount,
+        verdict: allPassed ? 'Accepted' : results.find(r => !r.passed)?.status || 'WA'
+      }
     });
     
   } catch (error) {
@@ -190,7 +280,7 @@ app.post('/api/judge', async (req, res) => {
   }
 });
 
-// 快速运行接口（不判题，只返回输出）
+// 快速运行接口
 app.post('/api/run', async (req, res) => {
   const { code, language, input = '' } = req.body;
   
@@ -208,58 +298,46 @@ app.post('/api/run', async (req, res) => {
   fs.mkdirSync(workDir, { recursive: true });
   
   try {
-    let executablePath;
-    let className;
-    
-    if (language === 'java') {
-      className = extractJavaClassName(code);
-      const sourceFile = path.join(workDir, `${className}.java`);
-      fs.writeFileSync(sourceFile, code);
-      
-      const compileCmd = config.compile(sourceFile, workDir);
-      const compileResult = await execCommand(compileCmd, 30000);
-      if (!compileResult.success) {
-        cleanup(workDir);
-        return res.json({ success: false, error: `编译错误:\n${compileResult.error}` });
-      }
-      executablePath = workDir;
-    } else {
-      const sourceFile = path.join(workDir, `main${config.ext}`);
-      fs.writeFileSync(sourceFile, code);
-      
-      if (config.needCompile) {
-        const execFile = path.join(workDir, 'main');
-        const compileCmd = config.compile(sourceFile, execFile);
-        const compileResult = await execCommand(compileCmd, 30000);
-        if (!compileResult.success) {
-          cleanup(workDir);
-          return res.json({ success: false, error: `编译错误:\n${compileResult.error}` });
-        }
-        executablePath = execFile;
-      } else {
-        executablePath = sourceFile;
-      }
+    // 编译
+    const compileResult = await compileCode(language, code, workDir);
+    if (!compileResult.success) {
+      cleanup(workDir);
+      return res.json({
+        success: false,
+        error: `编译错误 (Compilation Error):\n${compileResult.error}`
+      });
     }
     
-    let runCmd;
+    const { executablePath, className } = compileResult;
+    
+    // 运行
+    let cmd, args;
     if (language === 'java') {
-      runCmd = config.run(executablePath, input, className);
+      cmd = 'java';
+      args = ['-cp', executablePath, '-Xmx256m', className];
     } else if (language === 'python') {
-      runCmd = config.run(executablePath, input);
+      cmd = 'python3';
+      args = ['-u', executablePath];
     } else {
-      runCmd = config.run(executablePath, input);
+      cmd = executablePath;
+      args = [];
     }
     
-    const runResult = await execCommand(runCmd, TIMEOUT);
+    const runResult = await runProgram(cmd, args, input, TIMEOUT);
     cleanup(workDir);
     
     if (!runResult.success) {
-      return res.json({ success: false, error: runResult.error, time: runResult.time });
+      return res.json({
+        success: false,
+        error: runResult.error,
+        time: runResult.time,
+        status: runResult.status
+      });
     }
     
     res.json({
       success: true,
-      output: (runResult.output || '').substring(0, MAX_OUTPUT),
+      output: runResult.output.substring(0, MAX_OUTPUT),
       time: runResult.time
     });
     
@@ -271,9 +349,22 @@ app.post('/api/run', async (req, res) => {
 
 // 健康检查
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', languages: Object.keys(LANG_CONFIG) });
+  res.json({
+    status: 'ok',
+    languages: Object.keys(LANG_CONFIG),
+    version: '2.0',
+    features: ['ACM/OJ标准判题', '流式输出比较', '多语言支持']
+  });
 });
 
 app.listen(PORT, () => {
-  console.log(`🚀 灵码判题服务运行在 http://localhost:${PORT}`);
+  console.log(`
+🚀 灵码判题服务 v2.0 (ACM/OJ标准)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📍 地址: http://localhost:${PORT}
+🔗 判题: POST /api/judge
+🔗 运行: POST /api/run
+🔗 健康: GET  /api/health
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  `);
 });

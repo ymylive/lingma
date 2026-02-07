@@ -8,6 +8,7 @@ const navItems = [
   { path: '/algorithms', label: '🎬 算法演示' },
   { path: '/book', label: '📚 教程' },
   { path: '/practice', label: '🤖 AI练习' },
+  { path: '/mindmap', label: 'MindMap' },
 ];
 
 export default function Header() {
@@ -35,10 +36,10 @@ export default function Header() {
     >
       <nav className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
         <Link to="/" className="flex items-center gap-2 group">
-          <div className="w-9 h-9 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/20 group-hover:scale-105 transition-transform duration-300">
+          <div className="w-9 h-9 bg-gradient-to-br from-klein-500 to-klein-600 rounded-xl flex items-center justify-center shadow-lg shadow-klein-500/20 group-hover:scale-105 transition-transform duration-300">
             <span className="text-white font-bold text-sm tracking-wider">DS</span>
           </div>
-          <span className="font-bold text-lg text-slate-800 dark:text-white hidden sm:inline tracking-tight group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+          <span className="font-bold text-lg text-slate-800 dark:text-white hidden sm:inline tracking-tight group-hover:text-klein-600 dark:group-hover:text-pine-500 transition-colors">
             数据结构
           </span>
         </Link>
@@ -53,14 +54,14 @@ export default function Header() {
                   to={item.path}
                   className={`relative px-4 py-1.5 text-xs sm:text-sm font-medium rounded-full transition-all duration-300 ${
                     isActive
-                      ? 'text-indigo-600 dark:text-white'
+                      ? 'text-klein-600 dark:text-white'
                       : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-slate-700/50'
                   }`}
                 >
                   {isActive && (
                     <motion.div
                       layoutId="nav-pill"
-                      className="absolute inset-0 bg-white dark:bg-indigo-600 shadow-sm rounded-full"
+                      className="absolute inset-0 bg-white dark:bg-klein-600 shadow-sm rounded-full"
                       transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
                       style={{ zIndex: -1 }}
                     />
@@ -88,7 +89,7 @@ export default function Header() {
                 </svg>
               )}
               {isAuto && (
-                <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-emerald-500 rounded-full ring-2 ring-white dark:ring-slate-900"></span>
+                <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-pine-500 rounded-full ring-2 ring-white dark:ring-slate-900"></span>
               )}
             </button>
 
@@ -97,7 +98,7 @@ export default function Header() {
               <div className="relative">
                 <button
                   onClick={() => setShowDropdown(!showDropdown)}
-                  className="flex items-center gap-2 p-1 pl-2 pr-1 rounded-full border border-slate-200 dark:border-slate-700 hover:border-indigo-300 dark:hover:border-indigo-500 transition-all bg-white dark:bg-slate-900"
+                  className="flex items-center gap-2 p-1 pl-2 pr-1 rounded-full border border-slate-200 dark:border-slate-700 hover:border-klein-300 dark:hover:border-pine-500 transition-all bg-white dark:bg-slate-900"
                 >
                   <div className="hidden sm:block text-right mr-1">
                     <div className="text-xs font-bold text-slate-900 dark:text-white leading-none mb-0.5">{user?.username}</div>
@@ -105,7 +106,7 @@ export default function Header() {
                       <span className="text-amber-500">🔥</span> {progress.streak}天
                     </div>
                   </div>
-                  <div className="w-8 h-8 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold text-xs shadow-md">
+                  <div className="w-8 h-8 bg-gradient-to-br from-klein-500 to-klein-600 rounded-full flex items-center justify-center text-white font-bold text-xs shadow-md">
                     {user?.username.slice(0, 1).toUpperCase()}
                   </div>
                 </button>

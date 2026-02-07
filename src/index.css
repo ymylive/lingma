@@ -42,11 +42,11 @@
     font-family: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    @apply bg-slate-50 text-slate-900 transition-colors duration-500 selection:bg-indigo-500/30 selection:text-indigo-600 dark:selection:bg-indigo-400/30 dark:selection:text-indigo-300;
+    @apply bg-slate-50 text-slate-900 transition-colors duration-500 selection:bg-klein-500/30 selection:text-klein-600 dark:selection:bg-pine-500/30 dark:selection:text-pine-500;
   }
 
   .dark body {
-    @apply bg-[#030712] text-slate-50;
+    @apply bg-[#02040a] text-slate-50; /* Deepest Void Blue */
   }
 }
 
@@ -58,11 +58,11 @@
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(148, 163, 184, 0.3);
+  background: rgba(0, 47, 167, 0.2);
   border-radius: 10px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(148, 163, 184, 0.5);
+  background: rgba(0, 47, 167, 0.5);
 }
 
 /* 页面进入动画 - 开启硬件加速 */
@@ -72,22 +72,34 @@
 }
 
 @layer utilities {
-  /* 性能优化版玻璃拟态 */
+  /* 液态玻璃 (Liquid Glass) - Glossy & Wet */
   .glass {
-    @apply bg-white/70 dark:bg-[#0B1120]/70 backdrop-blur-md border border-white/40 dark:border-white/5;
+    @apply bg-white/40 dark:bg-[#000510]/60 backdrop-blur-xl border border-white/60 dark:border-white/10;
+    box-shadow: 
+      0 8px 32px 0 rgba(0, 47, 167, 0.1),
+      inset 0 0 0 1px rgba(255, 255, 255, 0.2),
+      inset 0 0 20px rgba(255, 255, 255, 0.2); /* Inset highlight for glossy feel */
   }
   
   .glass-card {
-    @apply bg-white/50 dark:bg-white/5 backdrop-blur-sm border border-white/50 dark:border-white/5 transition-transform duration-300 will-change-transform;
+    @apply bg-white/30 dark:bg-white/5 backdrop-blur-lg border border-white/50 dark:border-white/10 transition-transform duration-300 will-change-transform rounded-2xl;
+    box-shadow: 
+      0 4px 20px rgba(0, 0, 0, 0.05),
+      inset 0 1px 1px rgba(255, 255, 255, 0.6), /* Top edge highlight */
+      inset 0 -1px 20px rgba(255, 255, 255, 0.1); /* Bottom glossy depth */
   }
   
   .glass-card:hover {
-    @apply bg-white/70 dark:bg-white/10 border-indigo-500/30 dark:border-indigo-400/30 -translate-y-1;
+    @apply -translate-y-1 border-klein-500/30 dark:border-pine-500/30;
+    box-shadow: 
+      0 15px 35px rgba(0, 47, 167, 0.15),
+      inset 0 0 0 1px rgba(255, 255, 255, 0.4),
+      inset 0 0 30px rgba(255, 255, 255, 0.2);
   }
 
-  /* 渐变文本 */
+  /* 克莱因蓝-松花黄 艺术渐变 */
   .text-gradient {
-    @apply bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-600 dark:from-indigo-400 dark:via-purple-400 dark:to-indigo-400 bg-[length:200%_auto] animate-gradient;
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-klein-500 via-pine-500 to-klein-500 bg-[length:200%_auto] animate-gradient;
   }
 
   @keyframes gradient {
@@ -97,8 +109,8 @@
   }
 
   .animate-gradient {
-    animation: gradient 6s linear infinite;
-    will-change: background-position; /* 性能提示 */
+    animation: gradient 5s ease infinite;
+    will-change: background-position;
   }
 }
 
@@ -185,6 +197,351 @@
 .dark .text-emerald-600 { color: #34d399 !important; }
 .dark .text-amber-800 { color: #fcd34d !important; }
 .dark .text-rose-600 { color: #fb7185 !important; }
+
+/* Mind map tree */
+.mindmap-tree {
+  --mind-line: rgba(129, 140, 248, 0.45);
+  --mind-line-strong: rgba(99, 102, 241, 0.65);
+  --mind-node-bg: rgba(255, 255, 255, 0.88);
+  --mind-node-border: rgba(148, 163, 184, 0.45);
+  --mind-node-shadow: 0 10px 24px rgba(30, 41, 59, 0.08);
+  width: 100%;
+  min-width: max-content;
+  padding: 1rem 1.5rem 1.75rem;
+}
+
+.dark .mindmap-tree {
+  --mind-line: rgba(129, 140, 248, 0.42);
+  --mind-line-strong: rgba(129, 140, 248, 0.74);
+  --mind-node-bg: rgba(15, 23, 42, 0.9);
+  --mind-node-border: rgba(71, 85, 105, 0.88);
+  --mind-node-shadow: 0 14px 30px rgba(2, 6, 23, 0.36);
+}
+
+.mindmap-panel {
+  position: relative;
+}
+
+.mindmap-panel-fullscreen {
+  border: 1px solid rgba(148, 163, 184, 0.35);
+}
+
+.dark .mindmap-panel-fullscreen {
+  border-color: rgba(71, 85, 105, 0.75);
+}
+
+.mindmap-panel:fullscreen,
+.mindmap-panel:-webkit-full-screen {
+  width: 100vw;
+  height: 100vh;
+  max-width: none;
+  margin: 0;
+  padding: 1rem;
+  border-radius: 0;
+  border: none;
+  background: rgba(248, 250, 252, 0.98);
+}
+
+.dark .mindmap-panel:fullscreen,
+.dark .mindmap-panel:-webkit-full-screen {
+  background: rgba(2, 6, 23, 0.98);
+}
+
+.mindmap-panel:fullscreen:hover,
+.mindmap-panel:-webkit-full-screen:hover {
+  transform: none !important;
+}
+
+.mindmap-toolbar {
+  transition: all 0.2s ease;
+}
+
+.mindmap-toolbar-fullscreen {
+  position: sticky;
+  top: 0;
+  z-index: 12;
+  margin: -0.75rem -0.75rem 1rem;
+  padding: 0.75rem 0.9rem;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.28);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(248, 250, 252, 0.94));
+  backdrop-filter: blur(8px);
+  border-radius: 0.9rem 0.9rem 0 0;
+}
+
+.dark .mindmap-toolbar-fullscreen {
+  border-bottom-color: rgba(71, 85, 105, 0.68);
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.96), rgba(15, 23, 42, 0.9));
+}
+
+.mindmap-zoom-range {
+  accent-color: #6366f1;
+}
+
+.mindmap-canvas {
+  min-height: 560px;
+  overflow: hidden;
+  border-radius: 0.9rem;
+  cursor: grab;
+  touch-action: none;
+}
+
+.mindmap-canvas.is-hand-ready,
+.mindmap-canvas.is-hand-ready * {
+  cursor: grab !important;
+}
+
+.mindmap-canvas.is-panning {
+  cursor: grabbing;
+  user-select: none;
+}
+
+.mindmap-canvas.is-panning * {
+  cursor: grabbing !important;
+  user-select: none;
+}
+
+.mindmap-tree-balanced {
+  position: relative;
+  background-image: radial-gradient(circle at 1px 1px, rgba(148, 163, 184, 0.18) 1px, transparent 0);
+  background-size: 22px 22px;
+  border-radius: 1rem;
+}
+
+.mindmap-root-wrap {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 1.4rem;
+}
+
+.mindmap-root-node {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.6rem 1rem;
+  border-radius: 999px;
+  border: 1px solid rgba(79, 70, 229, 0.35);
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.16), rgba(168, 85, 247, 0.13));
+  box-shadow: 0 12px 28px rgba(99, 102, 241, 0.14);
+}
+
+.mindmap-root-title {
+  color: #0f172a;
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
+.dark .mindmap-root-title {
+  color: #e2e8f0;
+}
+
+.mindmap-root-tag {
+  color: #4f46e5;
+  font-size: 0.68rem;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  border: 1px solid rgba(99, 102, 241, 0.35);
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.dark .mindmap-root-tag {
+  color: #a5b4fc;
+  background: rgba(30, 41, 59, 0.64);
+}
+
+.mindmap-branch-layout {
+  display: grid;
+  grid-template-columns: minmax(310px, 1fr) minmax(310px, 1fr);
+  gap: 3rem;
+  align-items: start;
+}
+
+.mindmap-branch-layout-single {
+  grid-template-columns: minmax(310px, 1fr);
+  justify-content: center;
+}
+
+.mindmap-side-list,
+.mindmap-children {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.mindmap-side-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.mindmap-side-left .mindmap-side-list {
+  align-items: flex-end;
+}
+
+.mindmap-side-right .mindmap-side-list {
+  align-items: flex-start;
+}
+
+.mindmap-tree-node {
+  position: relative;
+}
+
+.mindmap-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.mindmap-row-left {
+  justify-content: flex-end;
+}
+
+.mindmap-row-right {
+  justify-content: flex-start;
+}
+
+.mindmap-node {
+  position: relative;
+  min-width: 190px;
+  max-width: 340px;
+  background: var(--mind-node-bg);
+  border-color: var(--mind-node-border);
+  box-shadow: var(--mind-node-shadow);
+}
+
+.mindmap-node::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  border-radius: 0.75rem 0.75rem 0 0;
+  background: hsl(calc(224 + var(--mind-node-depth, 1) * 6), 82%, 63%);
+  opacity: 0.95;
+}
+
+.mindmap-link {
+  width: 1.15rem;
+  height: 1.45rem;
+  margin-top: 0.64rem;
+  border-top: 1.4px solid var(--mind-line);
+  flex: 0 0 auto;
+}
+
+.mindmap-link-right {
+  border-top-right-radius: 12px;
+  border-right: 1.4px solid var(--mind-line);
+}
+
+.mindmap-link-left {
+  border-top-left-radius: 12px;
+  border-left: 1.4px solid var(--mind-line);
+}
+
+.mindmap-toggle-btn,
+.mindmap-toggle-space {
+  width: 1.4rem;
+  height: 1.4rem;
+  margin-top: 0.58rem;
+  flex: 0 0 auto;
+}
+
+.mindmap-toggle-btn {
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: rgba(255, 255, 255, 0.78);
+  transition: all 0.2s ease;
+}
+
+.dark .mindmap-toggle-btn {
+  background: rgba(15, 23, 42, 0.85);
+}
+
+.mindmap-toggle-btn:hover {
+  border-color: var(--mind-line-strong);
+  transform: translateY(-1px);
+}
+
+.mindmap-children {
+  margin-top: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  position: relative;
+}
+
+.mindmap-children.right {
+  margin-left: 1.75rem;
+  padding-left: 0.95rem;
+}
+
+.mindmap-children.right::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.25rem;
+  bottom: 0.2rem;
+  border-left: 1.4px dashed var(--mind-line);
+}
+
+.mindmap-children.left {
+  margin-right: 1.75rem;
+  padding-right: 0.95rem;
+}
+
+.mindmap-children.left::before {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 0.25rem;
+  bottom: 0.2rem;
+  border-right: 1.4px dashed var(--mind-line);
+}
+
+@media (max-width: 1280px) {
+  .mindmap-branch-layout {
+    gap: 1.6rem;
+  }
+}
+
+@media (max-width: 960px) {
+  .mindmap-branch-layout {
+    grid-template-columns: 1fr;
+    gap: 1.15rem;
+  }
+
+  .mindmap-side-left .mindmap-side-list {
+    align-items: flex-start;
+  }
+
+  .mindmap-row-left {
+    justify-content: flex-start;
+  }
+
+  .mindmap-link-left {
+    border-left: none;
+    border-right: 1.4px solid var(--mind-line);
+    border-top-left-radius: 0;
+    border-top-right-radius: 12px;
+  }
+
+  .mindmap-children.left {
+    margin-right: 0;
+    margin-left: 1.75rem;
+    padding-right: 0;
+    padding-left: 0.95rem;
+  }
+
+  .mindmap-children.left::before {
+    right: auto;
+    left: 0;
+    border-right: none;
+    border-left: 1.4px dashed var(--mind-line);
+  }
+}
 
 /* 深色模式下的边框颜色 */
 .dark .border-indigo-100 { border-color: rgba(99, 102, 241, 0.3) !important; }
