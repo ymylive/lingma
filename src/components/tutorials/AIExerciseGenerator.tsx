@@ -107,9 +107,10 @@ export default function AIExerciseGenerator() {
     <div className="space-y-6">
       {/* AI配置面板 */}
       {showConfig && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 max-w-lg w-full mx-4 shadow-2xl">
-            <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/50 p-4">
+          <div className="flex min-h-full items-center justify-center">
+            <div className="max-h-[calc(100vh-2rem)] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-5 shadow-2xl sm:p-6">
+              <h3 className="mb-4 flex items-center gap-2 text-base font-bold text-slate-800 sm:text-lg">
               <span>⚙️</span> AI API 配置
             </h3>
             
@@ -117,7 +118,7 @@ export default function AIExerciseGenerator() {
               {/* 提供商选择 */}
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">AI 服务商</label>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                   {PROVIDERS.map(p => (
                     <button
                       key={p.id}
@@ -127,7 +128,7 @@ export default function AIExerciseGenerator() {
                         baseUrl: p.baseUrl,
                         model: p.model
                       })}
-                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                      className={`min-h-[44px] cursor-pointer rounded-lg px-4 py-2 text-sm font-medium transition-all ${
                         config.provider === p.id
                           ? 'bg-indigo-600 text-white'
                           : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
@@ -147,7 +148,7 @@ export default function AIExerciseGenerator() {
                   value={config.apiKey}
                   onChange={e => setConfig({ ...config, apiKey: e.target.value })}
                   placeholder="输入你的API密钥"
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  className="min-h-[44px] w-full rounded-lg border border-slate-300 px-4 py-2 focus:border-transparent focus:ring-2 focus:ring-indigo-500"
                 />
                 <p className="mt-1 text-xs text-slate-500">
                   当前默认通过服务端代理请求 AI，此处输入不会持久化保存
@@ -164,7 +165,7 @@ export default function AIExerciseGenerator() {
                       value={config.baseUrl}
                       onChange={e => setConfig({ ...config, baseUrl: e.target.value })}
                       placeholder="https://api.example.com/v1"
-                      className="w-full px-4 py-2 border border-slate-300 rounded-lg"
+                      className="min-h-[44px] w-full rounded-lg border border-slate-300 px-4 py-2"
                     />
                   </div>
                   <div>
@@ -174,35 +175,36 @@ export default function AIExerciseGenerator() {
                       value={config.model}
                       onChange={e => setConfig({ ...config, model: e.target.value })}
                       placeholder="gpt-3.5-turbo"
-                      className="w-full px-4 py-2 border border-slate-300 rounded-lg"
+                      className="min-h-[44px] w-full rounded-lg border border-slate-300 px-4 py-2"
                     />
                   </div>
                 </>
               )}
             </div>
 
-            <div className="flex gap-3 mt-6">
+            <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row">
               <button
                 onClick={() => setShowConfig(false)}
-                className="flex-1 py-2 bg-slate-100 text-slate-600 rounded-lg font-medium hover:bg-slate-200"
+                className="min-h-[44px] flex-1 cursor-pointer rounded-lg bg-slate-100 py-2 font-medium text-slate-600 hover:bg-slate-200"
               >
                 取消
               </button>
               <button
                 onClick={handleSaveConfig}
-                className="flex-1 py-2 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700"
+                className="min-h-[44px] flex-1 cursor-pointer rounded-lg bg-indigo-600 py-2 font-medium text-white hover:bg-indigo-700"
               >
                 保存配置
               </button>
+            </div>
             </div>
           </div>
         </div>
       )}
 
       {/* 生成器主界面 */}
-      <div className="bg-gradient-to-r from-violet-600 to-indigo-600 rounded-xl p-6 text-white">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
+      <div className="rounded-2xl bg-gradient-to-r from-violet-600 to-indigo-600 p-4 text-white sm:p-6">
+        <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex items-start gap-3">
             <span className="text-3xl">🤖</span>
             <div>
               <h2 className="text-xl font-bold">AI 智能出题</h2>
@@ -211,21 +213,21 @@ export default function AIExerciseGenerator() {
           </div>
           <button
             onClick={() => setShowConfig(true)}
-            className="px-4 py-2 bg-white/20 rounded-lg text-sm font-medium hover:bg-white/30 transition-colors"
+            className="min-h-[44px] w-full cursor-pointer rounded-lg bg-white/20 px-4 py-2 text-sm font-medium transition-colors hover:bg-white/30 sm:w-auto"
           >
             ⚙️ 配置API
           </button>
         </div>
 
         {/* 选项区 */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {/* 知识点分类 */}
           <div>
             <label className="block text-sm font-medium text-white/80 mb-2">知识点</label>
             <select
               value={dataStructure}
               onChange={e => { setDataStructure(e.target.value); setTopic(''); }}
-              className="w-full px-4 py-2 bg-white/20 rounded-lg text-white border border-white/30 focus:outline-none focus:ring-2 focus:ring-white/50"
+              className="min-h-[44px] w-full rounded-lg border border-white/30 bg-white/20 px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-white/50"
             >
               <optgroup label="C语言" className="text-slate-800">
                 {CATEGORIES.filter(c => c.group === 'C语言').map(c => (
@@ -251,7 +253,7 @@ export default function AIExerciseGenerator() {
             <select
               value={topic}
               onChange={e => setTopic(e.target.value)}
-              className="w-full px-4 py-2 bg-white/20 rounded-lg text-white border border-white/30 focus:outline-none focus:ring-2 focus:ring-white/50"
+              className="min-h-[44px] w-full rounded-lg border border-white/30 bg-white/20 px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-white/50"
             >
               <option value="" className="text-slate-800">自定义主题</option>
               {(TOPICS[dataStructure] || []).map(t => (
@@ -263,7 +265,7 @@ export default function AIExerciseGenerator() {
           {/* 难度 */}
           <div>
             <label className="block text-sm font-medium text-white/80 mb-2">难度</label>
-            <div className="flex gap-1">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
               {[
                 { id: 'easy', label: '⭐简单' },
                 { id: 'medium', label: '⭐⭐中等' },
@@ -272,7 +274,7 @@ export default function AIExerciseGenerator() {
                 <button
                   key={d.id}
                   onClick={() => setDifficulty(d.id as 'easy' | 'medium' | 'hard')}
-                  className={`flex-1 py-2 rounded-lg text-xs font-medium transition-all ${
+                  className={`min-h-[44px] cursor-pointer rounded-lg px-3 py-2 text-sm font-medium transition-all ${
                     difficulty === d.id
                       ? 'bg-white text-indigo-600'
                       : 'bg-white/20 text-white hover:bg-white/30'
@@ -287,10 +289,10 @@ export default function AIExerciseGenerator() {
           {/* 题型 */}
           <div>
             <label className="block text-sm font-medium text-white/80 mb-2">题型</label>
-            <div className="flex gap-2">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               <button
                 onClick={() => setExerciseType('coding')}
-                className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${
+                className={`min-h-[44px] cursor-pointer rounded-lg px-3 py-2 text-sm font-medium transition-all ${
                   exerciseType === 'coding'
                     ? 'bg-white text-indigo-600'
                     : 'bg-white/20 text-white hover:bg-white/30'
@@ -300,7 +302,7 @@ export default function AIExerciseGenerator() {
               </button>
               <button
                 onClick={() => setExerciseType('fillblank')}
-                className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${
+                className={`min-h-[44px] cursor-pointer rounded-lg px-3 py-2 text-sm font-medium transition-all ${
                   exerciseType === 'fillblank'
                     ? 'bg-white text-indigo-600'
                     : 'bg-white/20 text-white hover:bg-white/30'
@@ -320,7 +322,7 @@ export default function AIExerciseGenerator() {
               value={customTopic}
               onChange={e => setCustomTopic(e.target.value)}
               placeholder="输入自定义题目主题，例如：链表反转的递归实现"
-              className="w-full px-4 py-3 bg-white/20 rounded-lg text-white placeholder-white/50 border border-white/30 focus:outline-none focus:ring-2 focus:ring-white/50"
+              className="min-h-[48px] w-full rounded-lg border border-white/30 bg-white/20 px-4 py-3 text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-white/50"
             />
           </div>
         )}
@@ -329,7 +331,7 @@ export default function AIExerciseGenerator() {
         <button
           onClick={handleGenerate}
           disabled={loading}
-          className="w-full mt-4 py-3 bg-white text-indigo-600 rounded-lg font-bold text-lg hover:bg-white/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          className="mt-4 flex min-h-[48px] w-full items-center justify-center gap-2 rounded-lg bg-white py-3 text-base font-bold text-indigo-600 transition-colors hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-50 sm:text-lg"
         >
           {loading ? (
             <>
