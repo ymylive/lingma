@@ -55,10 +55,6 @@ const AI_CONFIG_STORAGE_KEY = 'ai_config';
 const DEFAULT_PROXY_ORIGIN =
   typeof window !== 'undefined' && window.location ? window.location.origin : 'https://lingma.cornna.xyz';
 
-const AI_PROXY_URL = import.meta.env.DEV
-  ? 'http://localhost:3001/api/ai'
-  : (import.meta.env.VITE_AI_PROXY_URL || `${DEFAULT_PROXY_ORIGIN}/api/ai`);
-
 // 流式API地址
 const AI_STREAM_URL = import.meta.env.DEV
   ? 'http://localhost:3001/api/ai/stream'
@@ -111,8 +107,7 @@ export const loadAIConfig = () => {
 
 // 调用AI API (流式输出)
 async function callAI(prompt: string, onProgress?: (text: string) => void): Promise<string> {
-  const apiUrl = onProgress ? AI_STREAM_URL : AI_PROXY_URL;
-  console.log('Calling AI API:', apiUrl, 'Stream:', !!onProgress);
+  const apiUrl = AI_STREAM_URL;
   
   const messages = [
     {
@@ -177,34 +172,58 @@ async function callAI(prompt: string, onProgress?: (text: string) => void): Prom
       throw new Error(`AI API 调用失败: ${response.status}`);
     }
 
-    // 流式处理
-    if (onProgress && response.body) {
+    // 优先使用流式接口，避免高推理请求在上游长时间阻塞后直接超时
+    if (response.body) {
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let fullContent = '';
-      
+      let pending = '';
+
+      const flushLine = (rawLine: string) => {
+        const line = rawLine.trim();
+        if (!line.startsWith('data: ')) return;
+
+        const data = line.slice(6).trim();
+        if (!data || data === '[DONE]') return;
+
+        const json = JSON.parse(data);
+        const streamError = json.error;
+        if (streamError) {
+          const message =
+            typeof streamError === 'string'
+              ? streamError
+              : streamError.message || 'AI 流式请求失败';
+          throw new Error(message);
+        }
+
+        const content = json.choices?.[0]?.delta?.content || '';
+        if (content) {
+          fullContent += content;
+          onProgress?.(fullContent);
+        }
+      };
+
       while (true) {
         const { done, value } = await reader.read();
-        if (done) break;
-        
-        const chunk = decoder.decode(value, { stream: true });
-        const lines = chunk.split('\n');
-        
+        pending += decoder.decode(value || new Uint8Array(), { stream: !done });
+        const lines = pending.split('\n');
+        pending = lines.pop() || '';
+
         for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            const data = line.slice(6);
-            if (data === '[DONE]') continue;
-            try {
-              const json = JSON.parse(data);
-              const content = json.choices?.[0]?.delta?.content || '';
-              if (content) {
-                fullContent += content;
-                onProgress(fullContent);
-              }
-            } catch {}
-          }
+          flushLine(line);
         }
+
+        if (done) break;
       }
+
+      if (pending.trim()) {
+        flushLine(pending);
+      }
+
+      if (!fullContent) {
+        throw new Error('AI 返回内容为空');
+      }
+
       return fullContent;
     }
 
@@ -360,9 +379,7 @@ int main() {
 }
 
 // 通用JSON解析函数 - 处理AI返回中的换行问题
-function parseAIJsonResponse(response: string, type: string): any {
-  console.log(`Parsing ${type}, response length:`, response.length);
-  
+function parseAIJsonResponse(response: string, _type: string): any {
   let jsonStr = response;
   
   // 移除可能的markdown代码块
@@ -373,20 +390,16 @@ function parseAIJsonResponse(response: string, type: string): any {
   const endIdx = jsonStr.lastIndexOf('}');
   
   if (startIdx === -1 || endIdx === -1 || endIdx <= startIdx) {
-    console.error(`No JSON found in ${type} response`);
     throw new Error('AI返回中未找到JSON');
   }
   
   const rawJson = jsonStr.substring(startIdx, endIdx + 1);
-  console.log('Extracted JSON length:', rawJson.length);
   
   // 方法1: 直接尝试解析
   try {
-    const result = JSON.parse(rawJson);
-    console.log(`Parsed ${type} directly`);
-    return result;
+    return JSON.parse(rawJson);
   } catch (e1) {
-    console.log('Direct parse failed, trying fix...', (e1 as Error).message);
+    void e1;
   }
   
   // 方法2: 智能处理字符串内的换行符
@@ -433,11 +446,9 @@ function parseAIJsonResponse(response: string, type: string): any {
       }
     }
     
-    const result = JSON.parse(fixed);
-    console.log(`Parsed ${type} with smart fix`);
-    return result;
+    return JSON.parse(fixed);
   } catch (e2) {
-    console.error('Smart fix failed:', e2);
+    void e2;
   }
   
   // 方法3: 移除字符串外的换行，保留字符串内的转义
@@ -478,11 +489,9 @@ function parseAIJsonResponse(response: string, type: string): any {
       fixed += char;
     }
     
-    const result = JSON.parse(fixed);
-    console.log(`Parsed ${type} with compact fix`);
-    return result;
+    return JSON.parse(fixed);
   } catch (e3) {
-    console.error('Compact fix failed:', e3);
+    void e3;
   }
   
   const preview = rawJson.substring(0, 300);
