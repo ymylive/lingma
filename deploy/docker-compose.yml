@@ -4,7 +4,7 @@ services:
       context: ..
       dockerfile: deploy/docker/frontend.Dockerfile
     ports:
-      - "8080:80"
+      - "${FRONTEND_BIND_HOST:-127.0.0.1}:${FRONTEND_BIND_PORT:-18081}:80"
     depends_on:
       - api-proxy
       - judge-server
