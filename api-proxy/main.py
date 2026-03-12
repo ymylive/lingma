@@ -512,6 +512,7 @@ def build_upstream_headers() -> Dict[str, str]:
     headers = {
         "Authorization": f"Bearer {AI_API_KEY}",
         "Content-Type": "application/json",
+        "User-Agent": "Mozilla/5.0 (compatible; tumafang/1.0; +https://lingma.cornna.xyz)",
     }
     if AI_SITE_URL:
         headers["HTTP-Referer"] = AI_SITE_URL
