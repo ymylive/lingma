@@ -1071,6 +1071,7 @@ export default function MindMap() {
   };
 
   const canStartCanvasDrag = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (event.pointerType === 'touch') return false;
     if (event.button === 1) return true;
     if (event.button !== 0) return false;
     if (isSpacePressedRef.current) return true;
@@ -1180,29 +1181,29 @@ export default function MindMap() {
   const renderMindMapPanel = (fullscreen: boolean) => (
     <div
       ref={mindMapPanelRef}
-      className={`glass-card mindmap-panel p-5 overflow-hidden transition-all ${
+      className={`glass-card mindmap-panel overflow-hidden p-4 transition-all sm:p-5 ${
         fullscreen
           ? 'mindmap-panel-fullscreen bg-white/95 dark:bg-slate-950/95 shadow-2xl'
           : ''
       }`}
     >
       <div
-        className={`mindmap-toolbar flex flex-wrap items-center justify-between gap-3 mb-4 ${
+        className={`mindmap-toolbar mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between ${
           fullscreen ? 'mindmap-toolbar-fullscreen' : ''
         }`}
       >
         <div className="text-sm text-slate-500 dark:text-slate-400">
           缩放：{Math.round(scale * 100)}%
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
           <button
             onClick={resetCanvasViewport}
-            className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-900 text-sm text-slate-600 dark:text-slate-200 hover:border-indigo-400"
+            className="min-h-[44px] w-full cursor-pointer rounded-lg border border-slate-200 bg-white/80 px-3 py-2 text-sm text-slate-600 hover:border-indigo-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 sm:w-auto"
           >
             视图重置
           </button>
           <input
-            className="mindmap-zoom-range"
+            className="mindmap-zoom-range w-full sm:w-40"
             type="range"
             min={MIN_SCALE}
             max={MAX_SCALE}
@@ -1212,7 +1213,7 @@ export default function MindMap() {
           />
           <button
             onClick={handleToggleMapFullscreen}
-            className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-900 text-sm text-slate-600 dark:text-slate-200 hover:border-indigo-400"
+            className="min-h-[44px] w-full cursor-pointer rounded-lg border border-slate-200 bg-white/80 px-3 py-2 text-sm text-slate-600 hover:border-indigo-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 sm:w-auto"
           >
             <span className="inline-flex items-center gap-1.5">
               {fullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
@@ -1221,7 +1222,7 @@ export default function MindMap() {
           </button>
         </div>
       </div>
-      <div className="text-[11px] text-slate-500 dark:text-slate-400 mb-2">
+      <div className="mb-2 text-[11px] leading-5 text-slate-500 dark:text-slate-400">
         空白处拖动，或按住空格 / 鼠标中键拖动画布；滚轮平移，Ctrl+滚轮缩放
       </div>
       {!activeMap && (
@@ -1240,56 +1241,56 @@ export default function MindMap() {
           onPointerCancel={handleCanvasPointerUp}
           onWheel={handleCanvasWheel}
         >
-          <div className="min-w-max pr-8 pb-6">
-          <div style={treeScaleStyle} className="mindmap-tree mindmap-tree-balanced">
-            <div className="mindmap-root-wrap">
-              <div className="mindmap-root-node">
-                <span className="mindmap-root-title">{activeMap.title}</span>
-                <span className="mindmap-root-tag">Root</span>
+          <div className="min-w-max pb-4 pr-4 sm:pb-6 sm:pr-8">
+            <div style={treeScaleStyle} className="mindmap-tree mindmap-tree-balanced">
+              <div className="mindmap-root-wrap">
+                <div className="mindmap-root-node">
+                  <span className="mindmap-root-title">{activeMap.title}</span>
+                  <span className="mindmap-root-tag">Root</span>
+                </div>
+              </div>
+              <div
+                className={`mindmap-branch-layout ${
+                  hasDualRootSides ? '' : 'mindmap-branch-layout-single'
+                }`}
+              >
+                {balancedRootNodes.left.length > 0 && (
+                  <div className="mindmap-side mindmap-side-left">
+                    <ul className="mindmap-side-list">
+                      {balancedRootNodes.left.map((node) => (
+                        <TreeNode
+                          key={node.id}
+                          node={node}
+                          selectedId={selectedNodeId}
+                          onSelect={handleSelectNode}
+                          onToggle={handleToggleCollapse}
+                          direction="left"
+                          depth={0}
+                        />
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {balancedRootNodes.right.length > 0 && (
+                  <div className="mindmap-side mindmap-side-right">
+                    <ul className="mindmap-side-list">
+                      {balancedRootNodes.right.map((node) => (
+                        <TreeNode
+                          key={node.id}
+                          node={node}
+                          selectedId={selectedNodeId}
+                          onSelect={handleSelectNode}
+                          onToggle={handleToggleCollapse}
+                          direction="right"
+                          depth={0}
+                        />
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </div>
             </div>
-            <div
-              className={`mindmap-branch-layout ${
-                hasDualRootSides ? '' : 'mindmap-branch-layout-single'
-              }`}
-            >
-              {balancedRootNodes.left.length > 0 && (
-                <div className="mindmap-side mindmap-side-left">
-                  <ul className="mindmap-side-list">
-                    {balancedRootNodes.left.map((node) => (
-                      <TreeNode
-                        key={node.id}
-                        node={node}
-                        selectedId={selectedNodeId}
-                        onSelect={handleSelectNode}
-                        onToggle={handleToggleCollapse}
-                        direction="left"
-                        depth={0}
-                      />
-                    ))}
-                  </ul>
-                </div>
-              )}
-              {balancedRootNodes.right.length > 0 && (
-                <div className="mindmap-side mindmap-side-right">
-                  <ul className="mindmap-side-list">
-                    {balancedRootNodes.right.map((node) => (
-                      <TreeNode
-                        key={node.id}
-                        node={node}
-                        selectedId={selectedNodeId}
-                        onSelect={handleSelectNode}
-                        onToggle={handleToggleCollapse}
-                        direction="right"
-                        depth={0}
-                      />
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div>
           </div>
-        </div>
         </div>
       )}
     </div>
@@ -1297,30 +1298,30 @@ export default function MindMap() {
 
   return (
     <div className={containerClass}>
-      <div className="max-w-7xl mx-auto px-6 pt-24 pb-12">
+      <div className="mx-auto max-w-7xl px-4 pb-10 pt-20 sm:px-6 sm:pb-12 sm:pt-24">
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
           className={`mb-8 ${isMapFullscreen ? 'relative z-[120]' : ''}`}
         >
-          <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/70 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-xs text-slate-500 dark:text-slate-300 mb-3">
                 <Wand2 className="w-3.5 h-3.5 text-amber-500" />
                 AI 思维导图工作室
               </div>
-              <h1 className="text-3xl md:text-4xl font-bold text-slate-900 dark:text-white">
+              <h1 className="text-2xl font-bold text-slate-900 dark:text-white sm:text-3xl md:text-4xl">
                 生成 · 编辑 · 导出 · 笔记
               </h1>
               <p className="text-slate-600 dark:text-slate-400 mt-2 max-w-2xl">
                 支持主题、URL、文件内容生成思维导图，结合学习进度做个性化结构优化。
               </p>
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
               <button
                 onClick={handleCreateNew}
-                className="px-4 py-2 rounded-xl bg-slate-900 text-white hover:bg-slate-800 dark:bg-white dark:text-slate-900 transition"
+                className="min-h-[44px] w-full cursor-pointer rounded-xl bg-slate-900 px-4 py-2 text-white transition hover:bg-slate-800 dark:bg-white dark:text-slate-900 sm:w-auto"
               >
                 <span className="inline-flex items-center gap-2">
                   <Plus className="w-4 h-4" /> 新建导图
@@ -1329,7 +1330,7 @@ export default function MindMap() {
               <button
                 onClick={() => handleGenerate('new')}
                 disabled={isLoading}
-                className="px-4 py-2 rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 transition disabled:opacity-50"
+                className="min-h-[44px] w-full cursor-pointer rounded-xl bg-indigo-600 px-4 py-2 text-white transition hover:bg-indigo-700 disabled:opacity-50 sm:w-auto"
               >
                 <span className="inline-flex items-center gap-2">
                   <ListPlus className="w-4 h-4" /> 生成导图
@@ -1339,13 +1340,13 @@ export default function MindMap() {
           </div>
         </motion.div>
 
-        <div className="grid lg:grid-cols-[360px_minmax(0,1fr)] gap-8">
+        <div className="grid gap-6 lg:grid-cols-[340px_minmax(0,1fr)] xl:grid-cols-[360px_minmax(0,1fr)]">
           <aside className="space-y-6">
-            <div className="glass-card p-5">
+            <div className="glass-card p-4 sm:p-5">
               <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
                 <Wand2 className="w-4 h-4 text-amber-500" /> 生成来源
               </h2>
-              <div className="flex gap-2 mb-4">
+              <div className="mb-4 grid grid-cols-3 gap-2">
                 {[
                   { id: 'topic', label: '主题' },
                   { id: 'url', label: 'URL' },
@@ -1354,7 +1355,7 @@ export default function MindMap() {
                   <button
                     key={tab.id}
                     onClick={() => setSourceTab(tab.id as SourceTab)}
-                    className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition ${
+                    className={`min-h-[44px] cursor-pointer rounded-lg px-3 py-2 text-sm font-medium transition ${
                       sourceTab === tab.id
                         ? 'bg-indigo-600 text-white shadow'
                         : 'bg-white/80 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700'
@@ -1371,7 +1372,7 @@ export default function MindMap() {
                   <button
                     type="button"
                     onClick={() => setGenerationMode('full')}
-                    className={`px-3 py-2 rounded-lg text-sm font-medium transition border ${
+                    className={`min-h-[44px] cursor-pointer rounded-lg px-3 py-2 text-sm font-medium transition border ${
                       generationMode === 'full'
                         ? 'bg-indigo-600 text-white border-indigo-600'
                         : 'bg-white/80 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700'
@@ -1382,7 +1383,7 @@ export default function MindMap() {
                   <button
                     type="button"
                     onClick={() => setGenerationMode('explore')}
-                    className={`px-3 py-2 rounded-lg text-sm font-medium transition border ${
+                    className={`min-h-[44px] cursor-pointer rounded-lg px-3 py-2 text-sm font-medium transition border ${
                       generationMode === 'explore'
                         ? 'bg-amber-600 text-white border-amber-600'
                         : 'bg-white/80 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700'
@@ -1404,7 +1405,7 @@ export default function MindMap() {
                   <input
                     value={topicInput}
                     onChange={(e) => setTopicInput(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-900 text-sm"
+                    className="min-h-[44px] w-full rounded-lg border border-slate-200 bg-white/80 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
                     placeholder="如：二叉树遍历、递归与回溯"
                   />
                 </div>
@@ -1418,7 +1419,7 @@ export default function MindMap() {
                     <input
                       value={urlInput}
                       onChange={(e) => setUrlInput(e.target.value)}
-                      className="w-full pl-9 pr-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-900 text-sm"
+                      className="min-h-[44px] w-full rounded-lg border border-slate-200 bg-white/80 py-2 pl-9 pr-3 text-sm dark:border-slate-700 dark:bg-slate-900"
                       placeholder="https://example.com/article"
                     />
                   </div>
@@ -1433,7 +1434,7 @@ export default function MindMap() {
               {sourceTab === 'file' && (
                 <div className="space-y-3">
                   <label className="text-xs text-slate-500 dark:text-slate-400">上传文件</label>
-                  <label className="flex items-center justify-between gap-3 px-3 py-3 rounded-lg border border-dashed border-slate-300 dark:border-slate-600 bg-white/70 dark:bg-slate-900 text-sm cursor-pointer">
+                  <label className="flex min-h-[48px] cursor-pointer flex-col gap-3 rounded-lg border border-dashed border-slate-300 bg-white/70 px-3 py-3 text-sm dark:border-slate-600 dark:bg-slate-900 sm:flex-row sm:items-center sm:justify-between">
                     <span className="inline-flex items-center gap-2">
                       <FileUp className="w-4 h-4 text-indigo-500" />
                       {fileName || '拖拽或点击上传 .txt / .md'}
@@ -1457,14 +1458,14 @@ export default function MindMap() {
                 <button
                   onClick={() => handleGenerate('new')}
                   disabled={isLoading}
-                  className="w-full px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 disabled:opacity-60"
+                  className="min-h-[44px] w-full cursor-pointer rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-60"
                 >
                   {isLoading ? '生成中...' : '生成新导图'}
                 </button>
                 <button
                   onClick={() => handleGenerate('update')}
                   disabled={isLoading || !activeMap}
-                  className="w-full px-4 py-2 rounded-lg bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-200 border border-slate-200 dark:border-slate-700 text-sm font-medium hover:border-indigo-400"
+                  className="min-h-[44px] w-full cursor-pointer rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 hover:border-indigo-400 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
                 >
                   <span className="inline-flex items-center gap-2">
                     <RefreshCw className="w-4 h-4" /> 更新当前导图
@@ -1474,7 +1475,7 @@ export default function MindMap() {
               </div>
             </div>
 
-            <div className="glass-card p-5">
+            <div className="glass-card p-4 sm:p-5">
               <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
                 <Pencil className="w-4 h-4 text-indigo-500" /> 导图库
               </h3>
@@ -1531,7 +1532,8 @@ export default function MindMap() {
                           e.stopPropagation();
                           handleDeleteMap(map.id);
                         }}
-                        className="p-1 text-slate-400 hover:text-rose-500"
+                        aria-label="删除导图"
+                        className="min-h-[44px] min-w-[44px] cursor-pointer p-1 text-slate-400 hover:text-rose-500"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -1542,23 +1544,23 @@ export default function MindMap() {
             </div>
           </aside>
 
-          <section className="space-y-6">
-            <div className="glass-card p-5">
-              <div className="flex flex-wrap items-center justify-between gap-3">
+          <section className="min-w-0 space-y-6">
+            <div className="glass-card p-4 sm:p-5">
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                 <div>
                   <label className="text-xs text-slate-500 dark:text-slate-400">导图标题</label>
                   <input
                     value={mapTitle}
                     onChange={(e) => handleUpdateTitle(e.target.value)}
-                    className="mt-1 w-full md:w-[320px] px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-900 text-sm"
+                    className="mt-1 min-h-[44px] w-full rounded-lg border border-slate-200 bg-white/80 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900 sm:w-[320px]"
                     placeholder="导图标题"
                   />
                 </div>
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center">
                   <button
                     onClick={handleExportJson}
                     disabled={!activeMap}
-                    className="px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 text-sm text-slate-600 dark:text-slate-200 hover:border-indigo-400"
+                    className="min-h-[44px] w-full cursor-pointer rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-600 hover:border-indigo-400 dark:border-slate-700 dark:text-slate-200 sm:w-auto"
                   >
                     <span className="inline-flex items-center gap-2">
                       <Download className="w-4 h-4" /> JSON
@@ -1567,7 +1569,7 @@ export default function MindMap() {
                   <button
                     onClick={handleExportMarkdown}
                     disabled={!activeMap}
-                    className="px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 text-sm text-slate-600 dark:text-slate-200 hover:border-indigo-400"
+                    className="min-h-[44px] w-full cursor-pointer rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-600 hover:border-indigo-400 dark:border-slate-700 dark:text-slate-200 sm:w-auto"
                   >
                     <span className="inline-flex items-center gap-2">
                       <Download className="w-4 h-4" /> Markdown
@@ -1576,7 +1578,7 @@ export default function MindMap() {
                   <button
                     onClick={handleExportSvg}
                     disabled={!activeMap}
-                    className="px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 text-sm text-slate-600 dark:text-slate-200 hover:border-indigo-400"
+                    className="min-h-[44px] w-full cursor-pointer rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-600 hover:border-indigo-400 dark:border-slate-700 dark:text-slate-200 sm:w-auto"
                   >
                     <span className="inline-flex items-center gap-2">
                       <Download className="w-4 h-4" /> SVG
@@ -1585,7 +1587,7 @@ export default function MindMap() {
                   <button
                     onClick={handleExportPng}
                     disabled={!activeMap}
-                    className="px-3 py-2 rounded-lg bg-slate-900 text-white text-sm hover:bg-slate-800 dark:bg-white dark:text-slate-900"
+                    className="min-h-[44px] w-full cursor-pointer rounded-lg bg-slate-900 px-3 py-2 text-sm text-white hover:bg-slate-800 dark:bg-white dark:text-slate-900 sm:w-auto"
                   >
                     <span className="inline-flex items-center gap-2">
                       <Download className="w-4 h-4" /> PNG
@@ -1594,7 +1596,7 @@ export default function MindMap() {
                   <button
                     onClick={handleCopyMarkdown}
                     disabled={!activeMap}
-                    className="px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 text-sm text-slate-600 dark:text-slate-200 hover:border-indigo-400"
+                    className="min-h-[44px] w-full cursor-pointer rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-600 hover:border-indigo-400 dark:border-slate-700 dark:text-slate-200 sm:w-auto"
                   >
                     <span className="inline-flex items-center gap-2">
                       <Copy className="w-4 h-4" /> 复制大纲
@@ -1610,7 +1612,7 @@ export default function MindMap() {
             >
               {renderMindMapPanel(isMapFullscreen)}
               {!isMapFullscreen && (
-                <div className="glass-card p-5 space-y-4">
+                <div className="glass-card space-y-4 p-4 sm:p-5">
                 <h3 className="text-lg font-semibold text-slate-900 dark:text-white">节点编辑</h3>
                 {!selectedNode && (
                   <div className="text-sm text-slate-500 dark:text-slate-400">
@@ -1656,13 +1658,13 @@ export default function MindMap() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <div className="flex items-center justify-between gap-2 text-[11px]">
+                      <div className="flex flex-col items-start justify-between gap-2 text-[11px] sm:flex-row sm:items-center">
                         <span className="text-slate-500 dark:text-slate-400">写入方式</span>
                         <div className="inline-flex rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden">
                           <button
                             type="button"
                             onClick={() => setNodeAiWriteMode('replace')}
-                            className={`px-2.5 py-1 transition ${
+                            className={`min-h-[44px] px-3 py-2 transition ${
                               nodeAiWriteMode === 'replace'
                                 ? 'bg-indigo-600 text-white'
                                 : 'bg-white/80 dark:bg-slate-900 text-slate-600 dark:text-slate-300'
@@ -1673,7 +1675,7 @@ export default function MindMap() {
                           <button
                             type="button"
                             onClick={() => setNodeAiWriteMode('append')}
-                            className={`px-2.5 py-1 transition ${
+                            className={`min-h-[44px] px-3 py-2 transition ${
                               nodeAiWriteMode === 'append'
                                 ? 'bg-indigo-600 text-white'
                                 : 'bg-white/80 dark:bg-slate-900 text-slate-600 dark:text-slate-300'
@@ -1686,7 +1688,7 @@ export default function MindMap() {
                       <button
                         onClick={handleExpandSelectedNodeNote}
                         disabled={isNodeAiLoading}
-                        className="w-full px-3 py-2 rounded-lg bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/40 text-amber-700 dark:text-amber-300 text-sm hover:bg-amber-100 dark:hover:bg-amber-500/20 disabled:opacity-60"
+                        className="min-h-[44px] w-full cursor-pointer rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-700 hover:bg-amber-100 disabled:opacity-60 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-300 dark:hover:bg-amber-500/20"
                       >
                         <span className="inline-flex items-center gap-2">
                           <Wand2 className="w-4 h-4" />
@@ -1702,10 +1704,10 @@ export default function MindMap() {
                       </div>
                       {nodeAiError && <div className="text-xs text-rose-500">{nodeAiError}</div>}
                     </div>
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                       <button
                         onClick={handleAddChild}
-                        className="px-3 py-2 rounded-lg bg-indigo-600 text-white text-sm hover:bg-indigo-700"
+                        className="min-h-[44px] cursor-pointer rounded-lg bg-indigo-600 px-3 py-2 text-sm text-white hover:bg-indigo-700"
                       >
                         <span className="inline-flex items-center gap-2">
                           <Plus className="w-4 h-4" /> 添加子节点
@@ -1713,7 +1715,7 @@ export default function MindMap() {
                       </button>
                       <button
                         onClick={handleAddSibling}
-                        className="px-3 py-2 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-sm"
+                        className="min-h-[44px] cursor-pointer rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
                       >
                         <span className="inline-flex items-center gap-2">
                           <ListPlus className="w-4 h-4" /> 添加同级
@@ -1721,7 +1723,7 @@ export default function MindMap() {
                       </button>
                       <button
                         onClick={() => handleMoveNode('up')}
-                        className="px-3 py-2 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-sm"
+                        className="min-h-[44px] cursor-pointer rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
                       >
                         <span className="inline-flex items-center gap-2">
                           <MoveUp className="w-4 h-4" /> 上移
@@ -1729,7 +1731,7 @@ export default function MindMap() {
                       </button>
                       <button
                         onClick={() => handleMoveNode('down')}
-                        className="px-3 py-2 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-sm"
+                        className="min-h-[44px] cursor-pointer rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
                       >
                         <span className="inline-flex items-center gap-2">
                           <MoveDown className="w-4 h-4" /> 下移
@@ -1737,7 +1739,7 @@ export default function MindMap() {
                       </button>
                       <button
                         onClick={handleDeleteNode}
-                        className="col-span-2 px-3 py-2 rounded-lg bg-rose-50 text-rose-600 border border-rose-200 text-sm hover:bg-rose-100"
+                        className="min-h-[44px] cursor-pointer rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-600 hover:bg-rose-100 sm:col-span-2"
                       >
                         <span className="inline-flex items-center gap-2">
                           <Trash2 className="w-4 h-4" /> 删除节点
