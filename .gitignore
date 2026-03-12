@@ -25,3 +25,6 @@ dist-ssr
 
 # Runtime data
 api-proxy/data/
+__pycache__/
+*.pyc
+server_js.txt
