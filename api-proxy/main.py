@@ -10,7 +10,8 @@ import socket
 import sqlite3
 import threading
 from datetime import datetime, timezone
-from typing import Any, Dict, List
+from typing import Any, Dict, Iterator, List, Optional, Tuple
+from urllib.error import HTTPError, URLError
 from urllib.parse import urlparse
 from urllib.request import Request as UrlRequest
 from urllib.request import urlopen
@@ -18,7 +19,6 @@ from urllib.request import urlopen
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
-from openai import OpenAI
 
 DEFAULT_ALLOWED_ORIGINS = [
     "http://localhost:5173",
@@ -48,7 +48,12 @@ AI_MODEL = os.getenv("AI_MODEL", "openrouter/auto").strip()
 AI_SITE_URL = os.getenv("AI_SITE_URL", "https://lingma.cornna.xyz").strip()
 AI_SITE_NAME = os.getenv("AI_SITE_NAME", "LingMa").strip()
 ENABLE_THINKING = os.getenv("ENABLE_THINKING", "false").strip().lower() in {"1", "true", "yes", "on"}
+AI_REASONING_EFFORT = (os.getenv("AI_REASONING_EFFORT") or ("high" if ENABLE_THINKING else "")).strip().lower()
+AI_REQUEST_TIMEOUT_SECONDS = max(30, int(os.getenv("AI_REQUEST_TIMEOUT_SECONDS", "300") or "300"))
 ENABLE_REMOTE_MINDMAP_SYNC = os.getenv("ENABLE_REMOTE_MINDMAP_SYNC", "false").strip().lower() in {"1", "true", "yes", "on"}
+
+AI_PROTOCOL_RESPONSES = "responses"
+SUPPORTED_REASONING_EFFORTS = {"low", "medium", "high"}
 
 MINDMAP_DB_PATH = os.getenv("MINDMAP_DB_PATH", "/app/data/mindmaps.db").strip()
 MINDMAP_LEGACY_FILE = os.getenv("MINDMAP_LEGACY_FILE", "/app/data/mindmaps.json").strip()
@@ -66,16 +71,6 @@ def parse_allowed_origins() -> List[str]:
     return [origin.strip() for origin in raw.split(",") if origin.strip()]
 
 
-def build_client() -> OpenAI:
-    headers: Dict[str, str] = {}
-    if AI_SITE_URL:
-        headers["HTTP-Referer"] = AI_SITE_URL
-    if AI_SITE_NAME:
-        headers["X-Title"] = AI_SITE_NAME
-    return OpenAI(base_url=AI_BASE_URL, api_key=AI_API_KEY, default_headers=headers or None)
-
-
-client = build_client()
 db_lock = threading.Lock()
 
 app = FastAPI()
@@ -364,6 +359,8 @@ def require_authenticated_user(request: Request) -> sqlite3.Row:
     if user is None:
         raise HTTPException(status_code=401, detail="authentication required")
     return user
+
+
 def migrate_legacy_store() -> None:
     if not MINDMAP_LEGACY_FILE or not os.path.exists(MINDMAP_LEGACY_FILE):
         return
@@ -470,25 +467,403 @@ def fetch_document(target_url: str, max_length: int) -> Dict[str, Any]:
     }
 
 
-def build_request_payload(body: Dict[str, Any], stream: bool) -> Dict[str, Any]:
+def detect_protocol_from_url(api_url: str) -> str:
+    lower = (api_url or "").lower()
+    if "/responses" in lower:
+        return AI_PROTOCOL_RESPONSES
+    return AI_PROTOCOL_RESPONSES
+
+
+def apply_protocol_to_url(api_url: str, protocol: str) -> str:
+    base = (api_url or "").strip().rstrip("/")
+    if not base:
+        return base
+    lower = base.lower()
+    if lower.endswith("/chat/completions"):
+        if protocol == AI_PROTOCOL_RESPONSES:
+            return base[: -len("/chat/completions")] + "/responses"
+        return base
+    if lower.endswith("/responses"):
+        return base
+    if "/responses" in lower or "/chat/completions" in lower:
+        return base
+    if protocol == AI_PROTOCOL_RESPONSES:
+        return f"{base}/responses"
+    return base
+
+
+def resolve_responses_upstream_url() -> str:
+    return apply_protocol_to_url(AI_BASE_URL, detect_protocol_from_url(AI_BASE_URL))
+
+
+def responses_token_key(api_url: str) -> str:
+    host = urlparse(api_url or "").netloc.lower()
+    if host in {"api.openai.com", "gmn.chuangzuoli.com"}:
+        return "max_output_tokens"
+    return "max_tokens"
+
+
+def should_omit_responses_temperature(api_url: str) -> bool:
+    host = urlparse(api_url or "").netloc.lower()
+    return host == "gmn.chuangzuoli.com"
+
+
+def build_upstream_headers() -> Dict[str, str]:
+    headers = {
+        "Authorization": f"Bearer {AI_API_KEY}",
+        "Content-Type": "application/json",
+    }
+    if AI_SITE_URL:
+        headers["HTTP-Referer"] = AI_SITE_URL
+    if AI_SITE_NAME:
+        headers["X-Title"] = AI_SITE_NAME
+    return headers
+
+
+def parse_boolish(value: Any) -> bool:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        return value.strip().lower() in {"1", "true", "yes", "on"}
+    return bool(value)
+
+
+def extract_text_content(content: Any) -> str:
+    if isinstance(content, str):
+        return content
+    if isinstance(content, dict):
+        text = content.get("text")
+        if isinstance(text, str):
+            return text
+        nested = content.get("content")
+        if nested is not None:
+            return extract_text_content(nested)
+    if isinstance(content, list):
+        parts: List[str] = []
+        for item in content:
+            text = extract_text_content(item)
+            if text:
+                parts.append(text)
+        return "\n".join(parts).strip()
+    return ""
+
+
+def build_responses_input(messages: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    items: List[Dict[str, Any]] = []
+    for message in messages:
+        if not isinstance(message, dict):
+            continue
+        role = str(message.get("role") or "user").strip().lower() or "user"
+        if role not in {"system", "developer", "user", "assistant"}:
+            role = "user"
+        text = extract_text_content(message.get("content"))
+        if not text:
+            continue
+        items.append(
+            {
+                "role": role,
+                "content": [{"type": "input_text", "text": text}],
+            }
+        )
+    if not items:
+        raise HTTPException(status_code=400, detail="messages is required")
+    return items
+
+
+def resolve_reasoning_payload(body: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    reasoning = body.get("reasoning")
+    payload = dict(reasoning) if isinstance(reasoning, dict) else {}
+    effort = str(payload.get("effort") or body.get("reasoning_effort") or AI_REASONING_EFFORT or "").strip().lower()
+    if effort in SUPPORTED_REASONING_EFFORTS:
+        payload["effort"] = effort
+    elif "effort" in payload:
+        payload.pop("effort", None)
+    return payload or None
+
+
+def normalize_token_value(value: Any) -> int:
+    try:
+        return max(1, int(value))
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail="invalid max_tokens") from exc
+
+
+def build_responses_payload(body: Dict[str, Any], stream: Optional[bool] = None) -> Dict[str, Any]:
+    payload = dict(body or {})
+    payload["model"] = str(payload.get("model") or AI_MODEL).strip() or AI_MODEL
+    if stream is not None:
+        payload["stream"] = stream
+
+    if "input" not in payload:
+        messages = payload.get("messages")
+        if not isinstance(messages, list) or not messages:
+            raise HTTPException(status_code=400, detail="messages is required")
+        payload["input"] = build_responses_input(messages)
+    payload.pop("messages", None)
+
+    token_key = responses_token_key(resolve_responses_upstream_url())
+    if "max_tokens" in payload or "max_output_tokens" in payload:
+        token_value = payload.get("max_output_tokens", payload.get("max_tokens"))
+        payload.pop("max_tokens", None)
+        payload.pop("max_output_tokens", None)
+        payload[token_key] = normalize_token_value(token_value)
+
+    if should_omit_responses_temperature(resolve_responses_upstream_url()):
+        payload.pop("temperature", None)
+
+    reasoning = resolve_reasoning_payload(payload)
+    payload.pop("reasoning_effort", None)
+    if reasoning is not None:
+        payload["reasoning"] = reasoning
+    else:
+        payload.pop("reasoning", None)
+    return payload
+
+
+def build_legacy_request_payload(body: Dict[str, Any], stream: bool) -> Dict[str, Any]:
     messages = body.get("messages")
     if not isinstance(messages, list) or not messages:
         raise HTTPException(status_code=400, detail="messages is required")
 
-    payload: Dict[str, Any] = {
+    normalized: Dict[str, Any] = {
         "model": body.get("model") or AI_MODEL,
         "messages": messages,
         "stream": stream,
         "temperature": body.get("temperature", 0.7),
-        "max_tokens": body.get("max_tokens", 8192),
+        "max_tokens": body.get("max_tokens", body.get("max_output_tokens", 8192)),
     }
 
-    extra_body = body.get("extra_body")
-    if extra_body is None and ENABLE_THINKING:
-        extra_body = {"enable_thinking": True}
-    if extra_body is not None:
-        payload["extra_body"] = extra_body
+    if isinstance(body.get("metadata"), dict):
+        normalized["metadata"] = body["metadata"]
+
+    return build_responses_payload(normalized, stream=stream)
+
+
+def extract_error_message(body_text: str) -> str:
+    trimmed = (body_text or "").strip()
+    if not trimmed:
+        return "upstream request failed"
+    try:
+        payload = json.loads(trimmed)
+    except Exception:
+        return trimmed[:1000]
+    if isinstance(payload, dict):
+        error = payload.get("error")
+        if isinstance(error, dict):
+            message = error.get("message")
+            if isinstance(message, str) and message.strip():
+                return message.strip()
+        detail = payload.get("detail")
+        if isinstance(detail, str) and detail.strip():
+            return detail.strip()
+    return trimmed[:1000]
+
+
+def resolve_responses_token_key_override(body_text: str) -> Optional[str]:
+    lower = (body_text or "").lower()
+    if "unsupported parameter: max_output_tokens" in lower:
+        return "max_tokens"
+    if "unsupported parameter: max_tokens" in lower:
+        return ""
+    return None
+
+
+def override_responses_token_key(payload: Dict[str, Any], token_key: str, fallback: int) -> Dict[str, Any]:
+    value = fallback
+    for key in ("max_output_tokens", "max_tokens"):
+        if key in payload:
+            try:
+                value = int(payload[key])
+            except Exception:
+                value = fallback
+    payload = dict(payload)
+    payload.pop("max_output_tokens", None)
+    payload.pop("max_tokens", None)
+    if token_key:
+        payload[token_key] = value
     return payload
+
+
+def open_upstream_responses(payload: Dict[str, Any]) -> Any:
+    upstream_url = resolve_responses_upstream_url()
+    fallback_tokens = normalize_token_value(
+        payload.get("max_output_tokens", payload.get("max_tokens", 8192)),
+    )
+    current_payload = dict(payload)
+    token_override_attempted = False
+
+    while True:
+        try:
+            headers = build_upstream_headers()
+            if parse_boolish(current_payload.get("stream")):
+                headers["Accept"] = "text/event-stream"
+            request = UrlRequest(
+                upstream_url,
+                data=json.dumps(current_payload, ensure_ascii=False).encode("utf-8"),
+                headers=headers,
+                method="POST",
+            )
+            return urlopen(request, timeout=AI_REQUEST_TIMEOUT_SECONDS)
+        except HTTPError as exc:
+            body_text = exc.read().decode("utf-8", errors="replace")
+            override_key = None if token_override_attempted else resolve_responses_token_key_override(body_text)
+            if override_key is not None:
+                current_payload = override_responses_token_key(current_payload, override_key, fallback_tokens)
+                token_override_attempted = True
+                continue
+            raise HTTPException(status_code=exc.code, detail=extract_error_message(body_text)) from exc
+        except URLError as exc:
+            raise HTTPException(status_code=504, detail=str(exc.reason or exc)) from exc
+        except HTTPException:
+            raise
+        except Exception as exc:
+            raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+
+def read_upstream_responses_json(payload: Dict[str, Any]) -> Dict[str, Any]:
+    with open_upstream_responses(payload) as response:
+        body_text = response.read().decode("utf-8", errors="replace")
+    try:
+        data = json.loads(body_text)
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"invalid upstream response: {body_text[:500]}") from exc
+    if not isinstance(data, dict):
+        raise HTTPException(status_code=502, detail="invalid upstream response payload")
+    return data
+
+
+def extract_responses_json_text(data: Dict[str, Any]) -> Tuple[str, str]:
+    output_text = data.get("output_text")
+    if isinstance(output_text, str) and output_text.strip():
+        return output_text.strip(), "output_text"
+
+    texts: List[str] = []
+    output = data.get("output")
+    if isinstance(output, list):
+        for item in output:
+            if not isinstance(item, dict):
+                continue
+            contents = item.get("content")
+            if not isinstance(contents, list):
+                continue
+            for content in contents:
+                if isinstance(content, dict):
+                    text = content.get("text")
+                    if isinstance(text, str) and text.strip():
+                        texts.append(text.strip())
+    if texts:
+        return "\n".join(texts).strip(), "output[].content[].text"
+
+    return "", "empty"
+
+
+def build_legacy_chat_response(data: Dict[str, Any]) -> Dict[str, Any]:
+    text, _ = extract_responses_json_text(data)
+    return {
+        "id": str(data.get("id") or f"chatcmpl-{secrets.token_urlsafe(12)}"),
+        "object": "chat.completion",
+        "created": int(datetime.now(timezone.utc).timestamp()),
+        "model": str(data.get("model") or AI_MODEL),
+        "choices": [
+            {
+                "index": 0,
+                "message": {
+                    "role": "assistant",
+                    "content": text,
+                },
+                "finish_reason": "stop",
+            }
+        ],
+        "usage": data.get("usage"),
+    }
+
+
+def build_legacy_stream_chunk(chunk_id: str, model: str, delta: Optional[str] = None, finish_reason: Optional[str] = None) -> Dict[str, Any]:
+    payload: Dict[str, Any] = {
+        "id": chunk_id,
+        "object": "chat.completion.chunk",
+        "created": int(datetime.now(timezone.utc).timestamp()),
+        "model": model,
+        "choices": [
+            {
+                "index": 0,
+                "delta": {},
+                "finish_reason": finish_reason,
+            }
+        ],
+    }
+    if delta:
+        payload["choices"][0]["delta"] = {"content": delta}
+        payload["choices"][0]["finish_reason"] = None
+    return payload
+
+
+def iter_sse_events(response: Any) -> Iterator[str]:
+    buffer: List[str] = []
+    for raw_line in response:
+        line = raw_line.decode("utf-8", errors="replace")
+        if line in {"\n", "\r\n", "\r"}:
+            if buffer:
+                yield "\n".join(buffer)
+                buffer = []
+            continue
+        buffer.append(line.rstrip("\r\n"))
+    if buffer:
+        yield "\n".join(buffer)
+
+
+def extract_sse_data(event_block: str) -> str:
+    data_lines: List[str] = []
+    for line in event_block.splitlines():
+        if line.startswith("data:"):
+            data_lines.append(line[5:].lstrip())
+    return "\n".join(data_lines).strip()
+
+
+@app.get("/v1/models")
+async def list_models():
+    return JSONResponse(
+        content={
+            "object": "list",
+            "data": [
+                {
+                    "id": AI_MODEL,
+                    "object": "model",
+                    "created": int(datetime.now(timezone.utc).timestamp()),
+                    "owned_by": "tumafang",
+                }
+            ],
+        }
+    )
+
+
+@app.post("/v1/responses")
+async def responses_proxy(request: Request):
+    if not AI_API_KEY:
+        raise HTTPException(status_code=500, detail="AI_API_KEY is not configured")
+
+    body = await request.json()
+    stream = parse_boolish(body.get("stream"))
+    payload = build_responses_payload(body, stream=stream)
+
+    if stream:
+        def event_stream() -> Iterator[bytes]:
+            try:
+                with open_upstream_responses(payload) as upstream:
+                    for raw_line in upstream:
+                        yield raw_line
+            except HTTPException as exc:
+                yield f"data: {json.dumps({'error': {'message': str(exc.detail)}}, ensure_ascii=False)}\n\n".encode("utf-8")
+                yield b"data: [DONE]\n\n"
+
+        headers = {
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+        }
+        return StreamingResponse(event_stream(), media_type="text/event-stream", headers=headers)
+
+    data = read_upstream_responses_json(payload)
+    return JSONResponse(content=data)
 
 
 @app.post("/api/ai")
@@ -497,14 +872,9 @@ async def chat_completion(request: Request):
         raise HTTPException(status_code=500, detail="AI_API_KEY is not configured")
 
     body = await request.json()
-    payload = build_request_payload(body, stream=False)
-    try:
-        response = client.chat.completions.create(**payload)
-    except Exception as exc:
-        message = str(exc)
-        status_code = 504 if "timeout" in message.lower() else 502
-        raise HTTPException(status_code=status_code, detail=message) from exc
-    return JSONResponse(content=response.model_dump())
+    payload = build_legacy_request_payload(body, stream=False)
+    data = read_upstream_responses_json(payload)
+    return JSONResponse(content=build_legacy_chat_response(data))
 
 
 @app.post("/api/ai/stream")
@@ -513,18 +883,66 @@ async def chat_completion_stream(request: Request):
         raise HTTPException(status_code=500, detail="AI_API_KEY is not configured")
 
     body = await request.json()
-    payload = build_request_payload(body, stream=True)
+    payload = build_legacy_request_payload(body, stream=True)
 
-    def event_stream():
+    def event_stream() -> Iterator[str]:
+        chunk_id = f"chatcmpl-{secrets.token_urlsafe(12)}"
+        model_name = str(payload.get("model") or AI_MODEL)
+        sent_delta = False
+        stop_sent = False
         try:
-            stream = client.chat.completions.create(**payload)
-            for chunk in stream:
-                if not chunk.choices:
-                    continue
-                yield f"data: {json.dumps(chunk.model_dump(), ensure_ascii=False)}\n\n"
-            yield "data: [DONE]\n\n"
+            with open_upstream_responses(payload) as upstream:
+                for event_block in iter_sse_events(upstream):
+                    data_text = extract_sse_data(event_block)
+                    if not data_text or data_text == "[DONE]":
+                        continue
+                    try:
+                        event = json.loads(data_text)
+                    except Exception:
+                        continue
+                    if not isinstance(event, dict):
+                        continue
+
+                    response_obj = event.get("response")
+                    if isinstance(response_obj, dict):
+                        chunk_id = str(response_obj.get("id") or chunk_id)
+                        model_name = str(response_obj.get("model") or model_name)
+
+                    event_type = str(event.get("type") or "")
+                    if event_type == "response.output_text.delta":
+                        delta = event.get("delta")
+                        if isinstance(delta, str) and delta:
+                            sent_delta = True
+                            yield f"data: {json.dumps(build_legacy_stream_chunk(chunk_id, model_name, delta=delta), ensure_ascii=False)}\n\n"
+                    elif event_type == "response.output_text.done":
+                        done_text = event.get("text")
+                        if isinstance(done_text, str) and done_text and not sent_delta:
+                            sent_delta = True
+                            yield f"data: {json.dumps(build_legacy_stream_chunk(chunk_id, model_name, delta=done_text), ensure_ascii=False)}\n\n"
+                    elif event_type == "response.completed":
+                        if isinstance(response_obj, dict) and not sent_delta:
+                            final_text, _ = extract_responses_json_text(response_obj)
+                            if final_text:
+                                yield f"data: {json.dumps(build_legacy_stream_chunk(chunk_id, model_name, delta=final_text), ensure_ascii=False)}\n\n"
+                        yield f"data: {json.dumps(build_legacy_stream_chunk(chunk_id, model_name, finish_reason='stop'), ensure_ascii=False)}\n\n"
+                        yield "data: [DONE]\n\n"
+                        stop_sent = True
+                        return
+                    elif event_type == "response.failed" or isinstance(event.get("error"), dict):
+                        error = event.get("error") if isinstance(event.get("error"), dict) else {}
+                        message = str(error.get("message") or "upstream stream failed")
+                        yield f"data: {json.dumps({'error': message}, ensure_ascii=False)}\n\n"
+                        return
+        except HTTPException as exc:
+            yield f"data: {json.dumps({'error': str(exc.detail)}, ensure_ascii=False)}\n\n"
+            return
         except Exception as exc:
             yield f"data: {json.dumps({'error': str(exc)}, ensure_ascii=False)}\n\n"
+            return
+
+        if not stop_sent:
+            yield f"data: {json.dumps(build_legacy_stream_chunk(chunk_id, model_name, finish_reason='stop'), ensure_ascii=False)}\n\n"
+            yield "data: [DONE]\n\n"
 
     headers = {
         "Cache-Control": "no-cache",
