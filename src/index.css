@@ -275,6 +275,7 @@
 
 .mindmap-zoom-range {
   accent-color: #6366f1;
+  min-width: 7rem;
 }
 
 .mindmap-canvas {
@@ -508,6 +509,10 @@
 }
 
 @media (max-width: 960px) {
+  .mindmap-tree {
+    padding: 0.875rem 1rem 1.25rem;
+  }
+
   .mindmap-branch-layout {
     grid-template-columns: 1fr;
     gap: 1.15rem;
@@ -540,6 +545,99 @@
     left: 0;
     border-right: none;
     border-left: 1.4px dashed var(--mind-line);
+  }
+}
+
+@media (max-width: 640px) {
+  .mindmap-panel:fullscreen,
+  .mindmap-panel:-webkit-full-screen {
+    padding: 0.75rem;
+  }
+
+  .mindmap-toolbar-fullscreen {
+    margin: -0.5rem -0.5rem 0.85rem;
+    padding: 0.65rem 0.75rem;
+  }
+
+  .mindmap-tree {
+    padding: 0.75rem 0.75rem 1rem;
+  }
+
+  .mindmap-tree-balanced {
+    background-size: 18px 18px;
+    border-radius: 0.75rem;
+  }
+
+  .mindmap-root-node {
+    flex-wrap: wrap;
+    justify-content: center;
+    padding: 0.55rem 0.85rem;
+  }
+
+  .mindmap-root-title {
+    font-size: 0.88rem;
+  }
+
+  .mindmap-root-tag {
+    font-size: 0.64rem;
+  }
+
+  .mindmap-branch-layout,
+  .mindmap-branch-layout-single {
+    gap: 0.95rem;
+  }
+
+  .mindmap-side-list {
+    gap: 0.8rem;
+  }
+
+  .mindmap-row {
+    gap: 0.35rem;
+  }
+
+  .mindmap-node {
+    min-width: 150px;
+    max-width: 250px;
+  }
+
+  .mindmap-link {
+    width: 0.85rem;
+    height: 1.25rem;
+  }
+
+  .mindmap-toggle-btn,
+  .mindmap-toggle-space {
+    width: 1.3rem;
+    height: 1.3rem;
+  }
+
+  .mindmap-canvas {
+    overflow: auto;
+    min-height: 420px;
+    touch-action: pan-x pan-y pinch-zoom;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .mindmap-canvas.is-hand-ready,
+  .mindmap-canvas.is-hand-ready *,
+  .mindmap-canvas.is-panning,
+  .mindmap-canvas.is-panning * {
+    cursor: default !important;
+  }
+
+  .mindmap-zoom-range {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .mindmap-children {
+    gap: 0.75rem;
+  }
+
+  .mindmap-children.right,
+  .mindmap-children.left {
+    margin-left: 1.2rem;
+    padding-left: 0.7rem;
   }
 }
 
