@@ -134,9 +134,9 @@ export default function CodingExercise({
   return (
     <div className="border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden bg-white dark:bg-slate-800">
       {/* 题目头部 */}
-      <div className="bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
+      <div className="bg-gradient-to-r from-indigo-600 to-purple-600 px-4 py-4 sm:px-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex items-start gap-3">
             <span className="text-2xl">💻</span>
             <div>
               <h3 className="text-white font-bold text-lg">{title}</h3>
@@ -146,12 +146,12 @@ export default function CodingExercise({
             </div>
           </div>
           {/* 语言选择 - 只显示有模板的语言 */}
-          <div className="flex gap-1">
+          <div className="flex flex-wrap gap-2">
             {availableLangs.map(l => (
               <button
                 key={l}
                 onClick={() => handleLangChange(l)}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                className={`min-h-[44px] cursor-pointer rounded-lg px-3 py-1.5 text-sm font-medium transition-all ${
                   lang === l
                     ? 'bg-white text-indigo-600'
                     : 'bg-white/20 text-white hover:bg-white/30'
@@ -165,7 +165,7 @@ export default function CodingExercise({
       </div>
 
       {/* 题目描述 */}
-      <div className="p-6 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900">
+      <div className="border-b border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-900 sm:p-6">
         <h4 className="font-medium text-slate-800 dark:text-slate-200 mb-2">📋 题目描述</h4>
         <p className="text-slate-600 dark:text-slate-400 text-sm leading-relaxed whitespace-pre-line">{description}</p>
         
@@ -175,7 +175,7 @@ export default function CodingExercise({
           <div className="space-y-2">
             {testCases.slice(0, 2).map((tc, i) => (
               <div key={i} className="bg-white dark:bg-slate-800 rounded-lg p-3 border border-slate-200 dark:border-slate-700 text-sm">
-                <div className="flex gap-4">
+                <div className="flex flex-col gap-2 sm:flex-row sm:gap-4">
                   <div>
                     <span className="text-slate-500 dark:text-slate-400">输入：</span>
                     <code className="ml-2 bg-slate-100 dark:bg-slate-700 px-2 py-0.5 rounded text-indigo-600 dark:text-indigo-400">{tc.input}</code>
@@ -192,20 +192,20 @@ export default function CodingExercise({
       </div>
 
       {/* 代码编辑器 */}
-      <div className="p-6">
-        <div className="flex items-center justify-between mb-3">
+      <div className="p-4 sm:p-6">
+        <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <h4 className="font-medium text-slate-800 dark:text-slate-200">✏️ 编写代码 ({LANG_NAMES[lang]})</h4>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <button
               onClick={resetCode}
-              className="px-3 py-1.5 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-lg text-sm hover:bg-slate-200 dark:hover:bg-slate-600"
+              className="min-h-[44px] cursor-pointer rounded-lg bg-slate-100 px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600"
             >
               🔄 重置
             </button>
             {hints.length > 0 && (
               <button
                 onClick={() => setShowHints(!showHints)}
-                className="px-3 py-1.5 bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300 rounded-lg text-sm hover:bg-amber-200 dark:hover:bg-amber-800"
+                className="min-h-[44px] cursor-pointer rounded-lg bg-amber-100 px-3 py-1.5 text-sm text-amber-700 hover:bg-amber-200 dark:bg-amber-900/50 dark:text-amber-300 dark:hover:bg-amber-800"
               >
                 💡 提示
               </button>
@@ -234,24 +234,24 @@ export default function CodingExercise({
         />
 
         {/* 操作按钮 */}
-        <div className="flex gap-3 mt-4">
+        <div className="mt-4 flex flex-col gap-3 sm:flex-row">
           <button
             onClick={handleQuickRun}
             disabled={isRunning}
-            className="px-4 py-3 bg-emerald-600 text-white rounded-lg font-medium hover:bg-emerald-700 transition-colors disabled:opacity-50"
+            className="min-h-[44px] cursor-pointer rounded-lg bg-emerald-600 px-4 py-3 font-medium text-white transition-colors hover:bg-emerald-700 disabled:opacity-50"
           >
             {isRunning ? '⏳' : '▶️'} 运行
           </button>
           <button
             onClick={validateCode}
             disabled={isRunning}
-            className="flex-1 py-3 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition-colors disabled:opacity-50"
+            className="min-h-[44px] flex-1 cursor-pointer rounded-lg bg-indigo-600 py-3 font-medium text-white transition-colors hover:bg-indigo-700 disabled:opacity-50"
           >
             {isRunning ? '⏳ 判题中...' : '📤 提交判题'}
           </button>
           <button
             onClick={() => setShowSolution(!showSolution)}
-            className="px-4 py-3 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-lg font-medium hover:bg-slate-200 dark:hover:bg-slate-600"
+            className="min-h-[44px] cursor-pointer rounded-lg bg-slate-100 px-4 py-3 font-medium text-slate-600 hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600"
           >
             👀 答案
           </button>
@@ -471,9 +471,9 @@ export function FillInBlank({
   return (
     <div className="border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden bg-white dark:bg-slate-800">
       {/* 头部 */}
-      <div className="bg-gradient-to-r from-emerald-600 to-teal-600 px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
+      <div className="bg-gradient-to-r from-emerald-600 to-teal-600 px-4 py-4 sm:px-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex items-start gap-3">
             <span className="text-2xl">✏️</span>
             <div>
               <h3 className="text-white font-bold text-lg">{title}</h3>
@@ -483,12 +483,12 @@ export function FillInBlank({
             </div>
           </div>
           {/* 语言选择 - 只显示有模板的语言 */}
-          <div className="flex gap-1">
+          <div className="flex flex-wrap gap-2">
             {availableLangs.map(l => (
               <button
                 key={l}
                 onClick={() => { setLang(l); resetAll(); }}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                className={`min-h-[44px] cursor-pointer rounded-lg px-3 py-1.5 text-sm font-medium transition-all ${
                   lang === l
                     ? 'bg-white text-emerald-600'
                     : 'bg-white/20 text-white hover:bg-white/30'
@@ -502,29 +502,29 @@ export function FillInBlank({
       </div>
 
       {/* 题目描述 */}
-      <div className="p-6 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900">
+      <div className="border-b border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-900 sm:p-6">
         <p className="text-slate-600 dark:text-slate-400 text-sm leading-relaxed">{description}</p>
       </div>
 
       {/* 代码填空区 */}
-      <div className="p-6">
+      <div className="p-4 sm:p-6">
         <h4 className="font-medium text-slate-800 dark:text-slate-200 mb-3">📝 填写空白处的代码：</h4>
         <div className="bg-slate-900 rounded-lg p-4 font-mono text-sm overflow-x-auto">
           {renderCodeWithBlanks()}
         </div>
 
         {/* 操作按钮 */}
-        <div className="flex gap-3 mt-4">
+        <div className="mt-4 flex flex-col gap-3 sm:flex-row">
           <button
             onClick={checkAnswers}
             disabled={Object.keys(answers).length === 0}
-            className="flex-1 py-3 bg-emerald-600 text-white rounded-lg font-medium hover:bg-emerald-700 transition-colors disabled:opacity-50"
+            className="min-h-[44px] flex-1 cursor-pointer rounded-lg bg-emerald-600 py-3 font-medium text-white transition-colors hover:bg-emerald-700 disabled:opacity-50"
           >
             ✓ 检查答案
           </button>
           <button
             onClick={resetAll}
-            className="px-6 py-3 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-lg font-medium hover:bg-slate-200 dark:hover:bg-slate-600"
+            className="min-h-[44px] cursor-pointer rounded-lg bg-slate-100 px-6 py-3 font-medium text-slate-600 hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600"
           >
             🔄 重置
           </button>
