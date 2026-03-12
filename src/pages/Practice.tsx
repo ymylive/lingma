@@ -103,7 +103,6 @@ export default function Practice() {
 
   // 统计信息
   const stats = useMemo(() => {
-    console.log('【调试】allExercises总数:', allExercises.length);
     const total = allExercises.length;
     const coding = allExercises.filter(e => e.type === 'coding').length;
     const fillblank = allExercises.filter(e => e.type === 'fillblank').length;

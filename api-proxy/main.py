@@ -359,8 +359,6 @@ def require_authenticated_user(request: Request) -> sqlite3.Row:
     if user is None:
         raise HTTPException(status_code=401, detail="authentication required")
     return user
-
-
 def migrate_legacy_store() -> None:
     if not MINDMAP_LEGACY_FILE or not os.path.exists(MINDMAP_LEGACY_FILE):
         return
@@ -685,6 +683,27 @@ def override_responses_token_key(payload: Dict[str, Any], token_key: str, fallba
     return payload
 
 
+def downgrade_reasoning_on_timeout(payload: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    reasoning = payload.get("reasoning")
+    if not isinstance(reasoning, dict):
+        return None
+
+    effort = str(reasoning.get("effort") or "").strip().lower()
+    next_effort = {
+        "high": "medium",
+        "medium": "low",
+    }.get(effort)
+
+    if not next_effort:
+        return None
+
+    next_payload = dict(payload)
+    next_reasoning = dict(reasoning)
+    next_reasoning["effort"] = next_effort
+    next_payload["reasoning"] = next_reasoning
+    return next_payload
+
+
 def open_upstream_responses(payload: Dict[str, Any]) -> Any:
     upstream_url = resolve_responses_upstream_url()
     fallback_tokens = normalize_token_value(
@@ -712,6 +731,11 @@ def open_upstream_responses(payload: Dict[str, Any]) -> Any:
                 current_payload = override_responses_token_key(current_payload, override_key, fallback_tokens)
                 token_override_attempted = True
                 continue
+            if exc.code == 524:
+                downgraded_payload = downgrade_reasoning_on_timeout(current_payload)
+                if downgraded_payload is not None:
+                    current_payload = downgraded_payload
+                    continue
             raise HTTPException(status_code=exc.code, detail=extract_error_message(body_text)) from exc
         except URLError as exc:
             raise HTTPException(status_code=504, detail=str(exc.reason or exc)) from exc
