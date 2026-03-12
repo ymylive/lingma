@@ -49,6 +49,7 @@ export interface AIConfig {
   baseUrl?: string;
   model?: string;
 }
+const AI_CONFIG_STORAGE_KEY = 'ai_config';
 
 // 代理服务地址 (API密钥存储在服务器端，前端不暴露)
 const DEFAULT_PROXY_ORIGIN =
@@ -75,7 +76,7 @@ export const PROVIDERS = [
 // 默认配置 - 使用ModelScope魔搭平台
 let aiConfig: AIConfig = {
   provider: 'modelscope',
-  apiKey: 'ms-6750340c-ac7b-4bb9-af73-a5b25a5b386c',
+  apiKey: '',
   baseUrl: 'https://api-inference.modelscope.cn/v1',
   model: 'deepseek-ai/DeepSeek-V3.2'
   // 备用模型: 'deepseek-ai/DeepSeek-V3.2'
@@ -86,15 +87,22 @@ export const getAIConfig = () => aiConfig;
 export const setAIConfig = (config: Partial<AIConfig>) => {
   aiConfig = { ...aiConfig, ...config };
   // 保存到localStorage
-  localStorage.setItem('ai_config', JSON.stringify(aiConfig));
+  localStorage.setItem(
+    AI_CONFIG_STORAGE_KEY,
+    JSON.stringify({
+      provider: aiConfig.provider,
+      baseUrl: aiConfig.baseUrl,
+      model: aiConfig.model,
+    })
+  );
 };
 
 // 从localStorage加载配置
 export const loadAIConfig = () => {
-  const saved = localStorage.getItem('ai_config');
+  const saved = localStorage.getItem(AI_CONFIG_STORAGE_KEY);
   if (saved) {
     try {
-      aiConfig = { ...aiConfig, ...JSON.parse(saved) };
+      aiConfig = { ...aiConfig, ...JSON.parse(saved), apiKey: '' };
     } catch (e) {
       console.error('Failed to load AI config:', e);
     }

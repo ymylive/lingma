@@ -44,6 +44,7 @@ AI_MODEL = os.getenv("AI_MODEL", "openrouter/auto").strip()
 AI_SITE_URL = os.getenv("AI_SITE_URL", "https://lingma.cornna.xyz").strip()
 AI_SITE_NAME = os.getenv("AI_SITE_NAME", "LingMa").strip()
 ENABLE_THINKING = os.getenv("ENABLE_THINKING", "false").strip().lower() in {"1", "true", "yes", "on"}
+ENABLE_REMOTE_MINDMAP_SYNC = os.getenv("ENABLE_REMOTE_MINDMAP_SYNC", "false").strip().lower() in {"1", "true", "yes", "on"}
 
 MINDMAP_DB_PATH = os.getenv("MINDMAP_DB_PATH", "/app/data/mindmaps.db").strip()
 MINDMAP_LEGACY_FILE = os.getenv("MINDMAP_LEGACY_FILE", "/app/data/mindmaps.json").strip()
@@ -166,6 +167,11 @@ def sanitize_user_id(user_id: Any) -> str:
     if not USER_ID_RE.match(value):
         raise ValueError("Invalid userId")
     return value
+
+
+def ensure_remote_mindmap_sync_enabled() -> None:
+    if not ENABLE_REMOTE_MINDMAP_SYNC:
+        raise HTTPException(status_code=403, detail="remote mind map sync is disabled")
 
 
 def migrate_legacy_store() -> None:
@@ -355,6 +361,7 @@ async def doc_fetch(request: Request):
 
 @app.post("/api/mindmaps/load")
 async def load_mindmaps(request: Request):
+    ensure_remote_mindmap_sync_enabled()
     body = await request.json()
     try:
         user_id = sanitize_user_id(body.get("userId"))
@@ -383,6 +390,7 @@ async def load_mindmaps(request: Request):
 
 @app.post("/api/mindmaps/save")
 async def save_mindmaps(request: Request):
+    ensure_remote_mindmap_sync_enabled()
     body = await request.json()
     try:
         user_id = sanitize_user_id(body.get("userId"))
@@ -413,5 +421,6 @@ async def save_mindmaps(request: Request):
     return JSONResponse(content={"maps": maps, "updatedAt": updated_at})
 
 
-init_mindmap_db()
-migrate_legacy_store()
+if ENABLE_REMOTE_MINDMAP_SYNC:
+    init_mindmap_db()
+    migrate_legacy_store()

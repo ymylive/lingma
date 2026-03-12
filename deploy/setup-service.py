@@ -1,50 +1,47 @@
 #!/usr/bin/env python3
-import paramiko
+import json
 
-ssh = paramiko.SSHClient()
-ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-ssh.connect('8.134.33.19', username='root', password='Qq159741')
+from runtime_config import create_ssh_client, get_ai_proxy_config
 
-print("🔧 配置AI代理服务...")
 
-# 创建systemd服务文件
-service_content = '''[Unit]
+ssh = create_ssh_client()
+ai_config = get_ai_proxy_config()
+
+print("Configuring AI proxy service...")
+
+service_content = f"""[Unit]
 Description=LingMa AI API Proxy
 After=network.target
 
 [Service]
 Type=simple
 WorkingDirectory=/var/www/lingma/api-proxy
-Environment=AI_API_KEY=sk-vJy5jCgbzjksuW1njIbymPABzjK4UkuIVT3fD7MNLmmY570R
-Environment=AI_API_URL=https://api.aabao.top/v1/chat/completions
-Environment=AI_MODEL=deepseek-v3.2-exp-thinking
+Environment={json.dumps("AI_API_KEY=" + ai_config["AI_API_KEY"])}
+Environment={json.dumps("AI_API_URL=" + ai_config["AI_API_URL"])}
+Environment={json.dumps("AI_MODEL=" + ai_config["AI_MODEL"])}
 ExecStart=/usr/bin/node server.js
 Restart=always
 RestartSec=10
 
 [Install]
 WantedBy=multi-user.target
-'''
+"""
 
-# 写入服务文件
-cmd = f"echo '{service_content}' > /etc/systemd/system/ai-proxy.service"
-stdin, stdout, stderr = ssh.exec_command(cmd)
+command = "cat > /etc/systemd/system/ai-proxy.service <<'EOF'\n" + service_content + "EOF\n"
+stdin, stdout, stderr = ssh.exec_command(command)
 stdout.read()
 
-# 重载并启动服务
-commands = [
-    'systemctl daemon-reload',
-    'systemctl stop ai-proxy 2>/dev/null || true',
-    'systemctl start ai-proxy',
-    'systemctl enable ai-proxy',
-    'systemctl status ai-proxy'
-]
-
-for cmd in commands:
-    stdin, stdout, stderr = ssh.exec_command(cmd)
-    out = stdout.read().decode()
-    if out:
-        print(out)
+for command in [
+    "systemctl daemon-reload",
+    "systemctl stop ai-proxy 2>/dev/null || true",
+    "systemctl start ai-proxy",
+    "systemctl enable ai-proxy",
+    "systemctl status ai-proxy",
+]:
+    stdin, stdout, stderr = ssh.exec_command(command)
+    output = stdout.read().decode()
+    if output:
+        print(output)
 
 ssh.close()
-print("✅ AI代理服务配置完成!")
+print("AI proxy service configured.")

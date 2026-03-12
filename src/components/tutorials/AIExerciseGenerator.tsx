@@ -150,7 +150,7 @@ export default function AIExerciseGenerator() {
                   className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                 />
                 <p className="mt-1 text-xs text-slate-500">
-                  密钥仅保存在本地浏览器，不会上传到服务器
+                  当前默认通过服务端代理请求 AI，此处输入不会持久化保存
                 </p>
               </div>
 

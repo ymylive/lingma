@@ -1,18 +1,25 @@
 ' 灵码服务启动脚本 - 开机自启动
 ' 静默启动AI代理和前端开发服务器
+' 依赖环境变量：LINGMA_AI_API_KEY，可选：LINGMA_AI_API_URL、LINGMA_AI_MODEL
 
 Set WshShell = CreateObject("WScript.Shell")
 
-' 项目路径
 projectPath = "E:\project\tumafang"
+aiUrl = WshShell.ExpandEnvironmentStrings("%LINGMA_AI_API_URL%")
+aiModel = WshShell.ExpandEnvironmentStrings("%LINGMA_AI_MODEL%")
 
-' 启动AI代理服务
-WshShell.Run "cmd /c cd /d " & projectPath & "\api-proxy && set AI_API_KEY=sk-vJy5jCgbzjksuW1njIbymPABzjK4UkuIVT3fD7MNLmmY570R && set AI_API_URL=https://api.aabao.top/v1/chat/completions && set AI_MODEL=deepseek-v3.2-exp-thinking && node server.js", 0, False
+If aiUrl = "%LINGMA_AI_API_URL%" Then
+  aiUrl = "https://openrouter.ai/api/v1/chat/completions"
+End If
 
-' 等待2秒
+If aiModel = "%LINGMA_AI_MODEL%" Then
+  aiModel = "openrouter/auto"
+End If
+
+WshShell.Run "cmd /c if not defined LINGMA_AI_API_KEY exit /b 1 && cd /d " & projectPath & "\api-proxy && set AI_API_KEY=%LINGMA_AI_API_KEY% && set AI_API_URL=" & aiUrl & " && set AI_MODEL=" & aiModel & " && node server.js", 0, False
+
 WScript.Sleep 2000
 
-' 启动前端开发服务器
 WshShell.Run "cmd /c cd /d " & projectPath & " && npm run dev", 0, False
 
 Set WshShell = Nothing

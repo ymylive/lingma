@@ -74,6 +74,90 @@ const STORAGE_KEYS = {
   USERS_DB: 'ds_users_db',
 };
 
+const PASSWORD_HASH_VERSION = 1;
+const PASSWORD_HASH_ITERATIONS = 120000;
+const textEncoder = new TextEncoder();
+
+interface StoredUserRecord {
+  user: User;
+  progress: UserProgress;
+  password?: string;
+  passwordHash?: string;
+  passwordSalt?: string;
+  passwordVersion?: number;
+}
+
+function getCrypto() {
+  const cryptoApi = globalThis.crypto;
+  if (!cryptoApi?.subtle) {
+    throw new Error('当前浏览器不支持安全密码存储，请升级后重试');
+  }
+  return cryptoApi;
+}
+
+function bytesToBase64(bytes: Uint8Array) {
+  let binary = '';
+  bytes.forEach((byte) => {
+    binary += String.fromCharCode(byte);
+  });
+  return btoa(binary);
+}
+
+async function derivePasswordHash(password: string, salt: string) {
+  const cryptoApi = getCrypto();
+  const key = await cryptoApi.subtle.importKey(
+    'raw',
+    textEncoder.encode(password),
+    'PBKDF2',
+    false,
+    ['deriveBits']
+  );
+  const bits = await cryptoApi.subtle.deriveBits(
+    {
+      name: 'PBKDF2',
+      hash: 'SHA-256',
+      salt: textEncoder.encode(salt),
+      iterations: PASSWORD_HASH_ITERATIONS,
+    },
+    key,
+    256
+  );
+  return bytesToBase64(new Uint8Array(bits));
+}
+
+async function createPasswordRecord(password: string) {
+  const cryptoApi = getCrypto();
+  const saltBytes = new Uint8Array(16);
+  cryptoApi.getRandomValues(saltBytes);
+
+  const passwordSalt = bytesToBase64(saltBytes);
+  const passwordHash = await derivePasswordHash(password, passwordSalt);
+
+  return {
+    passwordHash,
+    passwordSalt,
+    passwordVersion: PASSWORD_HASH_VERSION,
+  };
+}
+
+function hasPasswordHash(
+  record: StoredUserRecord
+): record is StoredUserRecord & { passwordHash: string; passwordSalt: string } {
+  return Boolean(record.passwordHash && record.passwordSalt);
+}
+
+async function verifyPassword(record: StoredUserRecord, password: string) {
+  if (hasPasswordHash(record)) {
+    if (record.passwordVersion && record.passwordVersion !== PASSWORD_HASH_VERSION) {
+      return false;
+    }
+
+    const derivedHash = await derivePasswordHash(password, record.passwordSalt);
+    return derivedHash === record.passwordHash;
+  }
+  return record.password === password;
+}
+
 export function UserProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [progress, setProgress] = useState<UserProgress>(defaultProgress);
@@ -127,55 +211,90 @@ export function UserProvider({ children }: { children: ReactNode }) {
   };
 
   // 获取用户数据库
-  const getUsersDB = (): Record<string, { user: User; password: string; progress: UserProgress }> => {
+  const getUsersDB = (): Record<string, StoredUserRecord> => {
     const db = localStorage.getItem(STORAGE_KEYS.USERS_DB);
     return db ? JSON.parse(db) : {};
   };
 
+  const persistUsersDB = (db: Record<string, StoredUserRecord>) => {
+    localStorage.setItem(STORAGE_KEYS.USERS_DB, JSON.stringify(db));
+  };
+
   // 保存用户到数据库
-  const saveUserToDB = (email: string, userData: { user: User; password: string; progress: UserProgress }) => {
+  const saveUserToDB = (email: string, userData: StoredUserRecord) => {
     const db = getUsersDB();
     db[email] = userData;
-    localStorage.setItem(STORAGE_KEYS.USERS_DB, JSON.stringify(db));
+    persistUsersDB(db);
+  };
+
+  const migrateLegacyPassword = async (email: string, userData: StoredUserRecord, password: string) => {
+    const db = getUsersDB();
+    const migratedPassword = await createPasswordRecord(password);
+    const migratedUserData: StoredUserRecord = {
+      ...userData,
+      ...migratedPassword,
+    };
+
+    delete migratedUserData.password;
+    db[email] = migratedUserData;
+    persistUsersDB(db);
+
+    return migratedUserData;
   };
 
   // 登录
   const login = async (email: string, password: string): Promise<boolean> => {
-    const db = getUsersDB();
-    const userData = db[email];
+    try {
+      const db = getUsersDB();
+      const userData = db[email];
 
-    if (userData && userData.password === password) {
-      setUser(userData.user);
-      setProgress(userData.progress);
-      localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(userData.user));
-      localStorage.setItem(STORAGE_KEYS.PROGRESS, JSON.stringify(userData.progress));
+      if (!userData || !(await verifyPassword(userData, password))) {
+        return false;
+      }
+
+      const activeUserData = hasPasswordHash(userData)
+        ? userData
+        : await migrateLegacyPassword(email, userData, password);
+
+      setUser(activeUserData.user);
+      setProgress(activeUserData.progress);
+      localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(activeUserData.user));
+      localStorage.setItem(STORAGE_KEYS.PROGRESS, JSON.stringify(activeUserData.progress));
       return true;
+    } catch (error) {
+      console.error('Failed to login with local auth storage', error);
+      return false;
     }
-    return false;
   };
 
   // 注册
   const register = async (username: string, email: string, password: string): Promise<boolean> => {
-    const db = getUsersDB();
+    try {
+      const db = getUsersDB();
 
-    if (db[email]) {
-      return false; // 邮箱已存在
+      if (db[email]) {
+        return false; // 邮箱已存在
+      }
+
+      const newUser: User = {
+        id: Date.now().toString(),
+        username,
+        email,
+        createdAt: new Date().toISOString(),
+      };
+
+      const newProgress = { ...defaultProgress, lastVisit: new Date().toDateString(), streak: 1 };
+      const passwordRecord = await createPasswordRecord(password);
+
+      saveUserToDB(email, { user: newUser, progress: newProgress, ...passwordRecord });
+      setUser(newUser);
+      setProgress(newProgress);
+
+      return true;
+    } catch (error) {
+      console.error('Failed to register with local auth storage', error);
+      return false;
     }
-
-    const newUser: User = {
-      id: Date.now().toString(),
-      username,
-      email,
-      createdAt: new Date().toISOString(),
-    };
-
-    const newProgress = { ...defaultProgress, lastVisit: new Date().toDateString(), streak: 1 };
-
-    saveUserToDB(email, { user: newUser, password, progress: newProgress });
-    setUser(newUser);
-    setProgress(newProgress);
-
-    return true;
   };
 
   // 退出登录
@@ -185,7 +304,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
       const db = getUsersDB();
       if (db[user.email]) {
         db[user.email].progress = progress;
-        localStorage.setItem(STORAGE_KEYS.USERS_DB, JSON.stringify(db));
+        persistUsersDB(db);
       }
     }
 
@@ -204,7 +323,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
         const db = getUsersDB();
         if (db[user.email]) {
           db[user.email].progress = newProgress;
-          localStorage.setItem(STORAGE_KEYS.USERS_DB, JSON.stringify(db));
+          persistUsersDB(db);
         }
       }
       return newProgress;

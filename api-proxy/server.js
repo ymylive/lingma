@@ -51,7 +51,8 @@ const CONFIG = {
   RATE_LIMIT: 30,
   MINDMAP_DB_FILE: process.env.MINDMAP_DB_FILE || path.join(__dirname, 'data', 'mindmaps.db'),
   MINDMAP_LEGACY_FILE: process.env.MINDMAP_STORE_FILE || path.join(__dirname, 'data', 'mindmaps.json'),
-  MINDMAP_MAX_MAPS_PER_USER: 200
+  MINDMAP_MAX_MAPS_PER_USER: 200,
+  ENABLE_REMOTE_MINDMAP_SYNC: ['1', 'true', 'yes', 'on'].includes(String(process.env.ENABLE_REMOTE_MINDMAP_SYNC || '').trim().toLowerCase())
 };
 
 const rateLimitStore = new Map();
@@ -115,6 +116,12 @@ function sanitizeUserId(userIdRaw) {
     throw new Error('Invalid request: userId format');
   }
   return userId;
+}
+
+function ensureRemoteMindMapSyncEnabled() {
+  if (!CONFIG.ENABLE_REMOTE_MINDMAP_SYNC) {
+    throw new Error('Remote mind map sync is disabled');
+  }
 }
 
 function normalizeMindMapNode(node) {
@@ -615,6 +622,7 @@ const server = http.createServer(async (req, res) => {
       }
 
       if (isMindMap) {
+        ensureRemoteMindMapSyncEnabled();
         const userId = payload.userId;
 
         if (isMindMapLoad) {

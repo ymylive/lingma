@@ -28,7 +28,7 @@ import {
   type MindMapGenerateMode,
   type MindMapNode,
 } from '../services/mindMapService';
-import { loadMindMapsFromServer, saveMindMapsToServer } from '../services/mindMapStoreService';
+import { isRemoteMindMapSyncEnabled, loadMindMapsFromServer, saveMindMapsToServer } from '../services/mindMapStoreService';
 
 type SourceTab = 'topic' | 'url' | 'file';
 
@@ -452,6 +452,7 @@ export default function MindMap() {
   const { user, progress } = useUser();
 
   const userId = user?.id || '';
+  const remoteSyncEnabled = Boolean(userId) && isRemoteMindMapSyncEnabled();
   const storageKey = `${STORAGE_PREFIX}_${userId || 'guest'}`;
   const [maps, setMaps] = useState<MindMapData[]>([]);
   const [activeMapId, setActiveMapId] = useState<string | null>(null);
@@ -476,6 +477,7 @@ export default function MindMap() {
   const [nodeAiWriteMode, setNodeAiWriteMode] = useState<'replace' | 'append'>('replace');
 
   const lastSyncedMapsRef = useRef('');
+  const lastPersistedMapsRef = useRef('');
   const skipNextRemoteSyncRef = useRef(false);
   const mindMapPanelRef = useRef<HTMLDivElement | null>(null);
   const [pan, setPan] = useState({ x: 24, y: 24 });
@@ -516,11 +518,15 @@ export default function MindMap() {
     setSelectedNodeId(null);
     setSyncStatus('idle');
     setSyncMessage('');
-    setIsRemoteReady(!userId);
+    setIsRemoteReady(!remoteSyncEnabled);
     lastSyncedMapsRef.current = JSON.stringify(localMaps);
+    lastPersistedMapsRef.current = lastSyncedMapsRef.current;
     skipNextRemoteSyncRef.current = true;
 
-    if (!userId) {
+    if (!remoteSyncEnabled) {
+      if (userId) {
+        setSyncMessage('服务端同步未启用，当前仅本地保存');
+      }
       return () => {
         cancelled = true;
       };
@@ -571,28 +577,37 @@ export default function MindMap() {
     return () => {
       cancelled = true;
     };
-  }, [storageKey, userId]);
+  }, [remoteSyncEnabled, storageKey, userId]);
 
   useEffect(() => {
-    localStorage.setItem(storageKey, JSON.stringify(maps));
+    const timer = window.setTimeout(() => {
+      const serialized = JSON.stringify(maps);
+      if (serialized === lastPersistedMapsRef.current) {
+        return;
+      }
+      localStorage.setItem(storageKey, serialized);
+      lastPersistedMapsRef.current = serialized;
+    }, 250);
+
+    return () => window.clearTimeout(timer);
   }, [maps, storageKey]);
 
   useEffect(() => {
-    if (!userId || !isRemoteReady) return;
-
-    const serialized = JSON.stringify(maps);
-
-    if (skipNextRemoteSyncRef.current) {
-      skipNextRemoteSyncRef.current = false;
-      lastSyncedMapsRef.current = serialized;
-      return;
-    }
-
-    if (serialized === lastSyncedMapsRef.current) {
-      return;
-    }
+    if (!remoteSyncEnabled || !isRemoteReady) return;
 
     const timer = window.setTimeout(async () => {
+      const serialized = JSON.stringify(maps);
+
+      if (skipNextRemoteSyncRef.current) {
+        skipNextRemoteSyncRef.current = false;
+        lastSyncedMapsRef.current = serialized;
+        return;
+      }
+
+      if (serialized === lastSyncedMapsRef.current) {
+        return;
+      }
+
       try {
         setSyncStatus('syncing');
         await saveMindMapsToServer(userId, maps);
@@ -608,7 +623,7 @@ export default function MindMap() {
     }, 800);
 
     return () => window.clearTimeout(timer);
-  }, [maps, userId, isRemoteReady]);
+  }, [isRemoteReady, maps, remoteSyncEnabled, userId]);
 
   useEffect(() => {
     const doc = document as Document & {
@@ -1467,11 +1482,13 @@ export default function MindMap() {
                       : 'text-emerald-600 dark:text-emerald-400'
                 }`}
               >
-                {userId
+                {remoteSyncEnabled
                   ? syncStatus === 'syncing'
                     ? '服务器同步中...'
                     : syncMessage || '导图已与服务器同步'
-                  : '未登录：当前仅本地保存'}
+                  : userId
+                    ? syncMessage || '已登录：当前仅本地保存'
+                    : '未登录：当前仅本地保存'}
               </div>
               <div className="space-y-2 max-h-[360px] overflow-auto pr-2">
                 {maps.length === 0 && (

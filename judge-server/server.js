@@ -8,6 +8,25 @@ const { v4: uuidv4 } = require('uuid');
 const app = express();
 const PORT = 3002;  // 判题服务使用3002端口
 const TEMP_DIR = '/tmp/judge';
+const DEFAULT_ALLOWED_ORIGINS = [
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'http://127.0.0.1:5173',
+  'http://127.0.0.1:3000',
+  'https://lingma.cornna.xyz',
+  'http://lingma.cornna.xyz',
+  'http://8.134.33.19',
+  'https://8.134.33.19',
+  'http://8.134.33.19:8080',
+  'https://8.134.33.19:8080'
+];
+const ENV_ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || '')
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+const LOOPBACK_ORIGIN_RE = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i;
+const MAX_CONCURRENT_JOBS = Math.max(1, Number(process.env.JUDGE_MAX_CONCURRENT_JOBS || 2));
+let activeJobs = 0;
 const TIMEOUT = 5000; // 5秒超时
 const MAX_OUTPUT = 65536; // 64KB最大输出
 
@@ -16,8 +35,43 @@ if (!fs.existsSync(TEMP_DIR)) {
   fs.mkdirSync(TEMP_DIR, { recursive: true });
 }
 
-app.use(cors());
+app.use(cors({
+  origin(origin, callback) {
+    if (isOriginAllowed(origin)) {
+      callback(null, true);
+      return;
+    }
+    callback(new Error('Forbidden origin'));
+  },
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+}));
 app.use(express.json({ limit: '1mb' }));
+
+function isOriginAllowed(origin) {
+  if (!origin) return true;
+  return DEFAULT_ALLOWED_ORIGINS.includes(origin) || ENV_ALLOWED_ORIGINS.includes(origin) || LOOPBACK_ORIGIN_RE.test(origin);
+}
+
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (!isOriginAllowed(origin)) {
+    return res.status(403).json({ error: 'Forbidden origin' });
+  }
+  return next();
+});
+
+function tryAcquireJobSlot() {
+  if (activeJobs >= MAX_CONCURRENT_JOBS) {
+    return false;
+  }
+  activeJobs += 1;
+  return true;
+}
+
+function releaseJobSlot() {
+  activeJobs = Math.max(0, activeJobs - 1);
+}
 
 // ACM/OJ标准语言配置
 const LANG_CONFIG = {
@@ -173,6 +227,7 @@ async function compileCode(language, code, workDir) {
 // 判题接口 - ACM/OJ标准
 app.post('/api/judge', async (req, res) => {
   const { code, language, testCases } = req.body;
+  let jobAcquired = false;
   
   if (!code || !language || !testCases) {
     return res.status(400).json({ error: '缺少必要参数' });
@@ -183,6 +238,11 @@ app.post('/api/judge', async (req, res) => {
     return res.status(400).json({ error: '不支持的语言' });
   }
   
+  if (!tryAcquireJobSlot()) {
+    return res.status(429).json({ error: 'Judge server is busy, please retry later' });
+  }
+  jobAcquired = true;
+
   const jobId = uuidv4();
   const workDir = path.join(TEMP_DIR, jobId);
   fs.mkdirSync(workDir, { recursive: true });
@@ -277,12 +337,17 @@ app.post('/api/judge', async (req, res) => {
   } catch (error) {
     cleanup(workDir);
     res.status(500).json({ error: error.message });
+  } finally {
+    if (jobAcquired) {
+      releaseJobSlot();
+    }
   }
 });
 
 // 快速运行接口
 app.post('/api/run', async (req, res) => {
   const { code, language, input = '' } = req.body;
+  let jobAcquired = false;
   
   if (!code || !language) {
     return res.status(400).json({ error: '缺少必要参数' });
@@ -293,6 +358,11 @@ app.post('/api/run', async (req, res) => {
     return res.status(400).json({ error: '不支持的语言' });
   }
   
+  if (!tryAcquireJobSlot()) {
+    return res.status(429).json({ error: 'Judge server is busy, please retry later' });
+  }
+  jobAcquired = true;
+
   const jobId = uuidv4();
   const workDir = path.join(TEMP_DIR, jobId);
   fs.mkdirSync(workDir, { recursive: true });
@@ -344,6 +414,10 @@ app.post('/api/run', async (req, res) => {
   } catch (error) {
     cleanup(workDir);
     res.status(500).json({ error: error.message });
+  } finally {
+    if (jobAcquired) {
+      releaseJobSlot();
+    }
   }
 });
 
@@ -353,7 +427,11 @@ app.get('/api/health', (req, res) => {
     status: 'ok',
     languages: Object.keys(LANG_CONFIG),
     version: '2.0',
-    features: ['ACM/OJ标准判题', '流式输出比较', '多语言支持']
+    features: ['ACM/OJ标准判题', '流式输出比较', '多语言支持'],
+    concurrency: {
+      activeJobs,
+      maxConcurrentJobs: MAX_CONCURRENT_JOBS
+    }
   });
 });
 

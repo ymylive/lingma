@@ -11,6 +11,8 @@ const MINDMAP_STORE_BASE_URL = import.meta.env.DEV
       `${DEFAULT_PROXY_ORIGIN}/api/mindmaps`
     );
 
+const REMOTE_MINDMAP_SYNC_ENABLED = import.meta.env.VITE_ENABLE_REMOTE_MINDMAP_SYNC === 'true';
+
 interface MindMapLoadResponse {
   maps: MindMapData[];
   updatedAt?: string | null;
@@ -26,7 +28,19 @@ function normalizeError(status: number, text: string) {
   return `mindmap store request failed: ${status}`;
 }
 
+function assertRemoteSyncEnabled() {
+  if (!REMOTE_MINDMAP_SYNC_ENABLED) {
+    throw new Error('Remote mind map sync is disabled');
+  }
+}
+
+export function isRemoteMindMapSyncEnabled() {
+  return REMOTE_MINDMAP_SYNC_ENABLED;
+}
+
 export async function loadMindMapsFromServer(userId: string): Promise<MindMapLoadResponse> {
+  assertRemoteSyncEnabled();
+
   const response = await fetch(`${MINDMAP_STORE_BASE_URL}/load`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -42,6 +56,8 @@ export async function loadMindMapsFromServer(userId: string): Promise<MindMapLoa
 }
 
 export async function saveMindMapsToServer(userId: string, maps: MindMapData[]): Promise<MindMapSaveResponse> {
+  assertRemoteSyncEnabled();
+
   const response = await fetch(`${MINDMAP_STORE_BASE_URL}/save`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

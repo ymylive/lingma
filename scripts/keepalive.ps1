@@ -2,9 +2,18 @@
 $projectPath = "E:\project\tumafang"
 $checkInterval = 30
 
-$env:AI_API_KEY = "sk-vJy5jCgbzjksuW1njIbymPABzjK4UkuIVT3fD7MNLmmY570R"
-$env:AI_API_URL = "https://api.aabao.top/v1/chat/completions"
-$env:AI_MODEL = "deepseek-v3.2-exp-thinking"
+if (-not $env:AI_API_KEY) {
+    if (-not $env:LINGMA_AI_API_KEY) {
+        throw "Missing AI_API_KEY or LINGMA_AI_API_KEY"
+    }
+    $env:AI_API_KEY = $env:LINGMA_AI_API_KEY
+}
+if (-not $env:AI_API_URL) {
+    $env:AI_API_URL = if ($env:LINGMA_AI_API_URL) { $env:LINGMA_AI_API_URL } else { "https://openrouter.ai/api/v1/chat/completions" }
+}
+if (-not $env:AI_MODEL) {
+    $env:AI_MODEL = if ($env:LINGMA_AI_MODEL) { $env:LINGMA_AI_MODEL } else { "openrouter/auto" }
+}
 
 function Write-Log { param($Message); Write-Host "[$(Get-Date -Format 'HH:mm:ss')] $Message" }
 function Test-Port { param($Port); return $null -ne (Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue) }

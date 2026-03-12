@@ -1,41 +1,39 @@
 #!/usr/bin/env python3
-import paramiko
+import json
 
-ssh = paramiko.SSHClient()
-ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-ssh.connect('8.134.33.19', username='root', password='Qq159741')
+from runtime_config import create_ssh_client, get_ai_proxy_config
 
-print("🔧 设置环境变量并重启服务...")
 
-# 停止旧服务
-ssh.exec_command('pm2 delete ai-proxy 2>/dev/null || true')
+ssh = create_ssh_client()
+ai_config = get_ai_proxy_config()
 
-# 创建ecosystem配置文件
-ecosystem = '''
-module.exports = {
-  apps: [{
+print("Setting environment variables and restarting service...")
+
+ssh.exec_command("pm2 delete ai-proxy 2>/dev/null || true")
+
+ecosystem = f"""module.exports = {{
+  apps: [{{
     name: 'ai-proxy',
     script: 'server.js',
     cwd: '/var/www/lingma/api-proxy',
-    env: {
-      AI_API_KEY: 'sk-vJy5jCgbzjksuW1njIbymPABzjK4UkuIVT3fD7MNLmmY570R',
-      AI_API_URL: 'https://api.aabao.top/v1/chat/completions',
-      AI_MODEL: 'deepseek-v3.2-exp-thinking'
-    }
-  }]
-};
-'''
+    env: {{
+      AI_API_KEY: {json.dumps(ai_config["AI_API_KEY"])},
+      AI_API_URL: {json.dumps(ai_config["AI_API_URL"])},
+      AI_MODEL: {json.dumps(ai_config["AI_MODEL"])}
+    }}
+  }}]
+}};
+"""
 
-# 写入配置
-stdin, stdout, stderr = ssh.exec_command(f"echo '{ecosystem}' > /var/www/lingma/api-proxy/ecosystem.config.js")
+command = "cat > /var/www/lingma/api-proxy/ecosystem.config.js <<'EOF'\n" + ecosystem + "EOF\n"
+stdin, stdout, stderr = ssh.exec_command(command)
 stdout.read()
 
-# 用PM2启动
-stdin, stdout, stderr = ssh.exec_command('cd /var/www/lingma/api-proxy && pm2 start ecosystem.config.js && pm2 save')
+stdin, stdout, stderr = ssh.exec_command("cd /var/www/lingma/api-proxy && pm2 start ecosystem.config.js && pm2 save")
 print(stdout.read().decode())
 err = stderr.read().decode()
 if err:
-    print('⚠️', err)
+    print("Warning:", err)
 
 ssh.close()
-print("✅ 完成!")
+print("Done.")
