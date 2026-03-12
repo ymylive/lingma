@@ -173,7 +173,7 @@ export default function Practice() {
 
   return (
     <div className={containerClass}>
-      <div className="max-w-6xl mx-auto px-6">
+      <div className="mx-auto max-w-6xl px-4 sm:px-6">
         {/* 页面标题与统计 */}
         <div className="mb-8">
           <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-6">
@@ -182,8 +182,8 @@ export default function Practice() {
               <p className="text-slate-600 dark:text-slate-400">通过练习巩固数据结构与算法知识</p>
             </div>
             {/* 统计卡片 */}
-            <div className="flex gap-3">
-              <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 px-4 py-3 shadow-sm">
+            <div className="grid grid-cols-2 gap-3 sm:flex">
+              <div className="col-span-2 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 px-4 py-3 shadow-sm sm:col-span-1">
                 <div className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">{stats.total}</div>
                 <div className="text-xs text-slate-500 dark:text-slate-400">题目总数</div>
               </div>
@@ -200,10 +200,10 @@ export default function Practice() {
         </div>
 
         {/* Tab切换 */}
-        <div className="flex gap-2 mb-6">
+        <div className="mb-6 grid grid-cols-1 gap-2 sm:grid-cols-2">
           <button
             onClick={() => setTab('preset')}
-            className={`px-6 py-3 rounded-xl font-medium transition-all ${
+            className={`min-h-[48px] w-full rounded-xl px-6 py-3 font-medium transition-all ${
               tab === 'preset'
                 ? 'bg-indigo-600 text-white shadow-lg'
                 : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700'
@@ -213,7 +213,7 @@ export default function Practice() {
           </button>
           <button
             onClick={() => setTab('ai')}
-            className={`px-6 py-3 rounded-xl font-medium transition-all ${
+            className={`min-h-[48px] w-full rounded-xl px-6 py-3 font-medium transition-all ${
               tab === 'ai'
                 ? 'bg-indigo-600 text-white shadow-lg'
                 : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700'
@@ -250,7 +250,7 @@ export default function Practice() {
                 {activeFilterCount > 0 && (
                   <button
                     onClick={clearFilters}
-                    className="px-4 py-2 rounded-xl bg-rose-100 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400 hover:bg-rose-200 dark:hover:bg-rose-900/50 transition-all flex items-center gap-2 whitespace-nowrap"
+                    className="flex min-h-[44px] items-center gap-2 rounded-xl bg-rose-100 px-4 py-2 text-rose-600 transition-all hover:bg-rose-200 dark:bg-rose-900/30 dark:text-rose-400 dark:hover:bg-rose-900/50 sm:w-auto"
                   >
                     <span>清除筛选</span>
                     <span className="bg-rose-200 dark:bg-rose-800 px-2 py-0.5 rounded-full text-xs">{activeFilterCount}</span>
@@ -258,7 +258,7 @@ export default function Practice() {
                 )}
               </div>
               {/* 搜索结果统计 */}
-              <div className="mt-3 flex items-center justify-between text-sm text-slate-500 dark:text-slate-400">
+              <div className="mt-3 flex flex-col gap-2 text-sm text-slate-500 dark:text-slate-400 sm:flex-row sm:items-center sm:justify-between">
                 <span>
                   找到 <span className="font-bold text-indigo-600 dark:text-indigo-400">{filteredExercises.length}</span> 道题目
                   {searchQuery && <span className="ml-2">（搜索: "{searchQuery}"）</span>}
@@ -274,8 +274,8 @@ export default function Practice() {
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">题目分类</label>
                   <div className="space-y-3">
                     {CATEGORY_GROUPS.map(group => (
-                      <div key={group.group} className="flex items-start gap-2">
-                        <span className="text-xs text-slate-500 dark:text-slate-400 w-16 pt-1.5 shrink-0 font-medium">{group.group}</span>
+                      <div key={group.group} className="flex flex-col gap-2 sm:flex-row sm:items-start">
+                        <span className="shrink-0 text-xs font-medium text-slate-500 dark:text-slate-400 sm:w-16 sm:pt-1.5">{group.group}</span>
                         <div className="flex flex-wrap gap-1.5">
                           {group.items.map(c => (
                             <button
@@ -297,11 +297,11 @@ export default function Practice() {
                 </div>
                 
                 {/* 难度和题型筛选 */}
-                <div className="flex flex-wrap gap-4 pt-3 border-t border-slate-100 dark:border-slate-700">
+                <div className="flex flex-col gap-4 border-t border-slate-100 pt-3 dark:border-slate-700 sm:flex-row sm:flex-wrap">
                 {/* 难度筛选 */}
                 <div>
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">难度</label>
-                  <div className="flex gap-1">
+                  <div className="flex flex-wrap gap-1">
                     {[
                       { id: 'all', label: '全部' },
                       { id: 'easy', label: '⭐简单' },
@@ -325,7 +325,7 @@ export default function Practice() {
                 {/* 题型筛选 */}
                 <div>
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">题型</label>
-                  <div className="flex gap-1">
+                  <div className="flex flex-wrap gap-1">
                     {[
                       { id: 'all', label: '全部' },
                       { id: 'coding', label: '💻编程题' },
@@ -348,7 +348,7 @@ export default function Practice() {
                 {/* 完成状态筛选 */}
                 <div>
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">完成状态</label>
-                  <div className="flex gap-1">
+                  <div className="flex flex-wrap gap-1">
                     {[
                       { id: 'all', label: '全部' },
                       { id: 'incomplete', label: '⬜未完成' },
