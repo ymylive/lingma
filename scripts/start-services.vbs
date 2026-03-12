@@ -16,7 +16,7 @@ If aiModel = "%LINGMA_AI_MODEL%" Then
   aiModel = "openrouter/auto"
 End If
 
-WshShell.Run "cmd /c if not defined LINGMA_AI_API_KEY exit /b 1 && cd /d " & projectPath & "\api-proxy && set AI_API_KEY=%LINGMA_AI_API_KEY% && set AI_API_URL=" & aiUrl & " && set AI_MODEL=" & aiModel & " && node server.js", 0, False
+WshShell.Run "cmd /c if not defined LINGMA_AI_API_KEY exit /b 1 && cd /d " & projectPath & "\api-proxy && set AI_API_KEY=%LINGMA_AI_API_KEY% && set AI_API_URL=" & aiUrl & " && set AI_MODEL=" & aiModel & " && python -m uvicorn main:app --host 127.0.0.1 --port 3001", 0, False
 
 WScript.Sleep 2000
 

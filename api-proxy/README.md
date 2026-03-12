@@ -1,6 +1,6 @@
 # 🔐 AI API 代理服务
 
-保护 API 密钥不暴露给前端，通过后端代理调用 AI API。
+保护 API 密钥不暴露给前端，通过 FastAPI/Uvicorn 后端代理调用 AI API。
 
 ## 功能
 
@@ -25,12 +25,12 @@ export AI_API_URL="https://api.aabao.top/v1/chat/completions"
 export AI_MODEL="deepseek-v3.2-exp-thinking"
 ```
 
-### 3. 使用 PM2 启动服务
+### 3. 安装依赖并启动服务
 
 ```bash
 cd /var/www/lingma/api-proxy
-pm2 start server.js --name ai-proxy
-pm2 save
+pip install -r requirements.txt
+python3 -m uvicorn main:app --host 0.0.0.0 --port 3001
 ```
 
 ### 4. 配置 Nginx 反向代理
@@ -59,7 +59,7 @@ nginx -t && nginx -s reload
 
 ## 安全建议
 
-1. **不要在 server.js 中硬编码密钥**，使用环境变量
+1. **不要在脚本或源码中硬编码密钥**，统一使用环境变量
 2. 定期更换 API 密钥
 3. 监控请求日志，检测异常
 4. 根据需要调整速率限制

@@ -14,7 +14,9 @@ ssh.exec_command("pm2 delete ai-proxy 2>/dev/null || true")
 ecosystem = f"""module.exports = {{
   apps: [{{
     name: 'ai-proxy',
-    script: 'server.js',
+    script: 'python3',
+    interpreter: 'none',
+    args: '-m uvicorn main:app --host 0.0.0.0 --port 3001',
     cwd: '/var/www/lingma/api-proxy',
     env: {{
       AI_API_KEY: {json.dumps(ai_config["AI_API_KEY"])},

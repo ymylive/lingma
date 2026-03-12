@@ -19,7 +19,7 @@ WorkingDirectory=/var/www/lingma/api-proxy
 Environment={json.dumps("AI_API_KEY=" + ai_config["AI_API_KEY"])}
 Environment={json.dumps("AI_API_URL=" + ai_config["AI_API_URL"])}
 Environment={json.dumps("AI_MODEL=" + ai_config["AI_MODEL"])}
-ExecStart=/usr/bin/node server.js
+ExecStart=/usr/bin/python3 -m uvicorn main:app --host 0.0.0.0 --port 3001
 Restart=always
 RestartSec=10
 

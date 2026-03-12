@@ -17,7 +17,7 @@ if (-not $env:AI_MODEL) {
 
 function Write-Log { param($Message); Write-Host "[$(Get-Date -Format 'HH:mm:ss')] $Message" }
 function Test-Port { param($Port); return $null -ne (Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue) }
-function Start-AIProxy { Write-Log "Starting AI Proxy..."; Start-Process node -ArgumentList "server.js" -WorkingDirectory "$projectPath\api-proxy" -WindowStyle Hidden }
+function Start-AIProxy { Write-Log "Starting AI Proxy..."; Start-Process python -ArgumentList @("-m", "uvicorn", "main:app", "--host", "127.0.0.1", "--port", "3001") -WorkingDirectory "$projectPath\api-proxy" -WindowStyle Hidden }
 function Start-Frontend { Write-Log "Starting Frontend..."; Start-Process cmd -ArgumentList "/c npm run dev" -WorkingDirectory $projectPath -WindowStyle Hidden }
 
 Write-Log "=== LingMa Keepalive Started ==="

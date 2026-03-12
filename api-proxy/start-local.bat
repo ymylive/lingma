@@ -11,4 +11,4 @@ if "%AI_MODEL%"=="" if not "%LINGMA_AI_MODEL%"=="" set AI_MODEL=%LINGMA_AI_MODEL
 if "%AI_MODEL%"=="" set AI_MODEL=openrouter/auto
 if "%AI_SITE_URL%"=="" set AI_SITE_URL=http://127.0.0.1:5173
 if "%AI_SITE_NAME%"=="" set AI_SITE_NAME=LingMa
-node server.js
+python -m uvicorn main:app --host 127.0.0.1 --port 3001
