@@ -1,7 +1,6 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 
-// 用户信息接口
 export interface User {
   id: string;
   username: string;
@@ -10,16 +9,14 @@ export interface User {
   createdAt: string;
 }
 
-// 学习记录接口
 export interface LearningRecord {
   lessonId: string;
   lessonTitle: string;
   category: string;
   completedAt: string;
-  duration: number; // 学习时长（秒）
+  duration: number;
 }
 
-// 练习记录接口
 export interface ExerciseRecord {
   exerciseId: string;
   exerciseTitle: string;
@@ -29,7 +26,6 @@ export interface ExerciseRecord {
   isCorrect: boolean;
 }
 
-// 用户进度接口
 export interface UserProgress {
   completedLessons: string[];
   completedExercises: string[];
@@ -37,14 +33,14 @@ export interface UserProgress {
   exerciseHistory: ExerciseRecord[];
   totalLearningTime: number;
   lastVisit: string;
-  streak: number; // 连续学习天数
+  streak: number;
 }
 
-// 上下文类型
 interface UserContextType {
   user: User | null;
   progress: UserProgress;
   isLoggedIn: boolean;
+  isAuthLoading: boolean;
   login: (email: string, password: string) => Promise<boolean>;
   register: (username: string, email: string, password: string) => Promise<boolean>;
   logout: () => void;
@@ -54,6 +50,24 @@ interface UserContextType {
   isLessonCompleted: (lessonId: string) => boolean;
   isExerciseCompleted: (exerciseId: string) => boolean;
 }
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+const DEFAULT_PROXY_ORIGIN =
+  typeof window !== 'undefined' && window.location ? window.location.origin : 'https://lingma.cornna.xyz';
+const AUTH_BASE_URL = import.meta.env.DEV
+  ? 'http://localhost:3001/api/auth'
+  : (
+      import.meta.env.VITE_AUTH_BASE_URL ||
+      import.meta.env.VITE_AI_PROXY_URL?.replace('/api/ai', '/api/auth') ||
+      `${DEFAULT_PROXY_ORIGIN}/api/auth`
+    );
+
+const STORAGE_KEYS = {
+  LEGACY_USER: 'ds_user',
+  LEGACY_PROGRESS: 'ds_progress',
+  LEGACY_USERS_DB: 'ds_users_db',
+  PROGRESS_PREFIX: 'ds_progress_user',
+};
 
 const defaultProgress: UserProgress = {
   completedLessons: [],
@@ -67,270 +81,270 @@ const defaultProgress: UserProgress = {
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
-// 本地存储键
-const STORAGE_KEYS = {
-  USER: 'ds_user',
-  PROGRESS: 'ds_progress',
-  USERS_DB: 'ds_users_db',
-};
-
-const PASSWORD_HASH_VERSION = 1;
-const PASSWORD_HASH_ITERATIONS = 120000;
-const textEncoder = new TextEncoder();
-
-interface StoredUserRecord {
-  user: User;
-  progress: UserProgress;
-  password?: string;
-  passwordHash?: string;
-  passwordSalt?: string;
-  passwordVersion?: number;
-}
-
-function getCrypto() {
-  const cryptoApi = globalThis.crypto;
-  if (!cryptoApi?.subtle) {
-    throw new Error('当前浏览器不支持安全密码存储，请升级后重试');
+function normalizeProgress(input: unknown): UserProgress {
+  if (!input || typeof input !== 'object') {
+    return { ...defaultProgress };
   }
-  return cryptoApi;
-}
 
-function bytesToBase64(bytes: Uint8Array) {
-  let binary = '';
-  bytes.forEach((byte) => {
-    binary += String.fromCharCode(byte);
-  });
-  return btoa(binary);
-}
-
-async function derivePasswordHash(password: string, salt: string) {
-  const cryptoApi = getCrypto();
-  const key = await cryptoApi.subtle.importKey(
-    'raw',
-    textEncoder.encode(password),
-    'PBKDF2',
-    false,
-    ['deriveBits']
-  );
-  const bits = await cryptoApi.subtle.deriveBits(
-    {
-      name: 'PBKDF2',
-      hash: 'SHA-256',
-      salt: textEncoder.encode(salt),
-      iterations: PASSWORD_HASH_ITERATIONS,
-    },
-    key,
-    256
-  );
-  return bytesToBase64(new Uint8Array(bits));
-}
-
-async function createPasswordRecord(password: string) {
-  const cryptoApi = getCrypto();
-  const saltBytes = new Uint8Array(16);
-  cryptoApi.getRandomValues(saltBytes);
-
-  const passwordSalt = bytesToBase64(saltBytes);
-  const passwordHash = await derivePasswordHash(password, passwordSalt);
-
+  const data = input as Partial<UserProgress>;
   return {
-    passwordHash,
-    passwordSalt,
-    passwordVersion: PASSWORD_HASH_VERSION,
+    completedLessons: Array.isArray(data.completedLessons) ? data.completedLessons : [],
+    completedExercises: Array.isArray(data.completedExercises) ? data.completedExercises : [],
+    learningHistory: Array.isArray(data.learningHistory) ? data.learningHistory : [],
+    exerciseHistory: Array.isArray(data.exerciseHistory) ? data.exerciseHistory : [],
+    totalLearningTime: typeof data.totalLearningTime === 'number' ? data.totalLearningTime : 0,
+    lastVisit: typeof data.lastVisit === 'string' ? data.lastVisit : '',
+    streak: typeof data.streak === 'number' ? data.streak : 0,
   };
 }
 
-function hasPasswordHash(
-  record: StoredUserRecord
-): record is StoredUserRecord & { passwordHash: string; passwordSalt: string } {
-  return Boolean(record.passwordHash && record.passwordSalt);
+function getProgressStorageKey(userId: string) {
+  return `${STORAGE_KEYS.PROGRESS_PREFIX}_${userId}`;
 }
 
-async function verifyPassword(record: StoredUserRecord, password: string) {
-  if (hasPasswordHash(record)) {
-    if (record.passwordVersion && record.passwordVersion !== PASSWORD_HASH_VERSION) {
-      return false;
-    }
+function readStoredProgress(key: string) {
+  const raw = localStorage.getItem(key);
+  if (!raw) return null;
 
-    const derivedHash = await derivePasswordHash(password, record.passwordSalt);
-    return derivedHash === record.passwordHash;
+  try {
+    return normalizeProgress(JSON.parse(raw));
+  } catch {
+    return null;
   }
-  return record.password === password;
+}
+
+function persistProgress(userId: string, progress: UserProgress) {
+  localStorage.setItem(getProgressStorageKey(userId), JSON.stringify(progress));
+}
+
+function applyDailyStreak(progress: UserProgress) {
+  const today = new Date().toDateString();
+  const lastVisit = progress.lastVisit;
+
+  if (!lastVisit) {
+    return { ...progress, lastVisit: today, streak: 1 };
+  }
+
+  if (lastVisit === today) {
+    return progress;
+  }
+
+  const diffDays = Math.floor((new Date(today).getTime() - new Date(lastVisit).getTime()) / DAY_MS);
+  if (diffDays === 1) {
+    return { ...progress, lastVisit: today, streak: progress.streak + 1 };
+  }
+
+  return { ...progress, lastVisit: today, streak: 1 };
+}
+
+function loadProgressForUser(userId: string) {
+  const namespaced = readStoredProgress(getProgressStorageKey(userId));
+  if (namespaced) {
+    return namespaced;
+  }
+
+  const legacy = readStoredProgress(STORAGE_KEYS.LEGACY_PROGRESS);
+  if (legacy) {
+    persistProgress(userId, legacy);
+    return legacy;
+  }
+
+  return { ...defaultProgress };
+}
+
+function clearLegacyAuthStorage() {
+  localStorage.removeItem(STORAGE_KEYS.LEGACY_USER);
+  localStorage.removeItem(STORAGE_KEYS.LEGACY_USERS_DB);
+}
+
+async function readAuthError(response: Response) {
+  const text = await response.text();
+  if (!text) {
+    return `auth request failed: ${response.status}`;
+  }
+
+  try {
+    const parsed = JSON.parse(text) as { detail?: string; error?: string };
+    if (typeof parsed.detail === 'string' && parsed.detail) return parsed.detail;
+    if (typeof parsed.error === 'string' && parsed.error) return parsed.error;
+  } catch {
+    // Ignore malformed JSON error payloads and fall back to raw text.
+  }
+
+  return text;
+}
+
+async function fetchAuthSession() {
+  const response = await fetch(`${AUTH_BASE_URL}/session`, {
+    method: 'GET',
+    credentials: 'include',
+  });
+
+  if (response.status === 401) {
+    return null;
+  }
+
+  if (!response.ok) {
+    throw new Error(await readAuthError(response));
+  }
+
+  const data = (await response.json()) as { user?: User };
+  return data.user ?? null;
+}
+
+async function loginRequest(email: string, password: string) {
+  const response = await fetch(`${AUTH_BASE_URL}/login`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password }),
+  });
+
+  if (response.status === 401) {
+    return null;
+  }
+
+  if (!response.ok) {
+    throw new Error(await readAuthError(response));
+  }
+
+  const data = (await response.json()) as { user?: User };
+  return data.user ?? null;
+}
+
+async function registerRequest(username: string, email: string, password: string) {
+  const response = await fetch(`${AUTH_BASE_URL}/register`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username, email, password }),
+  });
+
+  if (response.status === 409) {
+    return null;
+  }
+
+  if (!response.ok) {
+    throw new Error(await readAuthError(response));
+  }
+
+  const data = (await response.json()) as { user?: User };
+  return data.user ?? null;
+}
+
+async function logoutRequest() {
+  const response = await fetch(`${AUTH_BASE_URL}/logout`, {
+    method: 'POST',
+    credentials: 'include',
+  });
+
+  if (!response.ok && response.status !== 401) {
+    throw new Error(await readAuthError(response));
+  }
 }
 
 export function UserProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [progress, setProgress] = useState<UserProgress>(defaultProgress);
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
 
-  // 初始化：从本地存储加载用户数据
   useEffect(() => {
-    const savedUser = localStorage.getItem(STORAGE_KEYS.USER);
-    const savedProgress = localStorage.getItem(STORAGE_KEYS.PROGRESS);
+    let cancelled = false;
 
-    if (savedUser) {
-      setUser(JSON.parse(savedUser));
-    }
-    if (savedProgress) {
-      setProgress(JSON.parse(savedProgress));
-    }
+    const hydrateSession = async () => {
+      try {
+        const sessionUser = await fetchAuthSession();
+        if (cancelled) return;
 
-    // 更新连续学习天数
-    updateStreak();
-  }, []);
+        clearLegacyAuthStorage();
 
-  // 保存用户数据到本地存储
-  useEffect(() => {
-    if (user) {
-      localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(user));
-    }
-  }, [user]);
+        if (!sessionUser) {
+          setUser(null);
+          setProgress({ ...defaultProgress });
+          return;
+        }
 
-  // 保存进度到本地存储
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.PROGRESS, JSON.stringify(progress));
-  }, [progress]);
-
-  // 更新连续学习天数
-  const updateStreak = () => {
-    const today = new Date().toDateString();
-    const lastVisit = progress.lastVisit;
-
-    if (!lastVisit) {
-      setProgress(prev => ({ ...prev, lastVisit: today, streak: 1 }));
-    } else if (lastVisit !== today) {
-      const lastDate = new Date(lastVisit);
-      const todayDate = new Date(today);
-      const diffDays = Math.floor((todayDate.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
-
-      if (diffDays === 1) {
-        setProgress(prev => ({ ...prev, lastVisit: today, streak: prev.streak + 1 }));
-      } else if (diffDays > 1) {
-        setProgress(prev => ({ ...prev, lastVisit: today, streak: 1 }));
+        const nextProgress = applyDailyStreak(loadProgressForUser(sessionUser.id));
+        setUser(sessionUser);
+        setProgress(nextProgress);
+        persistProgress(sessionUser.id, nextProgress);
+      } catch (error) {
+        console.error('Failed to restore auth session', error);
+        if (!cancelled) {
+          setUser(null);
+          setProgress({ ...defaultProgress });
+        }
+      } finally {
+        if (!cancelled) {
+          setIsAuthLoading(false);
+        }
       }
-    }
-  };
-
-  // 获取用户数据库
-  const getUsersDB = (): Record<string, StoredUserRecord> => {
-    const db = localStorage.getItem(STORAGE_KEYS.USERS_DB);
-    return db ? JSON.parse(db) : {};
-  };
-
-  const persistUsersDB = (db: Record<string, StoredUserRecord>) => {
-    localStorage.setItem(STORAGE_KEYS.USERS_DB, JSON.stringify(db));
-  };
-
-  // 保存用户到数据库
-  const saveUserToDB = (email: string, userData: StoredUserRecord) => {
-    const db = getUsersDB();
-    db[email] = userData;
-    persistUsersDB(db);
-  };
-
-  const migrateLegacyPassword = async (email: string, userData: StoredUserRecord, password: string) => {
-    const db = getUsersDB();
-    const migratedPassword = await createPasswordRecord(password);
-    const migratedUserData: StoredUserRecord = {
-      ...userData,
-      ...migratedPassword,
     };
 
-    delete migratedUserData.password;
-    db[email] = migratedUserData;
-    persistUsersDB(db);
+    void hydrateSession();
 
-    return migratedUserData;
-  };
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
-  // 登录
-  const login = async (email: string, password: string): Promise<boolean> => {
-    try {
-      const db = getUsersDB();
-      const userData = db[email];
+  useEffect(() => {
+    if (!user) {
+      return;
+    }
 
-      if (!userData || !(await verifyPassword(userData, password))) {
-        return false;
-      }
+    persistProgress(user.id, progress);
+  }, [progress, user]);
 
-      const activeUserData = hasPasswordHash(userData)
-        ? userData
-        : await migrateLegacyPassword(email, userData, password);
-
-      setUser(activeUserData.user);
-      setProgress(activeUserData.progress);
-      localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(activeUserData.user));
-      localStorage.setItem(STORAGE_KEYS.PROGRESS, JSON.stringify(activeUserData.progress));
-      return true;
-    } catch (error) {
-      console.error('Failed to login with local auth storage', error);
+  const login = async (email: string, password: string) => {
+    const nextUser = await loginRequest(email, password);
+    if (!nextUser) {
       return false;
     }
+
+    clearLegacyAuthStorage();
+    const nextProgress = applyDailyStreak(loadProgressForUser(nextUser.id));
+    setUser(nextUser);
+    setProgress(nextProgress);
+    persistProgress(nextUser.id, nextProgress);
+    return true;
   };
 
-  // 注册
-  const register = async (username: string, email: string, password: string): Promise<boolean> => {
-    try {
-      const db = getUsersDB();
-
-      if (db[email]) {
-        return false; // 邮箱已存在
-      }
-
-      const newUser: User = {
-        id: Date.now().toString(),
-        username,
-        email,
-        createdAt: new Date().toISOString(),
-      };
-
-      const newProgress = { ...defaultProgress, lastVisit: new Date().toDateString(), streak: 1 };
-      const passwordRecord = await createPasswordRecord(password);
-
-      saveUserToDB(email, { user: newUser, progress: newProgress, ...passwordRecord });
-      setUser(newUser);
-      setProgress(newProgress);
-
-      return true;
-    } catch (error) {
-      console.error('Failed to register with local auth storage', error);
+  const register = async (username: string, email: string, password: string) => {
+    const nextUser = await registerRequest(username, email, password);
+    if (!nextUser) {
       return false;
     }
+
+    clearLegacyAuthStorage();
+    const nextProgress = applyDailyStreak({ ...defaultProgress });
+    setUser(nextUser);
+    setProgress(nextProgress);
+    persistProgress(nextUser.id, nextProgress);
+    return true;
   };
 
-  // 退出登录
   const logout = () => {
-    // 保存当前进度到数据库
-    if (user) {
-      const db = getUsersDB();
-      if (db[user.email]) {
-        db[user.email].progress = progress;
-        persistUsersDB(db);
-      }
+    const currentUser = user;
+    if (currentUser) {
+      persistProgress(currentUser.id, progress);
     }
 
     setUser(null);
-    setProgress(defaultProgress);
-    localStorage.removeItem(STORAGE_KEYS.USER);
-    localStorage.removeItem(STORAGE_KEYS.PROGRESS);
-  };
-
-  // 更新进度
-  const updateProgress = (updates: Partial<UserProgress>) => {
-    setProgress(prev => {
-      const newProgress = { ...prev, ...updates };
-      // 同步到数据库
-      if (user) {
-        const db = getUsersDB();
-        if (db[user.email]) {
-          db[user.email].progress = newProgress;
-          persistUsersDB(db);
-        }
-      }
-      return newProgress;
+    setProgress({ ...defaultProgress });
+    clearLegacyAuthStorage();
+    void logoutRequest().catch((error) => {
+      console.error('Failed to clear auth session', error);
     });
   };
 
-  // 记录课程访问
+  const updateProgress = (updates: Partial<UserProgress>) => {
+    setProgress((prev) => ({
+      ...prev,
+      ...updates,
+    }));
+  };
+
   const recordLessonVisit = (lessonId: string, lessonTitle: string, category: string) => {
     const record: LearningRecord = {
       lessonId,
@@ -340,23 +354,26 @@ export function UserProvider({ children }: { children: ReactNode }) {
       duration: 0,
     };
 
-    setProgress(prev => {
-      const newHistory = [record, ...prev.learningHistory].slice(0, 100); // 保留最近100条
-      const newCompleted = prev.completedLessons.includes(lessonId)
-        ? prev.completedLessons
-        : [...prev.completedLessons, lessonId];
+    setProgress((prev) => {
+      const base = applyDailyStreak(prev);
+      const completedLessons = base.completedLessons.includes(lessonId)
+        ? base.completedLessons
+        : [...base.completedLessons, lessonId];
 
       return {
-        ...prev,
-        learningHistory: newHistory,
-        completedLessons: newCompleted,
-        lastVisit: new Date().toDateString(),
+        ...base,
+        completedLessons,
+        learningHistory: [record, ...base.learningHistory].slice(0, 100),
       };
     });
   };
 
-  // 记录练习完成
-  const recordExerciseComplete = (exerciseId: string, exerciseTitle: string, category: string, isCorrect: boolean) => {
+  const recordExerciseComplete = (
+    exerciseId: string,
+    exerciseTitle: string,
+    category: string,
+    isCorrect: boolean
+  ) => {
     const record: ExerciseRecord = {
       exerciseId,
       exerciseTitle,
@@ -366,24 +383,21 @@ export function UserProvider({ children }: { children: ReactNode }) {
       isCorrect,
     };
 
-    setProgress(prev => {
-      const newHistory = [record, ...prev.exerciseHistory].slice(0, 100);
-      const newCompleted = isCorrect && !prev.completedExercises.includes(exerciseId)
-        ? [...prev.completedExercises, exerciseId]
-        : prev.completedExercises;
+    setProgress((prev) => {
+      const base = applyDailyStreak(prev);
+      const completedExercises = isCorrect && !base.completedExercises.includes(exerciseId)
+        ? [...base.completedExercises, exerciseId]
+        : base.completedExercises;
 
       return {
-        ...prev,
-        exerciseHistory: newHistory,
-        completedExercises: newCompleted,
+        ...base,
+        completedExercises,
+        exerciseHistory: [record, ...base.exerciseHistory].slice(0, 100),
       };
     });
   };
 
-  // 检查课程是否完成
   const isLessonCompleted = (lessonId: string) => progress.completedLessons.includes(lessonId);
-
-  // 检查练习是否完成
   const isExerciseCompleted = (exerciseId: string) => progress.completedExercises.includes(exerciseId);
 
   return (
@@ -392,6 +406,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
         user,
         progress,
         isLoggedIn: !!user,
+        isAuthLoading,
         login,
         register,
         logout,

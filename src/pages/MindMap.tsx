@@ -452,7 +452,7 @@ export default function MindMap() {
   const { user, progress } = useUser();
 
   const userId = user?.id || '';
-  const remoteSyncEnabled = Boolean(userId) && isRemoteMindMapSyncEnabled();
+  const remoteSyncEnabled = Boolean(user) && isRemoteMindMapSyncEnabled();
   const storageKey = `${STORAGE_PREFIX}_${userId || 'guest'}`;
   const [maps, setMaps] = useState<MindMapData[]>([]);
   const [activeMapId, setActiveMapId] = useState<string | null>(null);
@@ -503,7 +503,12 @@ export default function MindMap() {
     let cancelled = false;
 
     const localMaps: MindMapData[] = (() => {
-      const stored = localStorage.getItem(storageKey);
+      const candidateKeys = userId ? [storageKey, `${STORAGE_PREFIX}_guest`] : [storageKey];
+
+      const stored = candidateKeys
+        .map((key) => localStorage.getItem(key))
+        .find((value) => Boolean(value));
+
       if (!stored) return [];
       try {
         const parsed = JSON.parse(stored) as MindMapData[];
@@ -535,7 +540,7 @@ export default function MindMap() {
     const loadFromServer = async () => {
       setSyncStatus('syncing');
       try {
-        const remote = await loadMindMapsFromServer(userId);
+        const remote = await loadMindMapsFromServer();
         if (cancelled) return;
 
         const remoteMaps = Array.isArray(remote.maps) ? remote.maps : [];
@@ -551,7 +556,7 @@ export default function MindMap() {
           setSyncStatus('saved');
           setSyncMessage('No server maps yet; using local cache');
           if (localMaps.length) {
-            await saveMindMapsToServer(userId, localMaps);
+            await saveMindMapsToServer(localMaps);
             if (cancelled) return;
             setSyncMessage('Uploaded local maps to server');
             lastSyncedMapsRef.current = JSON.stringify(localMaps);
@@ -610,7 +615,7 @@ export default function MindMap() {
 
       try {
         setSyncStatus('syncing');
-        await saveMindMapsToServer(userId, maps);
+        await saveMindMapsToServer(maps);
         lastSyncedMapsRef.current = serialized;
         setSyncStatus('saved');
         setSyncMessage(`Synced ${maps.length} maps to server`);
@@ -623,7 +628,7 @@ export default function MindMap() {
     }, 800);
 
     return () => window.clearTimeout(timer);
-  }, [isRemoteReady, maps, remoteSyncEnabled, userId]);
+  }, [isRemoteReady, maps, remoteSyncEnabled]);
 
   useEffect(() => {
     const doc = document as Document & {

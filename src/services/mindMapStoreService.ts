@@ -24,7 +24,16 @@ interface MindMapSaveResponse {
 }
 
 function normalizeError(status: number, text: string) {
-  if (text) return text;
+  if (text) {
+    try {
+      const parsed = JSON.parse(text) as { detail?: string; error?: string };
+      if (typeof parsed.detail === 'string' && parsed.detail) return parsed.detail;
+      if (typeof parsed.error === 'string' && parsed.error) return parsed.error;
+    } catch {
+      return text;
+    }
+    return text;
+  }
   return `mindmap store request failed: ${status}`;
 }
 
@@ -38,13 +47,13 @@ export function isRemoteMindMapSyncEnabled() {
   return REMOTE_MINDMAP_SYNC_ENABLED;
 }
 
-export async function loadMindMapsFromServer(userId: string): Promise<MindMapLoadResponse> {
+export async function loadMindMapsFromServer(): Promise<MindMapLoadResponse> {
   assertRemoteSyncEnabled();
 
   const response = await fetch(`${MINDMAP_STORE_BASE_URL}/load`, {
     method: 'POST',
+    credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ userId }),
   });
 
   if (!response.ok) {
@@ -55,13 +64,14 @@ export async function loadMindMapsFromServer(userId: string): Promise<MindMapLoa
   return response.json() as Promise<MindMapLoadResponse>;
 }
 
-export async function saveMindMapsToServer(userId: string, maps: MindMapData[]): Promise<MindMapSaveResponse> {
+export async function saveMindMapsToServer(maps: MindMapData[]): Promise<MindMapSaveResponse> {
   assertRemoteSyncEnabled();
 
   const response = await fetch(`${MINDMAP_STORE_BASE_URL}/save`, {
     method: 'POST',
+    credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ userId, maps }),
+    body: JSON.stringify({ maps }),
   });
 
   if (!response.ok) {

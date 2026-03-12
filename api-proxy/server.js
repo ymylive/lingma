@@ -6,6 +6,7 @@ const dns = require('dns').promises;
 const zlib = require('zlib');
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 const { DatabaseSync } = require('node:sqlite');
 
 // ========== 配置区域 ==========
@@ -52,7 +53,12 @@ const CONFIG = {
   MINDMAP_DB_FILE: process.env.MINDMAP_DB_FILE || path.join(__dirname, 'data', 'mindmaps.db'),
   MINDMAP_LEGACY_FILE: process.env.MINDMAP_STORE_FILE || path.join(__dirname, 'data', 'mindmaps.json'),
   MINDMAP_MAX_MAPS_PER_USER: 200,
-  ENABLE_REMOTE_MINDMAP_SYNC: ['1', 'true', 'yes', 'on'].includes(String(process.env.ENABLE_REMOTE_MINDMAP_SYNC || '').trim().toLowerCase())
+  ENABLE_REMOTE_MINDMAP_SYNC: ['1', 'true', 'yes', 'on'].includes(String(process.env.ENABLE_REMOTE_MINDMAP_SYNC || '').trim().toLowerCase()),
+  AUTH_DB_FILE: process.env.AUTH_DB_FILE || path.join(__dirname, 'data', 'auth.db'),
+  SESSION_COOKIE_NAME: String(process.env.SESSION_COOKIE_NAME || 'lingma_session').trim() || 'lingma_session',
+  SESSION_TTL_SECONDS: Math.max(3600, Number(process.env.SESSION_TTL_SECONDS || 2592000)),
+  SESSION_COOKIE_SECURE: String(process.env.SESSION_COOKIE_SECURE || '').trim().toLowerCase(),
+  PASSWORD_HASH_ITERATIONS: 120000,
 };
 
 const rateLimitStore = new Map();
@@ -83,11 +89,10 @@ function getClientIP(req) {
 function setCorsHeaders(res, origin) {
   if (origin) {
     res.setHeader('Access-Control-Allow-Origin', origin);
-  } else {
-    res.setHeader('Access-Control-Allow-Origin', '*');
   }
   res.setHeader('Vary', 'Origin');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   res.setHeader('Access-Control-Max-Age', '86400');
 }
@@ -99,6 +104,7 @@ function isOriginAllowed(origin) {
 
 let mindMapDb = null;
 let legacyMindMapMigrated = false;
+let authDb = null;
 
 function createServerId(prefix = 'mm') {
   return `${prefix}_${Math.random().toString(36).slice(2, 8)}${Date.now().toString(36).slice(-4)}`;
@@ -122,6 +128,196 @@ function ensureRemoteMindMapSyncEnabled() {
   if (!CONFIG.ENABLE_REMOTE_MINDMAP_SYNC) {
     throw new Error('Remote mind map sync is disabled');
   }
+}
+
+function sanitizeEmail(emailRaw) {
+  const email = String(emailRaw || '').trim().toLowerCase();
+  if (!email || email.length > 320 || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+    throw new Error('Invalid email');
+  }
+  return email;
+}
+
+function sanitizeUsername(usernameRaw) {
+  const username = String(usernameRaw || '').trim();
+  if (!username) {
+    throw new Error('username is required');
+  }
+  if (username.length > 64) {
+    throw new Error('username is too long');
+  }
+  return username;
+}
+
+function sanitizePassword(passwordRaw) {
+  const password = String(passwordRaw || '');
+  if (password.length < 6) {
+    throw new Error('password must be at least 6 characters');
+  }
+  if (password.length > 128) {
+    throw new Error('password is too long');
+  }
+  return password;
+}
+
+function hashPassword(password, passwordSalt) {
+  return crypto.pbkdf2Sync(password, Buffer.from(passwordSalt, 'base64'), CONFIG.PASSWORD_HASH_ITERATIONS, 32, 'sha256').toString('base64');
+}
+
+function createPasswordRecord(password) {
+  const passwordSalt = crypto.randomBytes(16).toString('base64');
+  return {
+    passwordHash: hashPassword(password, passwordSalt),
+    passwordSalt,
+  };
+}
+
+function verifyPassword(password, passwordHash, passwordSalt) {
+  const derived = hashPassword(password, passwordSalt);
+  return crypto.timingSafeEqual(Buffer.from(derived, 'utf8'), Buffer.from(passwordHash, 'utf8'));
+}
+
+function serializeUser(row) {
+  return {
+    id: row.id,
+    username: row.username,
+    email: row.email,
+    createdAt: row.created_at,
+  };
+}
+
+function clearExpiredSessions(db) {
+  db.prepare('DELETE FROM user_sessions WHERE expires_at <= ?').run(new Date().toISOString());
+}
+
+function getAuthDb() {
+  if (authDb) return authDb;
+
+  fs.mkdirSync(path.dirname(CONFIG.AUTH_DB_FILE), { recursive: true });
+  const db = new DatabaseSync(CONFIG.AUTH_DB_FILE);
+  db.exec(`
+    PRAGMA journal_mode = WAL;
+    CREATE TABLE IF NOT EXISTS users (
+      id TEXT PRIMARY KEY,
+      username TEXT NOT NULL,
+      email TEXT NOT NULL UNIQUE,
+      password_hash TEXT NOT NULL,
+      password_salt TEXT NOT NULL,
+      created_at TEXT NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS user_sessions (
+      session_id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      expires_at TEXT NOT NULL,
+      FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+    );
+    CREATE INDEX IF NOT EXISTS idx_user_sessions_user_id ON user_sessions(user_id);
+    CREATE INDEX IF NOT EXISTS idx_user_sessions_expires_at ON user_sessions(expires_at);
+  `);
+
+  authDb = db;
+  return authDb;
+}
+
+function parseCookies(req) {
+  const header = req.headers.cookie || '';
+  return header.split(';').reduce((acc, part) => {
+    const index = part.indexOf('=');
+    if (index === -1) return acc;
+    const key = part.slice(0, index).trim();
+    const value = part.slice(index + 1).trim();
+    if (!key) return acc;
+    try {
+      acc[key] = decodeURIComponent(value);
+    } catch {
+      acc[key] = value;
+    }
+    return acc;
+  }, {});
+}
+
+function shouldUseSecureSessionCookie(req) {
+  if (['1', 'true', 'yes', 'on'].includes(CONFIG.SESSION_COOKIE_SECURE)) {
+    return true;
+  }
+  if (['0', 'false', 'no', 'off'].includes(CONFIG.SESSION_COOKIE_SECURE)) {
+    return false;
+  }
+
+  const forwardedProto = String(req.headers['x-forwarded-proto'] || '').trim().toLowerCase();
+  if (forwardedProto) {
+    return forwardedProto === 'https';
+  }
+
+  const origin = String(req.headers.origin || '').trim().toLowerCase();
+  const host = String(req.headers.host || '').trim().toLowerCase();
+  const reference = origin || host;
+  return /^https:\/\//.test(origin) && !/localhost|127\.0\.0\.1/.test(reference);
+}
+
+function buildSessionCookie(sessionId, maxAgeSeconds, secure) {
+  const parts = [
+    `${CONFIG.SESSION_COOKIE_NAME}=${encodeURIComponent(sessionId)}`,
+    'Path=/',
+    'HttpOnly',
+    'SameSite=Lax',
+    `Max-Age=${maxAgeSeconds}`,
+  ];
+  if (secure) {
+    parts.push('Secure');
+  }
+  return parts.join('; ');
+}
+
+function clearSessionCookieValue(secure) {
+  const parts = [
+    `${CONFIG.SESSION_COOKIE_NAME}=`,
+    'Path=/',
+    'HttpOnly',
+    'SameSite=Lax',
+    'Max-Age=0',
+  ];
+  if (secure) {
+    parts.push('Secure');
+  }
+  return parts.join('; ');
+}
+
+function createSession(userId) {
+  const db = getAuthDb();
+  const sessionId = crypto.randomBytes(32).toString('base64url');
+  const now = new Date();
+  const expiresAt = new Date(now.getTime() + CONFIG.SESSION_TTL_SECONDS * 1000).toISOString();
+  clearExpiredSessions(db);
+  db.prepare(
+    `INSERT INTO user_sessions (session_id, user_id, created_at, expires_at)
+     VALUES (?, ?, ?, ?)`
+  ).run(sessionId, userId, now.toISOString(), expiresAt);
+  return sessionId;
+}
+
+function getAuthenticatedUser(req) {
+  const cookies = parseCookies(req);
+  const sessionId = cookies[CONFIG.SESSION_COOKIE_NAME];
+  if (!sessionId) return null;
+
+  const db = getAuthDb();
+  clearExpiredSessions(db);
+  return db.prepare(
+    `SELECT users.id, users.username, users.email, users.created_at
+     FROM user_sessions
+     JOIN users ON users.id = user_sessions.user_id
+     WHERE user_sessions.session_id = ? AND user_sessions.expires_at > ?`
+  ).get(sessionId, new Date().toISOString()) || null;
+}
+
+function requireAuthenticatedUser(req) {
+  const user = getAuthenticatedUser(req);
+  if (!user) {
+    throw new Error('authentication required');
+  }
+  return user;
 }
 
 function normalizeMindMapNode(node) {
@@ -579,16 +775,23 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // Routes: /api/ai, /api/ai/stream, /api/doc, /api/mindmaps/load, /api/mindmaps/save
+  // Routes: /api/ai, /api/ai/stream, /api/doc, /api/auth/*, /api/mindmaps/*
   const pathname = (req.url || '').split('?')[0];
   const isStream = pathname === '/api/ai/stream';
   const isAI = pathname === '/api/ai' || isStream;
   const isDoc = pathname === '/api/doc';
+  const isAuthSession = pathname === '/api/auth/session';
+  const isAuthLogin = pathname === '/api/auth/login';
+  const isAuthRegister = pathname === '/api/auth/register';
+  const isAuthLogout = pathname === '/api/auth/logout';
+  const isAuth = isAuthSession || isAuthLogin || isAuthRegister || isAuthLogout;
   const isMindMapLoad = pathname === '/api/mindmaps/load';
   const isMindMapSave = pathname === '/api/mindmaps/save';
   const isMindMap = isMindMapLoad || isMindMapSave;
+  const isGetRoute = isAuthSession;
+  const isPostRoute = isAI || isDoc || isMindMap || isAuthLogin || isAuthRegister || isAuthLogout;
 
-  if (req.method !== 'POST' || (!isAI && !isDoc && !isMindMap)) {
+  if ((req.method === 'GET' && !isGetRoute) || (req.method === 'POST' && !isPostRoute) || !['GET', 'POST'].includes(req.method)) {
     res.writeHead(404, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ error: 'Not found' }));
     return;
@@ -607,6 +810,80 @@ const server = http.createServer(async (req, res) => {
     try {
       const payload = body ? JSON.parse(body) : {};
 
+      if (isAuth) {
+        const db = getAuthDb();
+        const secureCookie = shouldUseSecureSessionCookie(req);
+
+        if (isAuthSession) {
+          const user = getAuthenticatedUser(req);
+          if (!user) {
+            res.writeHead(401, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Not authenticated' }));
+            return;
+          }
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ user: serializeUser(user) }));
+          return;
+        }
+
+        if (isAuthLogout) {
+          const sessionId = parseCookies(req)[CONFIG.SESSION_COOKIE_NAME];
+          if (sessionId) {
+            db.prepare('DELETE FROM user_sessions WHERE session_id = ?').run(sessionId);
+          }
+          res.setHeader('Set-Cookie', clearSessionCookieValue(secureCookie));
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: true }));
+          return;
+        }
+
+        if (isAuthRegister) {
+          const username = sanitizeUsername(payload.username);
+          const email = sanitizeEmail(payload.email);
+          const password = sanitizePassword(payload.password);
+          const existingUser = db.prepare('SELECT id FROM users WHERE email = ?').get(email);
+          if (existingUser) {
+            res.writeHead(409, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'email already registered' }));
+            return;
+          }
+
+          const userId = createServerId('usr');
+          const createdAt = new Date().toISOString();
+          const passwordRecord = createPasswordRecord(password);
+          db.prepare(
+            `INSERT INTO users (id, username, email, password_hash, password_salt, created_at)
+             VALUES (?, ?, ?, ?, ?, ?)`
+          ).run(userId, username, email, passwordRecord.passwordHash, passwordRecord.passwordSalt, createdAt);
+
+          const sessionId = createSession(userId);
+          res.setHeader('Set-Cookie', buildSessionCookie(sessionId, CONFIG.SESSION_TTL_SECONDS, secureCookie));
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ user: { id: userId, username, email, createdAt } }));
+          return;
+        }
+
+        const email = sanitizeEmail(payload.email);
+        const password = sanitizePassword(payload.password);
+        const user = db.prepare(
+          `SELECT id, username, email, password_hash, password_salt, created_at
+           FROM users
+           WHERE email = ?`
+        ).get(email);
+
+        if (!user || !verifyPassword(password, user.password_hash, user.password_salt)) {
+          res.writeHead(401, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'invalid email or password' }));
+          return;
+        }
+
+        const sessionId = createSession(user.id);
+        res.setHeader('Set-Cookie', buildSessionCookie(sessionId, CONFIG.SESSION_TTL_SECONDS, secureCookie));
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ user: serializeUser(user) }));
+        return;
+      }
+
       if (isDoc) {
         const targetUrl = payload.url;
         const maxLength = Number(payload.maxLength) || 16000;
@@ -623,7 +900,8 @@ const server = http.createServer(async (req, res) => {
 
       if (isMindMap) {
         ensureRemoteMindMapSyncEnabled();
-        const userId = payload.userId;
+        const currentUser = requireAuthenticatedUser(req);
+        const userId = currentUser.id;
 
         if (isMindMapLoad) {
           const result = await loadMindMapsByUserId(userId);
@@ -664,9 +942,24 @@ const server = http.createServer(async (req, res) => {
       
     } catch (e) {
       console.error('Error:', e.message);
-      const statusCode = /timeout/i.test(String(e.message || '')) ? 504 : 500;
+      const message = String(e.message || '');
+      let statusCode = 500;
+      if (/timeout/i.test(message)) {
+        statusCode = 504;
+      } else if (message === 'authentication required' || message === 'Not authenticated') {
+        statusCode = 401;
+      } else if (message === 'Remote mind map sync is disabled') {
+        statusCode = 403;
+      } else if (
+        message.startsWith('Invalid ') ||
+        message.includes('required') ||
+        message.includes('too long') ||
+        message.includes('at least 6 characters')
+      ) {
+        statusCode = 400;
+      }
       res.writeHead(statusCode, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ error: e.message }));
+      res.end(JSON.stringify({ error: message }));
     }
   });
 });
@@ -679,9 +972,14 @@ Address: http://localhost:${CONFIG.PORT}
 POST /api/ai
 POST /api/ai/stream
 POST /api/doc
+GET  /api/auth/session
+POST /api/auth/register
+POST /api/auth/login
+POST /api/auth/logout
 POST /api/mindmaps/load
 POST /api/mindmaps/save
 Mind map DB: ${CONFIG.MINDMAP_DB_FILE}
+Auth DB: ${CONFIG.AUTH_DB_FILE}
 Rate limit: ${CONFIG.RATE_LIMIT} req/min per IP
 ----------------------------------------
   `);

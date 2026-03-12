@@ -1,8 +1,11 @@
+import base64
+import hashlib
 import html
 import ipaddress
 import json
 import os
 import re
+import secrets
 import socket
 import sqlite3
 import threading
@@ -37,6 +40,7 @@ DOC_MAX_LENGTH = 30000
 DOC_TIMEOUT_SECONDS = 20
 
 USER_ID_RE = re.compile(r"^[A-Za-z0-9._@:-]{1,128}$")
+EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 AI_API_KEY = os.getenv("AI_API_KEY", "").strip()
 AI_BASE_URL = (os.getenv("AI_BASE_URL") or os.getenv("AI_API_URL") or "https://openrouter.ai/api/v1").strip()
@@ -48,6 +52,11 @@ ENABLE_REMOTE_MINDMAP_SYNC = os.getenv("ENABLE_REMOTE_MINDMAP_SYNC", "false").st
 
 MINDMAP_DB_PATH = os.getenv("MINDMAP_DB_PATH", "/app/data/mindmaps.db").strip()
 MINDMAP_LEGACY_FILE = os.getenv("MINDMAP_LEGACY_FILE", "/app/data/mindmaps.json").strip()
+AUTH_DB_PATH = os.getenv("AUTH_DB_PATH", "/app/data/auth.db").strip()
+SESSION_COOKIE_NAME = os.getenv("SESSION_COOKIE_NAME", "lingma_session").strip() or "lingma_session"
+SESSION_TTL_SECONDS = max(3600, int(os.getenv("SESSION_TTL_SECONDS", "2592000") or "2592000"))
+SESSION_COOKIE_SECURE = os.getenv("SESSION_COOKIE_SECURE", "").strip().lower()
+PASSWORD_HASH_ITERATIONS = 120000
 
 
 def parse_allowed_origins() -> List[str]:
@@ -73,8 +82,8 @@ app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
     allow_origins=parse_allowed_origins(),
-    allow_credentials=False,
-    allow_methods=["POST", "OPTIONS"],
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["Content-Type", "Authorization"],
 )
 
@@ -83,14 +92,16 @@ def now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-def get_db_connection() -> sqlite3.Connection:
-    return sqlite3.connect(MINDMAP_DB_PATH)
+def get_db_connection(db_path: str) -> sqlite3.Connection:
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    return conn
 
 
 def init_mindmap_db() -> None:
     os.makedirs(os.path.dirname(MINDMAP_DB_PATH), exist_ok=True)
     with db_lock:
-        conn = get_db_connection()
+        conn = get_db_connection(MINDMAP_DB_PATH)
         try:
             conn.execute(
                 """
@@ -99,6 +110,37 @@ def init_mindmap_db() -> None:
                     maps_json TEXT NOT NULL,
                     updated_at TEXT NOT NULL
                 )
+                """
+            )
+            conn.commit()
+        finally:
+            conn.close()
+
+
+def init_auth_db() -> None:
+    os.makedirs(os.path.dirname(AUTH_DB_PATH), exist_ok=True)
+    with db_lock:
+        conn = get_db_connection(AUTH_DB_PATH)
+        try:
+            conn.executescript(
+                """
+                CREATE TABLE IF NOT EXISTS users (
+                    id TEXT PRIMARY KEY,
+                    username TEXT NOT NULL,
+                    email TEXT NOT NULL UNIQUE,
+                    password_hash TEXT NOT NULL,
+                    password_salt TEXT NOT NULL,
+                    created_at TEXT NOT NULL
+                );
+                CREATE TABLE IF NOT EXISTS user_sessions (
+                    session_id TEXT PRIMARY KEY,
+                    user_id TEXT NOT NULL,
+                    created_at TEXT NOT NULL,
+                    expires_at TEXT NOT NULL,
+                    FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+                );
+                CREATE INDEX IF NOT EXISTS idx_user_sessions_user_id ON user_sessions(user_id);
+                CREATE INDEX IF NOT EXISTS idx_user_sessions_expires_at ON user_sessions(expires_at);
                 """
             )
             conn.commit()
@@ -174,11 +216,159 @@ def ensure_remote_mindmap_sync_enabled() -> None:
         raise HTTPException(status_code=403, detail="remote mind map sync is disabled")
 
 
+def sanitize_email(email: Any) -> str:
+    value = str(email or "").strip().lower()
+    if len(value) > 320 or not EMAIL_RE.match(value):
+        raise ValueError("Invalid email")
+    return value
+
+
+def sanitize_username(username: Any) -> str:
+    value = str(username or "").strip()
+    if not value:
+        raise ValueError("username is required")
+    if len(value) > 64:
+        raise ValueError("username is too long")
+    return value
+
+
+def sanitize_password(password: Any) -> str:
+    value = str(password or "")
+    if len(value) < 6:
+        raise ValueError("password must be at least 6 characters")
+    if len(value) > 128:
+        raise ValueError("password is too long")
+    return value
+
+
+def generate_user_id() -> str:
+    return f"usr_{secrets.token_urlsafe(12)}"
+
+
+def derive_password_hash(password: str, salt_b64: str) -> str:
+    salt = base64.b64decode(salt_b64.encode("ascii"))
+    digest = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, PASSWORD_HASH_ITERATIONS)
+    return base64.b64encode(digest).decode("ascii")
+
+
+def create_password_record(password: str) -> Dict[str, str]:
+    salt_b64 = base64.b64encode(secrets.token_bytes(16)).decode("ascii")
+    return {
+        "password_hash": derive_password_hash(password, salt_b64),
+        "password_salt": salt_b64,
+    }
+
+
+def verify_password(password: str, password_hash: str, password_salt: str) -> bool:
+    return derive_password_hash(password, password_salt) == password_hash
+
+
+def serialize_user(row: sqlite3.Row) -> Dict[str, str]:
+    return {
+        "id": row["id"],
+        "username": row["username"],
+        "email": row["email"],
+        "createdAt": row["created_at"],
+    }
+
+
+def cleanup_expired_sessions(conn: sqlite3.Connection) -> None:
+    conn.execute("DELETE FROM user_sessions WHERE expires_at <= ?", (now_iso(),))
+
+
+def create_session(user_id: str) -> str:
+    session_id = secrets.token_urlsafe(32)
+    created_at = now_iso()
+    expires_at = datetime.fromtimestamp(datetime.now().timestamp() + SESSION_TTL_SECONDS, tz=timezone.utc).isoformat()
+
+    with db_lock:
+        conn = get_db_connection(AUTH_DB_PATH)
+        try:
+            cleanup_expired_sessions(conn)
+            conn.execute(
+                """
+                INSERT INTO user_sessions(session_id, user_id, created_at, expires_at)
+                VALUES(?, ?, ?, ?)
+                """,
+                (session_id, user_id, created_at, expires_at),
+            )
+            conn.commit()
+        finally:
+            conn.close()
+
+    return session_id
+
+
+def should_secure_session_cookie(request: Request) -> bool:
+    if SESSION_COOKIE_SECURE in {"1", "true", "yes", "on"}:
+        return True
+    if SESSION_COOKIE_SECURE in {"0", "false", "no", "off"}:
+        return False
+
+    forwarded_proto = (request.headers.get("x-forwarded-proto") or "").strip().lower()
+    if forwarded_proto:
+        return forwarded_proto == "https"
+
+    host = (request.headers.get("host") or "").strip().lower()
+    return request.url.scheme == "https" and "localhost" not in host and "127.0.0.1" not in host
+
+
+def apply_session_cookie(response: JSONResponse, request: Request, session_id: str) -> None:
+    response.set_cookie(
+        SESSION_COOKIE_NAME,
+        session_id,
+        max_age=SESSION_TTL_SECONDS,
+        httponly=True,
+        secure=should_secure_session_cookie(request),
+        samesite="lax",
+        path="/",
+    )
+
+
+def clear_session_cookie(response: JSONResponse, request: Request) -> None:
+    response.delete_cookie(
+        SESSION_COOKIE_NAME,
+        httponly=True,
+        secure=should_secure_session_cookie(request),
+        samesite="lax",
+        path="/",
+    )
+
+
+def get_authenticated_user(request: Request) -> sqlite3.Row | None:
+    session_id = request.cookies.get(SESSION_COOKIE_NAME)
+    if not session_id:
+        return None
+
+    with db_lock:
+        conn = get_db_connection(AUTH_DB_PATH)
+        try:
+            cleanup_expired_sessions(conn)
+            row = conn.execute(
+                """
+                SELECT users.id, users.username, users.email, users.created_at
+                FROM user_sessions
+                JOIN users ON users.id = user_sessions.user_id
+                WHERE user_sessions.session_id = ? AND user_sessions.expires_at > ?
+                """,
+                (session_id, now_iso()),
+            ).fetchone()
+            conn.commit()
+            return row
+        finally:
+            conn.close()
+
+
+def require_authenticated_user(request: Request) -> sqlite3.Row:
+    user = get_authenticated_user(request)
+    if user is None:
+        raise HTTPException(status_code=401, detail="authentication required")
+    return user
 def migrate_legacy_store() -> None:
     if not MINDMAP_LEGACY_FILE or not os.path.exists(MINDMAP_LEGACY_FILE):
         return
     with db_lock:
-        conn = get_db_connection()
+        conn = get_db_connection(MINDMAP_DB_PATH)
         try:
             row = conn.execute("SELECT COUNT(1) FROM user_mindmaps").fetchone()
             if row and row[0] > 0:
@@ -359,17 +549,119 @@ async def doc_fetch(request: Request):
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
-@app.post("/api/mindmaps/load")
-async def load_mindmaps(request: Request):
-    ensure_remote_mindmap_sync_enabled()
+@app.get("/api/auth/session")
+async def auth_session(request: Request):
+    user = get_authenticated_user(request)
+    if user is None:
+        raise HTTPException(status_code=401, detail="not authenticated")
+    return JSONResponse(content={"user": serialize_user(user)})
+
+
+@app.post("/api/auth/register")
+async def auth_register(request: Request):
     body = await request.json()
     try:
-        user_id = sanitize_user_id(body.get("userId"))
+        username = sanitize_username(body.get("username"))
+        email = sanitize_email(body.get("email"))
+        password = sanitize_password(body.get("password"))
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    password_record = create_password_record(password)
+    created_at = now_iso()
+    user_id = generate_user_id()
+
+    with db_lock:
+        conn = get_db_connection(AUTH_DB_PATH)
+        try:
+            existing = conn.execute("SELECT id FROM users WHERE email = ?", (email,)).fetchone()
+            if existing is not None:
+                raise HTTPException(status_code=409, detail="email already registered")
+
+            conn.execute(
+                """
+                INSERT INTO users(id, username, email, password_hash, password_salt, created_at)
+                VALUES(?, ?, ?, ?, ?, ?)
+                """,
+                (user_id, username, email, password_record["password_hash"], password_record["password_salt"], created_at),
+            )
+            conn.commit()
+        finally:
+            conn.close()
+
+    session_id = create_session(user_id)
+    response = JSONResponse(
+        content={
+            "user": {
+                "id": user_id,
+                "username": username,
+                "email": email,
+                "createdAt": created_at,
+            }
+        }
+    )
+    apply_session_cookie(response, request, session_id)
+    return response
+
+
+@app.post("/api/auth/login")
+async def auth_login(request: Request):
+    body = await request.json()
+    try:
+        email = sanitize_email(body.get("email"))
+        password = sanitize_password(body.get("password"))
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     with db_lock:
-        conn = get_db_connection()
+        conn = get_db_connection(AUTH_DB_PATH)
+        try:
+            row = conn.execute(
+                """
+                SELECT id, username, email, password_hash, password_salt, created_at
+                FROM users
+                WHERE email = ?
+                """,
+                (email,),
+            ).fetchone()
+        finally:
+            conn.close()
+
+    if row is None or not verify_password(password, row["password_hash"], row["password_salt"]):
+        raise HTTPException(status_code=401, detail="invalid email or password")
+
+    session_id = create_session(row["id"])
+    response = JSONResponse(content={"user": serialize_user(row)})
+    apply_session_cookie(response, request, session_id)
+    return response
+
+
+@app.post("/api/auth/logout")
+async def auth_logout(request: Request):
+    session_id = request.cookies.get(SESSION_COOKIE_NAME)
+
+    if session_id:
+        with db_lock:
+            conn = get_db_connection(AUTH_DB_PATH)
+            try:
+                conn.execute("DELETE FROM user_sessions WHERE session_id = ?", (session_id,))
+                conn.commit()
+            finally:
+                conn.close()
+
+    response = JSONResponse(content={"ok": True})
+    clear_session_cookie(response, request)
+    return response
+
+
+@app.post("/api/mindmaps/load")
+async def load_mindmaps(request: Request):
+    ensure_remote_mindmap_sync_enabled()
+    current_user = require_authenticated_user(request)
+    user_id = current_user["id"]
+
+    with db_lock:
+        conn = get_db_connection(MINDMAP_DB_PATH)
         try:
             row = conn.execute(
                 "SELECT maps_json, updated_at FROM user_mindmaps WHERE user_id = ?",
@@ -391,9 +683,10 @@ async def load_mindmaps(request: Request):
 @app.post("/api/mindmaps/save")
 async def save_mindmaps(request: Request):
     ensure_remote_mindmap_sync_enabled()
+    current_user = require_authenticated_user(request)
     body = await request.json()
     try:
-        user_id = sanitize_user_id(body.get("userId"))
+        user_id = current_user["id"]
         maps = normalize_maps_payload(body.get("maps"))
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -402,7 +695,7 @@ async def save_mindmaps(request: Request):
     maps_json = json.dumps(maps, ensure_ascii=False)
 
     with db_lock:
-        conn = get_db_connection()
+        conn = get_db_connection(MINDMAP_DB_PATH)
         try:
             conn.execute(
                 """
@@ -421,6 +714,7 @@ async def save_mindmaps(request: Request):
     return JSONResponse(content={"maps": maps, "updatedAt": updated_at})
 
 
+init_auth_db()
 if ENABLE_REMOTE_MINDMAP_SYNC:
     init_mindmap_db()
     migrate_legacy_store()

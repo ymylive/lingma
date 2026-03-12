@@ -13,7 +13,7 @@ const navItems = [
 
 export default function Header() {
   const location = useLocation();
-  const { user, isLoggedIn, progress, logout } = useUser();
+  const { user, isLoggedIn, isAuthLoading, progress, logout } = useUser();
   const { theme, toggleTheme, isAuto } = useTheme();
   const [showDropdown, setShowDropdown] = useState(false);
   const [scrolled, setScrolled] = useState(false);
@@ -94,7 +94,11 @@ export default function Header() {
             </button>
 
             {/* User Section */}
-            {isLoggedIn ? (
+            {isAuthLoading ? (
+              <div className="ml-2 px-5 py-2 text-sm text-slate-500 dark:text-slate-400">
+                验证中...
+              </div>
+            ) : isLoggedIn ? (
               <div className="relative">
                 <button
                   onClick={() => setShowDropdown(!showDropdown)}
