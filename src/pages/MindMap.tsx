@@ -18,6 +18,7 @@ import {
   ChevronRight,
   Wand2
 } from 'lucide-react';
+import { useI18n } from '../contexts/I18nContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useUser } from '../contexts/UserContext';
 import { fetchDocumentFromUrl } from '../services/docService';
@@ -52,11 +53,6 @@ const createNode = (title = '新节点'): MindMapNode => ({
   collapsed: false,
   children: [],
 });
-
-const formatDate = (value: string) => {
-  const date = new Date(value);
-  return date.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' });
-};
 
 const buildPersonalContext = (progress: ReturnType<typeof useUser>['progress']) => {
   const categoryCount = progress.learningHistory.reduce<Record<string, number>>((acc, item) => {
@@ -448,6 +444,7 @@ const downloadBlob = (name: string, blob: Blob) => {
   URL.revokeObjectURL(link.href);
 };
 export default function MindMap() {
+  const { formatDate } = useI18n();
   const { theme } = useTheme();
   const { user, progress } = useUser();
 
@@ -1524,7 +1521,7 @@ export default function MindMap() {
                       <div>
                         <div className="text-sm font-semibold text-slate-900 dark:text-white">{map.title}</div>
                         <div className="text-xs text-slate-500 dark:text-slate-400">
-                          {map.source?.type?.toUpperCase() || 'TOPIC'} · {formatDate(map.updatedAt)}
+                          {map.source?.type?.toUpperCase() || 'TOPIC'} · {formatDate(map.updatedAt, { month: 'short', day: 'numeric' })}
                         </div>
                       </div>
                       <button
