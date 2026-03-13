@@ -9,6 +9,7 @@ import secrets
 import socket
 import sqlite3
 import threading
+from contextlib import contextmanager
 from datetime import datetime, timezone
 from typing import Any, Dict, Iterator, List, Optional, Tuple
 from urllib.error import HTTPError, URLError
@@ -16,6 +17,7 @@ from urllib.parse import urlparse
 from urllib.request import Request as UrlRequest
 from urllib.request import urlopen
 
+import requests
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
@@ -42,6 +44,23 @@ DOC_TIMEOUT_SECONDS = 20
 USER_ID_RE = re.compile(r"^[A-Za-z0-9._@:-]{1,128}$")
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
+
+def env_bool(*names: str, default: bool = False) -> bool:
+    for name in names:
+        value = os.getenv(name)
+        if value is None:
+            continue
+        return value.strip().lower() in {"1", "true", "yes", "on"}
+    return default
+
+
+def first_env(*names: str) -> str:
+    for name in names:
+        value = os.getenv(name)
+        if value and value.strip():
+            return value.strip()
+    return ""
+
 AI_API_KEY = os.getenv("AI_API_KEY", "").strip()
 AI_BASE_URL = (os.getenv("AI_BASE_URL") or os.getenv("AI_API_URL") or "https://openrouter.ai/api/v1").strip()
 AI_MODEL = os.getenv("AI_MODEL", "openrouter/auto").strip()
@@ -50,6 +69,8 @@ AI_SITE_NAME = os.getenv("AI_SITE_NAME", "LingMa").strip()
 ENABLE_THINKING = os.getenv("ENABLE_THINKING", "false").strip().lower() in {"1", "true", "yes", "on"}
 AI_REASONING_EFFORT = (os.getenv("AI_REASONING_EFFORT") or ("high" if ENABLE_THINKING else "")).strip().lower()
 AI_REQUEST_TIMEOUT_SECONDS = max(30, int(os.getenv("AI_REQUEST_TIMEOUT_SECONDS", "300") or "300"))
+AI_CONNECT_TIMEOUT_SECONDS = max(5.0, float(os.getenv("AI_CONNECT_TIMEOUT_SECONDS", "20") or "20"))
+AI_TRUST_ENV = env_bool("AI_TRUST_ENV", "NOFX_AI_TRUST_ENV", default=False)
 ENABLE_REMOTE_MINDMAP_SYNC = os.getenv("ENABLE_REMOTE_MINDMAP_SYNC", "false").strip().lower() in {"1", "true", "yes", "on"}
 
 AI_PROTOCOL_RESPONSES = "responses"
@@ -520,6 +541,15 @@ def resolve_responses_upstream_url() -> str:
     return apply_protocol_to_url(AI_BASE_URL, detect_protocol_from_url(AI_BASE_URL))
 
 
+def is_openai_official(api_url: str) -> bool:
+    host = urlparse(api_url or "").netloc.lower()
+    return host == "api.openai.com"
+
+
+def should_force_responses_stream(api_url: str, protocol: str) -> bool:
+    return protocol == AI_PROTOCOL_RESPONSES and not is_openai_official(api_url)
+
+
 def responses_token_key(api_url: str) -> str:
     host = urlparse(api_url or "").netloc.lower()
     if host in {"api.openai.com", "gmn.chuangzuoli.com"}:
@@ -539,10 +569,30 @@ def build_upstream_headers() -> Dict[str, str]:
         "User-Agent": "Mozilla/5.0 (compatible; tumafang/1.0; +https://lingma.cornna.xyz)",
     }
     if AI_SITE_URL:
+        headers["Referer"] = AI_SITE_URL
         headers["HTTP-Referer"] = AI_SITE_URL
     if AI_SITE_NAME:
         headers["X-Title"] = AI_SITE_NAME
     return headers
+
+
+def resolve_explicit_upstream_proxies() -> Optional[Dict[str, str]]:
+    all_proxy = first_env("AI_ALL_PROXY", "NOFX_PROXY", "NOFX_ALL_PROXY")
+    http_proxy = first_env("AI_HTTP_PROXY", "NOFX_HTTP_PROXY") or all_proxy
+    https_proxy = first_env("AI_HTTPS_PROXY", "NOFX_HTTPS_PROXY") or http_proxy or all_proxy
+
+    proxies: Dict[str, str] = {}
+    if http_proxy:
+        proxies["http"] = http_proxy
+    if https_proxy:
+        proxies["https"] = https_proxy
+    return proxies or None
+
+
+def build_upstream_session(proxies: Optional[Dict[str, str]] = None) -> requests.Session:
+    session = requests.Session()
+    session.trust_env = bool(AI_TRUST_ENV and not proxies)
+    return session
 
 
 def parse_boolish(value: Any) -> bool:
@@ -730,8 +780,67 @@ def downgrade_reasoning_on_timeout(payload: Dict[str, Any]) -> Optional[Dict[str
     return next_payload
 
 
-def open_upstream_responses(payload: Dict[str, Any]) -> Any:
+def prepare_upstream_request(payload: Dict[str, Any]) -> Tuple[str, Dict[str, Any], Dict[str, str], bool]:
     upstream_url = resolve_responses_upstream_url()
+    protocol = detect_protocol_from_url(upstream_url)
+    stream_requested = parse_boolish(payload.get("stream"))
+    effective_stream = stream_requested or should_force_responses_stream(upstream_url, protocol)
+
+    request_payload = dict(payload)
+    if effective_stream:
+        request_payload["stream"] = True
+
+    headers = build_upstream_headers()
+    headers["Accept"] = "text/event-stream" if effective_stream else "application/json"
+    return upstream_url, request_payload, headers, effective_stream
+
+
+def decode_response_text(response: requests.Response) -> str:
+    response.encoding = response.encoding or "utf-8"
+    return response.text
+
+
+def extract_responses_sse_json(body_text: str) -> Dict[str, Any]:
+    last_payload: Optional[Dict[str, Any]] = None
+    last_response: Optional[Dict[str, Any]] = None
+
+    for line in (body_text or "").splitlines():
+        current = line.strip()
+        if not current.startswith("data:"):
+            continue
+        payload_text = current[len("data:") :].strip()
+        if not payload_text or payload_text == "[DONE]":
+            continue
+        try:
+            event = json.loads(payload_text)
+        except Exception:
+            continue
+        if not isinstance(event, dict):
+            continue
+
+        last_payload = event
+        response_obj = event.get("response")
+        if isinstance(response_obj, dict):
+            last_response = response_obj
+
+        event_type = str(event.get("type") or "")
+        if event_type == "response.completed" and isinstance(response_obj, dict):
+            return response_obj
+        if event_type == "response.failed":
+            error = event.get("error") if isinstance(event.get("error"), dict) else {}
+            message = str(error.get("message") or "upstream stream failed").strip()
+            raise HTTPException(status_code=502, detail=message or "upstream stream failed")
+
+    if isinstance(last_response, dict):
+        return last_response
+    if isinstance(last_payload, dict) and isinstance(last_payload.get("error"), dict):
+        message = str(last_payload["error"].get("message") or "upstream stream failed").strip()
+        raise HTTPException(status_code=502, detail=message or "upstream stream failed")
+    raise HTTPException(status_code=502, detail=f"invalid upstream response: {(body_text or '').strip()[:500]}")
+
+
+def perform_upstream_responses_request(payload: Dict[str, Any]) -> Tuple[requests.Session, requests.Response]:
+    explicit_proxies = resolve_explicit_upstream_proxies()
     fallback_tokens = normalize_token_value(
         payload.get("max_output_tokens", payload.get("max_tokens", 8192)),
     )
@@ -739,41 +848,64 @@ def open_upstream_responses(payload: Dict[str, Any]) -> Any:
     token_override_attempted = False
 
     while True:
+        request_url, request_payload, headers, effective_stream = prepare_upstream_request(current_payload)
+        session = build_upstream_session(explicit_proxies)
         try:
-            headers = build_upstream_headers()
-            if parse_boolish(current_payload.get("stream")):
-                headers["Accept"] = "text/event-stream"
-            request = UrlRequest(
-                upstream_url,
-                data=json.dumps(current_payload, ensure_ascii=False).encode("utf-8"),
+            response = session.post(
+                request_url,
                 headers=headers,
-                method="POST",
+                json=request_payload,
+                timeout=(AI_CONNECT_TIMEOUT_SECONDS, AI_REQUEST_TIMEOUT_SECONDS),
+                proxies=explicit_proxies,
+                stream=effective_stream,
             )
-            return urlopen(request, timeout=AI_REQUEST_TIMEOUT_SECONDS)
-        except HTTPError as exc:
-            body_text = exc.read().decode("utf-8", errors="replace")
-            override_key = None if token_override_attempted else resolve_responses_token_key_override(body_text)
-            if override_key is not None:
-                current_payload = override_responses_token_key(current_payload, override_key, fallback_tokens)
-                token_override_attempted = True
+        except requests.Timeout as exc:
+            session.close()
+            downgraded_payload = downgrade_reasoning_on_timeout(current_payload)
+            if downgraded_payload is not None:
+                current_payload = downgraded_payload
                 continue
-            if exc.code == 524:
-                downgraded_payload = downgrade_reasoning_on_timeout(current_payload)
-                if downgraded_payload is not None:
-                    current_payload = downgraded_payload
-                    continue
-            raise HTTPException(status_code=exc.code, detail=extract_error_message(body_text)) from exc
-        except URLError as exc:
-            raise HTTPException(status_code=504, detail=str(exc.reason or exc)) from exc
-        except HTTPException:
-            raise
-        except Exception as exc:
+            raise HTTPException(status_code=504, detail=str(exc)) from exc
+        except requests.RequestException as exc:
+            session.close()
             raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+        if response.status_code < 400:
+            return session, response
+
+        body_text = decode_response_text(response)
+        response.close()
+        session.close()
+
+        override_key = None if token_override_attempted else resolve_responses_token_key_override(body_text)
+        if override_key is not None:
+            current_payload = override_responses_token_key(current_payload, override_key, fallback_tokens)
+            token_override_attempted = True
+            continue
+        if response.status_code == 524:
+            downgraded_payload = downgrade_reasoning_on_timeout(current_payload)
+            if downgraded_payload is not None:
+                current_payload = downgraded_payload
+                continue
+        raise HTTPException(status_code=response.status_code, detail=extract_error_message(body_text))
+
+
+@contextmanager
+def open_upstream_responses(payload: Dict[str, Any]) -> Iterator[requests.Response]:
+    session, response = perform_upstream_responses_request(payload)
+    try:
+        yield response
+    finally:
+        response.close()
+        session.close()
 
 
 def read_upstream_responses_json(payload: Dict[str, Any]) -> Dict[str, Any]:
     with open_upstream_responses(payload) as response:
-        body_text = response.read().decode("utf-8", errors="replace")
+        body_text = decode_response_text(response)
+        content_type = (response.headers.get("Content-Type") or "").lower()
+    if "text/event-stream" in content_type or "data:" in body_text:
+        return extract_responses_sse_json(body_text)
     try:
         data = json.loads(body_text)
     except Exception as exc:
@@ -851,14 +983,18 @@ def build_legacy_stream_chunk(chunk_id: str, model: str, delta: Optional[str] = 
 
 def iter_sse_events(response: Any) -> Iterator[str]:
     buffer: List[str] = []
-    for raw_line in response:
-        line = raw_line.decode("utf-8", errors="replace")
-        if line in {"\n", "\r\n", "\r"}:
+    if hasattr(response, "iter_lines"):
+        line_iter = response.iter_lines(decode_unicode=True)
+    else:
+        line_iter = (raw_line.decode("utf-8", errors="replace") for raw_line in response)
+
+    for line in line_iter:
+        if line in {"", "\n", "\r\n", "\r"}:
             if buffer:
                 yield "\n".join(buffer)
                 buffer = []
             continue
-        buffer.append(line.rstrip("\r\n"))
+        buffer.append(str(line).rstrip("\r\n"))
     if buffer:
         yield "\n".join(buffer)
 
@@ -901,8 +1037,9 @@ async def responses_proxy(request: Request):
         def event_stream() -> Iterator[bytes]:
             try:
                 with open_upstream_responses(payload) as upstream:
-                    for raw_line in upstream:
-                        yield raw_line
+                    for chunk in upstream.iter_content(chunk_size=8192):
+                        if chunk:
+                            yield chunk
             except HTTPException as exc:
                 yield f"data: {json.dumps({'error': {'message': str(exc.detail)}}, ensure_ascii=False)}\n\n".encode("utf-8")
                 yield b"data: [DONE]\n\n"
