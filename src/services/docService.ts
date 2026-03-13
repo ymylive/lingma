@@ -1,3 +1,5 @@
+import { localizeRuntimeText, pickRuntimeText } from '../utils/runtimeLocale';
+
 const DEFAULT_PROXY_ORIGIN =
   typeof window !== 'undefined' && window.location ? window.location.origin : 'https://lingma.cornna.xyz';
 
@@ -23,7 +25,7 @@ export async function fetchDocumentFromUrl(targetUrl: string, maxLength = 16000)
 
   if (!response.ok) {
     const text = await response.text();
-    throw new Error(text || `URL 获取失败: ${response.status}`);
+    throw new Error(text ? localizeRuntimeText(text) : pickRuntimeText(`URL 获取失败: ${response.status}`, `Failed to fetch URL: ${response.status}`));
   }
 
   return response.json() as Promise<DocFetchResult>;

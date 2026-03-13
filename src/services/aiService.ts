@@ -1,5 +1,7 @@
 // AI出题服务 - 支持多种AI API
 
+import { isEnglishRuntimeLocale, pickRuntimeText } from '../utils/runtimeLocale';
+
 export interface GeneratedExercise {
   title: string;
   description: string;
@@ -105,6 +107,36 @@ export const loadAIConfig = () => {
   }
 };
 
+function getUiLanguageLabel() {
+  return isEnglishRuntimeLocale() ? 'English' : '中文';
+}
+
+function getDifficultyText(difficulty: 'easy' | 'medium' | 'hard') {
+  if (difficulty === 'easy') {
+    return pickRuntimeText('简单', 'Easy');
+  }
+  if (difficulty === 'medium') {
+    return pickRuntimeText('中等', 'Medium');
+  }
+  return pickRuntimeText('困难', 'Hard');
+}
+
+function getDifficultyGuidance(difficulty: 'easy' | 'medium' | 'hard') {
+  if (difficulty === 'easy') {
+    return pickRuntimeText('基础操作，直接实现', 'basic operations with direct implementation');
+  }
+  if (difficulty === 'medium') {
+    return pickRuntimeText('需要算法设计，有一定技巧', 'requires algorithm design with moderate technique');
+  }
+  return pickRuntimeText('复杂算法，需要优化或高级数据结构', 'requires advanced optimization or higher-level data structures');
+}
+
+function getUserFacingOutputInstruction() {
+  return isEnglishRuntimeLocale()
+    ? 'All user-facing JSON fields must be written in English, including title, description, hints, explanation, and test case descriptions.'
+    : '所有用户可见的 JSON 字段都必须使用中文，包括标题、题面、提示、解析和测试用例说明。';
+}
+
 // 调用AI API (流式输出)
 async function callAI(prompt: string, onProgress?: (text: string) => void): Promise<string> {
   const apiUrl = AI_STREAM_URL;
@@ -151,7 +183,7 @@ async function callAI(prompt: string, onProgress?: (text: string) => void): Prom
 - 包含：基本功能测试、边界条件测试、特殊情况测试
 - input和expectedOutput必须是纯文本格式
 
-六、JSON输出：严格按照要求格式，不包含任何其他文字说明`
+六、JSON输出：严格按照要求格式，不包含任何其他文字说明\n\n七、输出语言要求：${getUserFacingOutputInstruction()}`
     },
     { role: 'user', content: prompt }
   ];
@@ -169,7 +201,7 @@ async function callAI(prompt: string, onProgress?: (text: string) => void): Prom
     clearTimeout(timeoutId);
 
     if (!response.ok) {
-      throw new Error(`AI API 调用失败: ${response.status}`);
+      throw new Error(pickRuntimeText(`AI API 调用失败: ${response.status}`, `AI API request failed: ${response.status}`));
     }
 
     // 优先使用流式接口，避免高推理请求在上游长时间阻塞后直接超时
@@ -192,7 +224,7 @@ async function callAI(prompt: string, onProgress?: (text: string) => void): Prom
           const message =
             typeof streamError === 'string'
               ? streamError
-              : streamError.message || 'AI 流式请求失败';
+              : streamError.message || pickRuntimeText('AI 流式请求失败', 'AI streaming request failed');
           throw new Error(message);
         }
 
@@ -221,7 +253,7 @@ async function callAI(prompt: string, onProgress?: (text: string) => void): Prom
       }
 
       if (!fullContent) {
-        throw new Error('AI 返回内容为空');
+        throw new Error(pickRuntimeText('AI 返回内容为空', 'AI returned empty content'));
       }
 
       return fullContent;
@@ -234,13 +266,13 @@ async function callAI(prompt: string, onProgress?: (text: string) => void): Prom
       content = data.choices[0].message.content || '';
     }
     if (!content) {
-      throw new Error(`AI 返回内容为空`);
+      throw new Error(pickRuntimeText('AI 返回内容为空', 'AI returned empty content'));
     }
     return content;
   } catch (error: unknown) {
     clearTimeout(timeoutId);
     if (error instanceof Error && error.name === 'AbortError') {
-      throw new Error('AI API 请求超时，请稍后重试');
+      throw new Error(pickRuntimeText('AI API 请求超时，请稍后重试', 'AI request timed out. Please try again later.'));
     }
     throw error;
   }
@@ -254,7 +286,7 @@ export async function generateCodingExercise(
   onProgress?: (text: string) => void,
   profileHint?: string
 ): Promise<GeneratedExercise> {
-  const difficultyText = difficulty === 'easy' ? '简单' : difficulty === 'medium' ? '中等' : '困难';
+  const difficultyText = getDifficultyText(difficulty);
   const profileSection = profileHint
     ? `\n【用户画像约束】\n${profileHint}\n- 请根据这组画像控制题目抽象层级、样例复杂度、提示力度和边界条件强度。\n`
     : '';
@@ -263,7 +295,7 @@ export async function generateCodingExercise(
 【题目要求】
 - 知识点：${dataStructure}
 - 主题：${topic}  
-- 难度：${difficultyText}（${difficulty === 'easy' ? '基础操作，直接实现' : difficulty === 'medium' ? '需要算法设计，有一定技巧' : '复杂算法，需要优化或高级数据结构'}）
+- 难度：${difficultyText}（${getDifficultyGuidance(difficulty)}）\n- 输出语言：${getUiLanguageLabel()}（${getUserFacingOutputInstruction()}）
 ${profileSection}
 
 【ACM/OJ标准格式 - 必须严格遵守】
@@ -332,9 +364,8 @@ export async function generateFillBlank(
   const profileSection = profileHint
     ? `\n【用户画像约束】\n${profileHint}\n- 请让待填空函数数量、函数体长度、提示强度和边界条件与该用户画像匹配。\n`
     : '';
-  const prompt = `生成一道关于"${dataStructure} - ${topic}"的${
-    difficulty === 'easy' ? '简单' : difficulty === 'medium' ? '中等' : '困难'
-  }难度【函数实现填空题】。
+  const difficultyText = getDifficultyText(difficulty);
+  const prompt = `生成一道关于"${dataStructure} - ${topic}"的${difficultyText}难度【函数实现填空题】。
 ${profileSection}
 
 【题目格式要求】
@@ -382,7 +413,7 @@ int main() {
 2. 每个函数答案是完整的函数体代码（多行）
 3. 给出的代码框架必须完整可编译（填空后）
 4. 代码换行用\\n表示
-5. 只返回JSON，不要其他文字`;
+5. 只返回JSON，不要其他文字\n6. 用户可见字段必须使用 ${getUiLanguageLabel()}`;
 
   const response = await callAI(prompt, onProgress);
   return parseAIJsonResponse(response, 'fill blank');
@@ -400,7 +431,7 @@ function parseAIJsonResponse(response: string, _type: string): any {
   const endIdx = jsonStr.lastIndexOf('}');
   
   if (startIdx === -1 || endIdx === -1 || endIdx <= startIdx) {
-    throw new Error('AI返回中未找到JSON');
+    throw new Error(pickRuntimeText('AI返回中未找到JSON', 'No JSON payload was found in the AI response'));
   }
   
   const rawJson = jsonStr.substring(startIdx, endIdx + 1);
@@ -505,7 +536,7 @@ function parseAIJsonResponse(response: string, _type: string): any {
   }
   
   const preview = rawJson.substring(0, 300);
-  throw new Error(`AI返回格式错误: ${preview}...`);
+  throw new Error(pickRuntimeText(`AI返回格式错误: ${preview}...`, `AI returned malformed JSON: ${preview}...`));
 }
 
 // 批量生成题目

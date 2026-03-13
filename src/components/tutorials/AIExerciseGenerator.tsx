@@ -68,7 +68,7 @@ const LEARNING_STATE_LABELS = {
 
 export default function AIExerciseGenerator() {
   const { user, progress } = useUser();
-  const { isEnglish } = useI18n();
+  const { isEnglish, t } = useI18n();
   const [showConfig, setShowConfig] = useState(false);
   const [config, setConfig] = useState<AIConfig>(getAIConfig());
   const [dataStructure, setDataStructure] = useState('链表');
@@ -86,12 +86,14 @@ export default function AIExerciseGenerator() {
   const aiDefaults = buildAiDefaults(progress, user?.skillLevel || progress.skillLevel);
   const levelMeta = getSkillLevelMeta(aiDefaults.effectiveLevel);
   const targetLanguageMeta = getTargetLanguageMeta(user?.targetLanguage);
+  const categoryLabel = (value: string) => t(CATEGORIES.find((item) => item.id === value)?.name || value);
+  const learningStateLabel = t(LEARNING_STATE_LABELS[aiDefaults.learningState]);
   const profileHint = [
-    isEnglish ? `Current effective level: ${levelMeta.label}` : `用户当前有效水平：${levelMeta.label}`,
-    isEnglish ? `Current learning state: ${LEARNING_STATE_LABELS[aiDefaults.learningState]}` : `当前学习状态：${LEARNING_STATE_LABELS[aiDefaults.learningState]}`,
-    isEnglish ? `Recommended topics: ${aiDefaults.suggestedCategories.slice(0, 3).join(', ')}` : `系统推荐专题：${aiDefaults.suggestedCategories.slice(0, 3).join('、')}`,
+    isEnglish ? `Current effective level: ${t(levelMeta.label)}` : `用户当前有效水平：${t(levelMeta.label)}`,
+    isEnglish ? `Current learning state: ${learningStateLabel}` : `当前学习状态：${learningStateLabel}`,
+    isEnglish ? `Recommended topics: ${aiDefaults.suggestedCategories.slice(0, 3).map((item) => categoryLabel(item)).join(', ')}` : `系统推荐专题：${aiDefaults.suggestedCategories.slice(0, 3).map((item) => categoryLabel(item)).join('、')}`,
     isEnglish ? `Primary programming language: ${targetLanguageMeta.label}` : `主学编程语言：${targetLanguageMeta.label}`,
-    isEnglish ? `Current requested topic: ${dataStructure}` : `当前出题专题：${dataStructure}`,
+    isEnglish ? `Current requested topic: ${categoryLabel(dataStructure)}` : `当前出题专题：${categoryLabel(dataStructure)}`,
   ].join('\n');
 
   useEffect(() => {
@@ -116,7 +118,7 @@ export default function AIExerciseGenerator() {
   };
 
   const handleGenerate = async () => {
-    const finalTopic = topic || customTopic || '基本操作';
+    const finalTopic = topic || customTopic || t('基本操作');
     
     // API密钥已在服务器端配置，无需前端验证
 
@@ -134,7 +136,7 @@ export default function AIExerciseGenerator() {
         setGeneratedFillBlank(fillBlank);
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : '生成失败，请重试');
+      setError(e instanceof Error ? e.message : t('生成失败，请重试'));
     } finally {
       setLoading(false);
     }
@@ -148,13 +150,13 @@ export default function AIExerciseGenerator() {
           <div className="flex min-h-full items-center justify-center">
             <div className="max-h-[calc(100vh-2rem)] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-5 shadow-2xl sm:p-6">
               <h3 className="mb-4 flex items-center gap-2 text-base font-bold text-slate-800 sm:text-lg">
-              <span>⚙️</span> AI API 配置
+              <span>⚙️</span> {t('AI API 配置')}
             </h3>
             
             <div className="space-y-4">
               {/* 提供商选择 */}
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">AI 服务商</label>
+                <label className="block text-sm font-medium text-slate-700 mb-2">{t('AI 服务商')}</label>
                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                   {PROVIDERS.map(p => (
                     <button
@@ -171,7 +173,7 @@ export default function AIExerciseGenerator() {
                           : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                       }`}
                     >
-                      {p.name}
+                      {t(p.name)}
                     </button>
                   ))}
                 </div>
@@ -179,16 +181,16 @@ export default function AIExerciseGenerator() {
 
               {/* API密钥 */}
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">API 密钥</label>
+                <label className="block text-sm font-medium text-slate-700 mb-2">{t('API 密钥')}</label>
                 <input
                   type="password"
                   value={config.apiKey}
                   onChange={e => setConfig({ ...config, apiKey: e.target.value })}
-                  placeholder="输入你的API密钥"
+                  placeholder={t('输入你的API密钥')}
                   className="min-h-[44px] w-full rounded-lg border border-slate-300 px-4 py-2 focus:border-transparent focus:ring-2 focus:ring-indigo-500"
                 />
                 <p className="mt-1 text-xs text-slate-500">
-                  当前默认通过服务端代理请求 AI，此处输入不会持久化保存
+                  {t('当前默认通过服务端代理请求 AI，此处输入不会持久化保存')}
                 </p>
               </div>
 
@@ -196,7 +198,7 @@ export default function AIExerciseGenerator() {
               {config.provider === 'custom' && (
                 <>
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">API 地址</label>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">{t('API 地址')}</label>
                     <input
                       type="text"
                       value={config.baseUrl}
@@ -206,7 +208,7 @@ export default function AIExerciseGenerator() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">模型名称</label>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">{t('模型名称')}</label>
                     <input
                       type="text"
                       value={config.model}
@@ -224,13 +226,13 @@ export default function AIExerciseGenerator() {
                 onClick={() => setShowConfig(false)}
                 className="min-h-[44px] flex-1 cursor-pointer rounded-lg bg-slate-100 py-2 font-medium text-slate-600 hover:bg-slate-200"
               >
-                取消
+                {t('取消')}
               </button>
               <button
                 onClick={handleSaveConfig}
                 className="min-h-[44px] flex-1 cursor-pointer rounded-lg bg-indigo-600 py-2 font-medium text-white hover:bg-indigo-700"
               >
-                保存配置
+                {t('保存配置')}
               </button>
             </div>
             </div>
@@ -244,15 +246,15 @@ export default function AIExerciseGenerator() {
           <div className="flex items-start gap-3">
             <span className="text-3xl">🤖</span>
             <div>
-              <h2 className="text-xl font-bold">AI 智能出题</h2>
-              <p className="text-white/70 text-sm">根据主题自动生成编程练习题</p>
+              <h2 className="text-xl font-bold">{t('AI 智能出题')}</h2>
+              <p className="text-white/70 text-sm">{t('根据主题自动生成编程练习题')}</p>
             </div>
           </div>
           <button
             onClick={() => setShowConfig(true)}
             className="min-h-[44px] w-full cursor-pointer rounded-lg bg-white/20 px-4 py-2 text-sm font-medium transition-colors hover:bg-white/30 sm:w-auto"
           >
-            ⚙️ 配置API
+            ⚙️ {t('配置API')}
           </button>
         </div>
 
@@ -260,25 +262,25 @@ export default function AIExerciseGenerator() {
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
               {/* 知识点分类 */}
               <div>
-                <label className="block text-sm font-medium text-white/80 mb-2">知识点</label>
+                <label className="block text-sm font-medium text-white/80 mb-2">{t('知识点')}</label>
             <select
               value={dataStructure}
               onChange={e => { setDataStructure(e.target.value); setTopic(''); setHasManualCategory(true); }}
               className="min-h-[44px] w-full rounded-lg border border-white/30 bg-white/20 px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-white/50"
             >
-              <optgroup label="C语言" className="text-slate-800">
+              <optgroup label={t('C语言')} className="text-slate-800">
                 {CATEGORIES.filter(c => c.group === 'C语言').map(c => (
-                  <option key={c.id} value={c.id} className="text-slate-800">{c.icon} {c.name}</option>
+                  <option key={c.id} value={c.id} className="text-slate-800">{c.icon} {t(c.name)}</option>
                 ))}
               </optgroup>
-              <optgroup label="数据结构" className="text-slate-800">
+              <optgroup label={t('数据结构')} className="text-slate-800">
                 {CATEGORIES.filter(c => c.group === '数据结构').map(c => (
-                  <option key={c.id} value={c.id} className="text-slate-800">{c.icon} {c.name}</option>
+                  <option key={c.id} value={c.id} className="text-slate-800">{c.icon} {t(c.name)}</option>
                 ))}
               </optgroup>
-              <optgroup label="算法" className="text-slate-800">
+              <optgroup label={t('算法')} className="text-slate-800">
                 {CATEGORIES.filter(c => c.group === '算法').map(c => (
-                  <option key={c.id} value={c.id} className="text-slate-800">{c.icon} {c.name}</option>
+                  <option key={c.id} value={c.id} className="text-slate-800">{c.icon} {t(c.name)}</option>
                 ))}
               </optgroup>
             </select>
@@ -286,22 +288,22 @@ export default function AIExerciseGenerator() {
 
           {/* 主题 */}
           <div>
-            <label className="block text-sm font-medium text-white/80 mb-2">题目主题</label>
+            <label className="block text-sm font-medium text-white/80 mb-2">{t('题目主题')}</label>
             <select
               value={topic}
               onChange={e => setTopic(e.target.value)}
               className="min-h-[44px] w-full rounded-lg border border-white/30 bg-white/20 px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-white/50"
             >
-              <option value="" className="text-slate-800">自定义主题</option>
-              {(TOPICS[dataStructure] || []).map(t => (
-                <option key={t} value={t} className="text-slate-800">{t}</option>
+              <option value="" className="text-slate-800">{t('自定义主题')}</option>
+              {(TOPICS[dataStructure] || []).map((topicItem) => (
+                <option key={topicItem} value={topicItem} className="text-slate-800">{t(topicItem)}</option>
               ))}
             </select>
           </div>
 
           {/* 难度 */}
           <div>
-            <label className="block text-sm font-medium text-white/80 mb-2">难度</label>
+            <label className="block text-sm font-medium text-white/80 mb-2">{t('难度')}</label>
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
               {[
                 { id: 'easy', label: '⭐简单' },
@@ -317,7 +319,7 @@ export default function AIExerciseGenerator() {
                       : 'bg-white/20 text-white hover:bg-white/30'
                   }`}
                 >
-                  {d.label}
+                  {t(d.label)}
                 </button>
               ))}
             </div>
@@ -325,7 +327,7 @@ export default function AIExerciseGenerator() {
 
           {/* 题型 */}
           <div>
-            <label className="block text-sm font-medium text-white/80 mb-2">题型</label>
+            <label className="block text-sm font-medium text-white/80 mb-2">{t('题型')}</label>
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               <button
                 onClick={() => setExerciseType('coding')}
@@ -335,7 +337,7 @@ export default function AIExerciseGenerator() {
                     : 'bg-white/20 text-white hover:bg-white/30'
                 }`}
               >
-                💻 编程题
+                💻 {t('编程题')}
               </button>
               <button
                 onClick={() => setExerciseType('fillblank')}
@@ -345,7 +347,7 @@ export default function AIExerciseGenerator() {
                     : 'bg-white/20 text-white hover:bg-white/30'
                 }`}
               >
-                ✏️ 填空题
+                ✏️ {t('填空题')}
               </button>
             </div>
           </div>
@@ -358,7 +360,7 @@ export default function AIExerciseGenerator() {
               type="text"
               value={customTopic}
               onChange={e => setCustomTopic(e.target.value)}
-              placeholder="输入自定义题目主题，例如：链表反转的递归实现"
+              placeholder={t('输入自定义题目主题，例如：链表反转的递归实现')}
               className="min-h-[48px] w-full rounded-lg border border-white/30 bg-white/20 px-4 py-3 text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-white/50"
             />
           </div>
@@ -366,10 +368,10 @@ export default function AIExerciseGenerator() {
 
         <div className="mt-4 rounded-2xl border border-white/20 bg-white/10 p-4">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-indigo-600">{levelMeta.label}</span>
-            <span className="rounded-full bg-white/20 px-3 py-1 text-xs font-medium text-white">{LEARNING_STATE_LABELS[aiDefaults.learningState]}</span>
+            <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-indigo-600">{t(levelMeta.label)}</span>
+            <span className="rounded-full bg-white/20 px-3 py-1 text-xs font-medium text-white">{learningStateLabel}</span>
           </div>
-          <p className="mt-3 text-sm text-white/85">{aiDefaults.message}</p>
+          <p className="mt-3 text-sm text-white/85">{t(aiDefaults.message)}</p>
           <div className="mt-3 flex flex-wrap gap-2">
             {aiDefaults.suggestedCategories.map((item) => (
               <button
@@ -379,7 +381,7 @@ export default function AIExerciseGenerator() {
                   dataStructure === item ? 'bg-white text-indigo-600' : 'bg-white/15 text-white hover:bg-white/25'
                 }`}
               >
-                {item}
+                {categoryLabel(item)}
               </button>
             ))}
             <button
@@ -393,7 +395,7 @@ export default function AIExerciseGenerator() {
               }}
               className="min-h-[40px] cursor-pointer rounded-full bg-emerald-500 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-400"
             >
-              恢复我的水平推荐
+              {t('恢复我的水平推荐')}
             </button>
           </div>
         </div>
@@ -407,12 +409,12 @@ export default function AIExerciseGenerator() {
           {loading ? (
             <>
               <span className="animate-spin">⏳</span>
-              AI 正在生成题目...
+              {t('AI 正在生成题目...')}
             </>
           ) : (
             <>
               <span>✨</span>
-              生成{exerciseType === 'coding' ? '编程题' : '填空题'}
+              {t(exerciseType === 'coding' ? '生成编程题' : '生成填空题')}
             </>
           )}
         </button>
@@ -430,7 +432,7 @@ export default function AIExerciseGenerator() {
         <div className="animate-fadeIn">
           <div className="mb-4 flex items-center gap-2 text-emerald-600">
             <span>✅</span>
-            <span className="font-medium">题目已生成！</span>
+            <span className="font-medium">{t('题目已生成！')}</span>
           </div>
           <CodingExercise
             title={generatedExercise.title}
@@ -449,7 +451,7 @@ export default function AIExerciseGenerator() {
         <div className="animate-fadeIn">
           <div className="mb-4 flex items-center gap-2 text-emerald-600">
             <span>✅</span>
-            <span className="font-medium">填空题已生成！</span>
+            <span className="font-medium">{t('填空题已生成！')}</span>
           </div>
           <FillInBlank
             title={generatedFillBlank.title}

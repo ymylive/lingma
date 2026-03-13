@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useI18n } from '../../contexts/I18nContext';
 
 interface Section {
   title: string;
@@ -13,13 +14,14 @@ interface TutorialPanelProps {
 
 export default function TutorialPanel({ title, sections }: TutorialPanelProps) {
   const [activeTab, setActiveTab] = useState(0);
+  const { t } = useI18n();
 
   return (
     <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
       {/* 标题 */}
       <div className="bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-4">
         <h2 className="text-xl font-bold text-white flex items-center gap-2">
-          <span>📚</span> {title} - 学习教程
+          <span>📚</span> {t(title)} - {t('学习教程')}
         </h2>
       </div>
 
@@ -36,7 +38,7 @@ export default function TutorialPanel({ title, sections }: TutorialPanelProps) {
             }`}
           >
             <span>{section.icon}</span>
-            {section.title}
+            {t(section.title)}
           </button>
         ))}
       </div>
@@ -94,13 +96,14 @@ export function CompareTable({ headers, rows }: {
   headers: string[]; 
   rows: string[][] 
 }) {
+  const { t } = useI18n();
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
           <tr className="bg-slate-100 dark:bg-slate-700">
             {headers.map((h, i) => (
-              <th key={i} className="px-4 py-2 text-left font-medium text-slate-700 dark:text-slate-200">{h}</th>
+              <th key={i} className="px-4 py-2 text-left font-medium text-slate-700 dark:text-slate-200">{t(h)}</th>
             ))}
           </tr>
         </thead>
@@ -134,13 +137,14 @@ export function MultiLangCode({ codes, title }: {
   title?: string;
 }) {
   const [lang, setLang] = useState<'cpp' | 'java' | 'python'>('cpp');
+  const { t } = useI18n();
   const langNames = { cpp: 'C++', java: 'Java', python: 'Python' };
   const available = Object.keys(codes).filter(k => codes[k as keyof typeof codes]) as ('cpp' | 'java' | 'python')[];
   
   return (
     <div className="bg-slate-800 rounded-lg overflow-hidden">
       <div className="flex items-center justify-between px-4 py-2 bg-slate-700/50">
-        {title && <span className="text-slate-300 text-sm font-medium">{title}</span>}
+        {title && <span className="text-slate-300 text-sm font-medium">{t(title)}</span>}
         <div className="flex gap-1">
           {available.map(l => (
             <button
@@ -204,13 +208,14 @@ export function Term({ word, meaning }: { word: string; meaning: string }) {
 
 // 工具组件：难度标签
 export function DifficultyBadge({ level }: { level: 'easy' | 'medium' | 'hard' }) {
+  const { t } = useI18n();
   const config = {
     easy: { text: '⭐ 入门', color: 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400' },
     medium: { text: '⭐⭐ 进阶', color: 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400' },
     hard: { text: '⭐⭐⭐ 困难', color: 'bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-400' },
   };
   const c = config[level];
-  return <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${c.color}`}>{c.text}</span>;
+  return <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${c.color}`}>{t(c.text)}</span>;
 }
 
 // 工具组件：提示框
@@ -218,6 +223,7 @@ export function TipBox({ type, children }: {
   type: 'tip' | 'warning' | 'important'; 
   children: React.ReactNode 
 }) {
+  const { t } = useI18n();
   const styles = {
     tip: { bg: 'bg-emerald-50 dark:bg-emerald-900/30', border: 'border-emerald-200 dark:border-emerald-800', icon: '💡', title: '提示' },
     warning: { bg: 'bg-amber-50 dark:bg-amber-900/30', border: 'border-amber-200 dark:border-amber-800', icon: '⚠️', title: '注意' },
@@ -228,7 +234,7 @@ export function TipBox({ type, children }: {
   return (
     <div className={`${s.bg} ${s.border} border rounded-lg p-4`}>
       <div className="flex items-center gap-2 font-medium text-slate-800 dark:text-slate-200 mb-1">
-        <span>{s.icon}</span> {s.title}
+        <span>{s.icon}</span> {t(s.title)}
       </div>
       <div className="text-sm text-slate-700 dark:text-slate-300">{children}</div>
     </div>
@@ -250,6 +256,7 @@ export function QuizQuestion({ question, options, answer, explanation }: {
 }) {
   const [selected, setSelected] = useState<number | null>(null);
   const [showAnswer, setShowAnswer] = useState(false);
+  const { t } = useI18n();
 
   return (
     <div className="border border-slate-200 dark:border-slate-700 rounded-lg p-4">
@@ -277,7 +284,7 @@ export function QuizQuestion({ question, options, answer, explanation }: {
       </div>
       {showAnswer && (
         <div className="bg-slate-50 dark:bg-slate-700 rounded-lg p-3 text-sm">
-          <span className="font-medium text-emerald-600 dark:text-emerald-400">正确答案: {String.fromCharCode(65 + answer)}</span>
+          <span className="font-medium text-emerald-600 dark:text-emerald-400">{t('正确答案')}: {String.fromCharCode(65 + answer)}</span>
           <p className="text-slate-600 dark:text-slate-300 mt-1">{explanation}</p>
         </div>
       )}

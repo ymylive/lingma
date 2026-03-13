@@ -1,5 +1,6 @@
 import type { Exercise, ExerciseDifficulty } from '../data/exercises';
 import { sortExercisesForPractice } from './practiceProgression';
+import { localizeRuntimeText, pickRuntimeText } from './runtimeLocale';
 
 export type UserSkillLevel = 'beginner' | 'foundation' | 'intermediate' | 'advanced';
 export type LearningState = 'onboarding' | 'review' | 'steady' | 'challenge';
@@ -45,53 +46,133 @@ export interface DailyRecommendation {
   ctaLabel: string;
 }
 
+interface LocalizedPair {
+  zh: string;
+  en: string;
+}
+
+interface SkillLevelMetaDefinition {
+  id: UserSkillLevel;
+  label: LocalizedPair;
+  shortLabel: LocalizedPair;
+  description: LocalizedPair;
+  defaultDifficulty: ExerciseDifficulty;
+  recommendedTrack: LocalizedPair;
+  practiceCategories: string[];
+  aiCategories: string[];
+  aiMessage: LocalizedPair;
+}
+
 const SKILL_LEVEL_ORDER: UserSkillLevel[] = ['beginner', 'foundation', 'intermediate', 'advanced'];
 
-export const SKILL_LEVEL_META: Record<UserSkillLevel, SkillLevelMeta> = {
+function localText(zh: string, en: string): LocalizedPair {
+  return { zh, en };
+}
+
+function resolveLocalized(pair: LocalizedPair): string {
+  return pickRuntimeText(pair.zh, pair.en);
+}
+
+function createSkillLevelMeta(definition: SkillLevelMetaDefinition): SkillLevelMeta {
+  return {
+    id: definition.id,
+    get label() {
+      return resolveLocalized(definition.label);
+    },
+    get shortLabel() {
+      return resolveLocalized(definition.shortLabel);
+    },
+    get description() {
+      return resolveLocalized(definition.description);
+    },
+    defaultDifficulty: definition.defaultDifficulty,
+    get recommendedTrack() {
+      return resolveLocalized(definition.recommendedTrack);
+    },
+    practiceCategories: definition.practiceCategories,
+    aiCategories: definition.aiCategories,
+    get aiMessage() {
+      return resolveLocalized(definition.aiMessage);
+    },
+  } as SkillLevelMeta;
+}
+
+const SKILL_LEVEL_META_DEFINITIONS: Record<UserSkillLevel, SkillLevelMetaDefinition> = {
   beginner: {
     id: 'beginner',
-    label: '入门起步',
-    shortLabel: '入门',
-    description: '刚开始刷题，先打稳输入输出、基础编程和简单数据结构。',
+    label: localText('入门起步', 'Beginner Start'),
+    shortLabel: localText('入门', 'Beginner'),
+    description: localText(
+      '刚开始刷题，先打稳输入输出、基础编程和简单数据结构。',
+      'You are just getting started. Focus on input/output, basic programming, and simple data structures first.',
+    ),
     defaultDifficulty: 'easy',
-    recommendedTrack: '基础编程 -> 数组 -> 链表',
+    recommendedTrack: localText('基础编程 -> 数组 -> 链表', 'Fundamentals -> Arrays -> Linked Lists'),
     practiceCategories: ['基础编程', '基础概念', '数组', '链表', '填空题'],
     aiCategories: ['c-basic', '链表', '查找'],
-    aiMessage: '优先生成基础操作、清晰样例和低门槛实现题。',
+    aiMessage: localText(
+      '优先生成基础操作、清晰样例和低门槛实现题。',
+      'Prefer foundational operations, clear examples, and low-barrier implementation tasks.',
+    ),
   },
   foundation: {
     id: 'foundation',
-    label: '基础巩固',
-    shortLabel: '巩固',
-    description: '已经能做基础题，继续扩大到链表、栈队列和排序查找。',
+    label: localText('基础巩固', 'Foundation Builder'),
+    shortLabel: localText('巩固', 'Foundation'),
+    description: localText(
+      '已经能做基础题，继续扩大到链表、栈队列和排序查找。',
+      'You can already solve basic problems. Expand into linked lists, stacks, queues, sorting, and searching.',
+    ),
     defaultDifficulty: 'easy',
-    recommendedTrack: '数组 -> 链表 -> 栈/队列',
+    recommendedTrack: localText('数组 -> 链表 -> 栈/队列', 'Arrays -> Linked Lists -> Stack/Queue'),
     practiceCategories: ['数组', '链表', '栈', '队列', '排序', '查找'],
     aiCategories: ['链表', '栈', '队列', '排序'],
-    aiMessage: '生成简单到中等过渡题，强调模板熟练度和常见边界。',
+    aiMessage: localText(
+      '生成简单到中等过渡题，强调模板熟练度和常见边界。',
+      'Generate easy-to-medium transition problems that emphasize template fluency and common edge cases.',
+    ),
   },
   intermediate: {
     id: 'intermediate',
-    label: '进阶刷题',
-    shortLabel: '进阶',
-    description: '开始主刷典型算法题，重点练中等难度和专题技巧。',
+    label: localText('进阶刷题', 'Intermediate Track'),
+    shortLabel: localText('进阶', 'Intermediate'),
+    description: localText(
+      '开始主刷典型算法题，重点练中等难度和专题技巧。',
+      'Start working through classic algorithm problems with a focus on medium difficulty and topic-specific techniques.',
+    ),
     defaultDifficulty: 'medium',
-    recommendedTrack: '哈希表 -> 双指针 -> 二叉树',
+    recommendedTrack: localText('哈希表 -> 双指针 -> 二叉树', 'Hash Table -> Two Pointers -> Binary Tree'),
     practiceCategories: ['哈希表', '双指针', '字符串', '二叉树', '滑动窗口', '回溯'],
     aiCategories: ['二叉树', '递归', '查找', '贪心'],
-    aiMessage: '生成中等难度专题题，要求用户独立完成算法设计。',
+    aiMessage: localText(
+      '生成中等难度专题题，要求用户独立完成算法设计。',
+      'Generate medium-difficulty topical problems that require the learner to design the algorithm independently.',
+    ),
   },
   advanced: {
     id: 'advanced',
-    label: '冲刺提升',
-    shortLabel: '冲刺',
-    description: '已有较强刷题基础，优先挑战综合题、优化题和考试重点。',
+    label: localText('冲刺提升', 'Advanced Sprint'),
+    shortLabel: localText('冲刺', 'Advanced'),
+    description: localText(
+      '已有较强刷题基础，优先挑战综合题、优化题和考试重点。',
+      'You already have solid foundations. Prioritize composite problems, optimization tasks, and exam-focused practice.',
+    ),
     defaultDifficulty: 'hard',
-    recommendedTrack: '动态规划 -> 图 -> 设计',
+    recommendedTrack: localText('动态规划 -> 图 -> 设计', 'Dynamic Programming -> Graph -> Design'),
     practiceCategories: ['动态规划', '图', '设计', '并查集', '单调栈', '区间'],
     aiCategories: ['动态规划', '图', '贪心', '递归'],
-    aiMessage: '生成中高阶题，突出复杂度优化、状态设计和综合应用。',
+    aiMessage: localText(
+      '生成中高阶题，突出复杂度优化、状态设计和综合应用。',
+      'Generate medium-to-advanced problems that emphasize complexity optimization, state design, and combined techniques.',
+    ),
   },
+};
+
+export const SKILL_LEVEL_META: Record<UserSkillLevel, SkillLevelMeta> = {
+  beginner: createSkillLevelMeta(SKILL_LEVEL_META_DEFINITIONS.beginner),
+  foundation: createSkillLevelMeta(SKILL_LEVEL_META_DEFINITIONS.foundation),
+  intermediate: createSkillLevelMeta(SKILL_LEVEL_META_DEFINITIONS.intermediate),
+  advanced: createSkillLevelMeta(SKILL_LEVEL_META_DEFINITIONS.advanced),
 };
 
 function difficultyRank(difficulty: ExerciseDifficulty): number {
@@ -121,6 +202,12 @@ function hashString(value: string): number {
 function pickByDay<T>(items: T[], seed: string): T | null {
   if (items.length === 0) return null;
   return items[hashString(seed) % items.length];
+}
+
+function getDifficultyLabel(difficulty: ExerciseDifficulty): string {
+  if (difficulty === 'easy') return pickRuntimeText('简单', 'Easy');
+  if (difficulty === 'medium') return pickRuntimeText('中等', 'Medium');
+  return pickRuntimeText('困难', 'Hard');
 }
 
 export function normalizeSkillLevel(value: unknown): UserSkillLevel {
@@ -248,7 +335,7 @@ export function buildDailyRecommendation(
         : levelMeta.defaultDifficulty;
   const focusCategory = exercise?.category || levelMeta.practiceCategories[0];
 
-  const reason =
+  const zhReason =
     learningState === 'review'
       ? `最近出现连续失分，今天优先回到 ${focusCategory} 做复盘修正。`
       : learningState === 'challenge'
@@ -256,6 +343,14 @@ export function buildDailyRecommendation(
         : learningState === 'onboarding'
           ? `先从 ${levelMeta.recommendedTrack} 起步，建立稳定题感。`
           : `按你当前水平继续推进 ${focusCategory}，保持稳定刷题节奏。`;
+  const enReason =
+    learningState === 'review'
+      ? `You have hit consecutive misses recently. Return to ${focusCategory} for targeted review today.`
+      : learningState === 'challenge'
+        ? `Your recent form is steady. You can push ${focusCategory} to a higher difficulty today.`
+        : learningState === 'onboarding'
+          ? `Start with ${levelMeta.recommendedTrack} to build a steady problem-solving rhythm.`
+          : `Keep advancing through ${focusCategory} at your current level and maintain a steady practice rhythm.`;
 
   return {
     dateKey,
@@ -265,9 +360,12 @@ export function buildDailyRecommendation(
     learningState,
     recommendedDifficulty,
     recommendedTrack: levelMeta.recommendedTrack,
-    reason,
+    reason: localizeRuntimeText(zhReason, enReason),
     focusCategory,
-    ctaLabel: learningState === 'review' ? '开始复盘' : '开始今日题',
+    ctaLabel: localizeRuntimeText(
+      learningState === 'review' ? '开始复盘' : '开始今日题',
+      learningState === 'review' ? 'Start Review' : 'Start Today',
+    ),
   };
 }
 
@@ -276,22 +374,29 @@ export function buildAiDefaults(progress: UserProgressSnapshot, requestedLevel?:
   const effectiveLevel = deriveEffectiveSkillLevel(declaredLevel, progress);
   const learningState = deriveLearningState(progress);
   const meta = getSkillLevelMeta(effectiveLevel);
+  const difficulty =
+    learningState === 'review'
+      ? shiftDifficulty(meta.defaultDifficulty, -1)
+      : learningState === 'challenge'
+        ? shiftDifficulty(meta.defaultDifficulty, meta.defaultDifficulty === 'hard' ? 0 : 1)
+        : meta.defaultDifficulty;
 
   return {
     declaredLevel,
     effectiveLevel,
     learningState,
-    difficulty:
-      learningState === 'review'
-        ? shiftDifficulty(meta.defaultDifficulty, -1)
-        : learningState === 'challenge'
-          ? shiftDifficulty(meta.defaultDifficulty, meta.defaultDifficulty === 'hard' ? 0 : 1)
-          : meta.defaultDifficulty,
+    difficulty,
     dataStructure: meta.aiCategories[0],
     suggestedCategories: meta.aiCategories,
     message:
       learningState === 'review'
-        ? `已按你的最近状态切到更稳的难度，先修复基础和边界题。`
-        : `${meta.aiMessage} 当前建议难度为 ${meta.defaultDifficulty === 'easy' ? '简单' : meta.defaultDifficulty === 'medium' ? '中等' : '困难'}。`,
+        ? localizeRuntimeText(
+            '已按你的最近状态切到更稳的难度，先修复基础和边界题。',
+            'Difficulty has been lowered to stabilize your recent performance. Repair fundamentals and edge cases first.',
+          )
+        : pickRuntimeText(
+            `${meta.aiMessage} 当前建议难度为 ${getDifficultyLabel(difficulty)}。`,
+            `${meta.aiMessage} Current recommended difficulty is ${getDifficultyLabel(difficulty)}.`,
+          ),
   };
 }
