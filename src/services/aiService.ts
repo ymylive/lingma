@@ -251,15 +251,20 @@ export async function generateCodingExercise(
   topic: string,
   difficulty: 'easy' | 'medium' | 'hard' = 'medium',
   dataStructure: string = '链表',
-  onProgress?: (text: string) => void
+  onProgress?: (text: string) => void,
+  profileHint?: string
 ): Promise<GeneratedExercise> {
   const difficultyText = difficulty === 'easy' ? '简单' : difficulty === 'medium' ? '中等' : '困难';
+  const profileSection = profileHint
+    ? `\n【用户画像约束】\n${profileHint}\n- 请根据这组画像控制题目抽象层级、样例复杂度、提示力度和边界条件强度。\n`
+    : '';
   const prompt = `请生成一道严格符合ACM/OJ竞赛标准的"${dataStructure} - ${topic}"${difficultyText}难度编程题。
 
 【题目要求】
 - 知识点：${dataStructure}
 - 主题：${topic}  
 - 难度：${difficultyText}（${difficulty === 'easy' ? '基础操作，直接实现' : difficulty === 'medium' ? '需要算法设计，有一定技巧' : '复杂算法，需要优化或高级数据结构'}）
+${profileSection}
 
 【ACM/OJ标准格式 - 必须严格遵守】
 
@@ -321,11 +326,16 @@ export async function generateFillBlank(
   topic: string,
   difficulty: 'easy' | 'medium' | 'hard' = 'easy',
   dataStructure: string = '链表',
-  onProgress?: (text: string) => void
+  onProgress?: (text: string) => void,
+  profileHint?: string
 ): Promise<GeneratedFillBlank> {
+  const profileSection = profileHint
+    ? `\n【用户画像约束】\n${profileHint}\n- 请让待填空函数数量、函数体长度、提示强度和边界条件与该用户画像匹配。\n`
+    : '';
   const prompt = `生成一道关于"${dataStructure} - ${topic}"的${
     difficulty === 'easy' ? '简单' : difficulty === 'medium' ? '中等' : '困难'
   }难度【函数实现填空题】。
+${profileSection}
 
 【题目格式要求】
 这是一道需要补全多个函数体的填空题，类似考试题：
