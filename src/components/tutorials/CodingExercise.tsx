@@ -76,7 +76,7 @@ function verdictText(verdict?: string) {
 export default function CodingExercise({
   exerciseId, title, description, difficulty, category, templates, solutions, testCases, hints = [], explanation, commonMistakes = [],
 }: CodingExerciseProps) {
-  const { recordExerciseComplete } = useUser();
+  const { recordExerciseComplete, user } = useUser();
   const [lang, setLang] = useState<Lang>('cpp');
   const [code, setCode] = useState('');
   const [showHints, setShowHints] = useState(false);
@@ -86,9 +86,12 @@ export default function CodingExercise({
   const [judge, setJudge] = useState<JudgeResponse | null>(null);
 
   useEffect(() => {
-    const preferred = SUPPORTED_LANGS.find((item) => templates[item] || solutions[item]) || 'cpp';
+    const preferredTarget = user?.targetLanguage;
+    const preferred = preferredTarget && (templates[preferredTarget] || solutions[preferredTarget])
+      ? preferredTarget
+      : (SUPPORTED_LANGS.find((item) => templates[item] || solutions[item]) || 'cpp');
     setLang(preferred);
-  }, [solutions, templates]);
+  }, [solutions, templates, user?.targetLanguage]);
 
   useEffect(() => {
     setCode(starterCode(exerciseId, title, lang, templates, solutions));
@@ -256,14 +259,21 @@ export default function CodingExercise({
 }
 
 export function FillInBlank({ exerciseId, title, description, difficulty, category, codeTemplate, blanks, explanation }: FillInBlankProps) {
-  const { recordExerciseComplete } = useUser();
+  const { recordExerciseComplete, user } = useUser();
   const availableLangs = useMemo(() => SUPPORTED_LANGS.filter((item) => codeTemplate[item]), [codeTemplate]);
-  const [lang, setLang] = useState<Lang>(availableLangs[0] || 'cpp');
+  const [lang, setLang] = useState<Lang>(
+    (user?.targetLanguage && availableLangs.includes(user.targetLanguage) ? user.targetLanguage : availableLangs[0]) || 'cpp'
+  );
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [submitted, setSubmitted] = useState(false);
   const [results, setResults] = useState<Record<string, boolean>>({});
 
-  useEffect(() => { setLang(availableLangs[0] || 'cpp'); }, [availableLangs]);
+  useEffect(() => {
+    const preferred = user?.targetLanguage && availableLangs.includes(user.targetLanguage)
+      ? user.targetLanguage
+      : availableLangs[0];
+    setLang(preferred || 'cpp');
+  }, [availableLangs, user?.targetLanguage]);
 
   const checkAnswers = () => {
     const next: Record<string, boolean> = {};

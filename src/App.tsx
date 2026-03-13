@@ -1,7 +1,9 @@
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { UserProvider } from './contexts/UserContext';
 import { ThemeProvider } from './contexts/ThemeContext';
+import { I18nProvider } from './contexts/I18nContext';
 import Header from './components/Header';
+import LocalizationBridge from './components/LocalizationBridge';
 import ProtectedRoute from './components/ProtectedRoute';
 import Home from './pages/Home';
 import Algorithms from './pages/Algorithms';
@@ -52,57 +54,60 @@ function PageWrapper({ children }: { children: React.ReactNode }) {
 function App() {
   return (
     <ThemeProvider>
-      <UserProvider>
-        <Router>
-          {/* Global Aurora Background - Soft, Flowing, High-End */}
-          <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none bg-slate-50 dark:bg-[#000510] transition-colors duration-500">
-             {/* Static Base Gradients (Klein Blue & Pine Yellow) */}
-             <div className="absolute inset-0 opacity-40 dark:opacity-30"
-                  style={{
-                    background: `
-                      radial-gradient(circle at 15% 15%, rgba(0, 47, 167, 0.35) 0%, transparent 50%), /* Klein Top-Left */
-                      radial-gradient(circle at 85% 85%, rgba(0, 47, 167, 0.3) 0%, transparent 50%), /* Klein Bottom-Right */
-                      radial-gradient(circle at 50% 50%, rgba(255, 225, 53, 0.1) 0%, transparent 60%) /* Pine Center */
-                    `,
-                    filter: 'contrast(120%) blur(20px)', // Soften edges
-                  }}
-             />
-             
-             {/* Animated Floating Orb (Pine Yellow) */}
-             <motion.div 
-               animate={{ 
-                 transform: ['translate(0,0) scale(1)', 'translate(5%, -5%) scale(1.1)', 'translate(-2%, 5%) scale(0.95)', 'translate(0,0) scale(1)']
-               }}
-               transition={{ duration: 20, repeat: Infinity, ease: "easeInOut" }}
-               className="absolute inset-0 opacity-30 dark:opacity-20 will-change-transform"
-               style={{
-                 background: `radial-gradient(circle at 70% 30%, rgba(255, 225, 53, 0.25) 0%, transparent 40%)`
-               }}
-             />
+      <I18nProvider>
+        <UserProvider>
+          <Router>
+            <LocalizationBridge />
+            {/* Global Aurora Background - Soft, Flowing, High-End */}
+            <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none bg-slate-50 dark:bg-[#000510] transition-colors duration-500">
+               {/* Static Base Gradients (Klein Blue & Pine Yellow) */}
+               <div className="absolute inset-0 opacity-40 dark:opacity-30"
+                    style={{
+                      background: `
+                        radial-gradient(circle at 15% 15%, rgba(0, 47, 167, 0.35) 0%, transparent 50%), /* Klein Top-Left */
+                        radial-gradient(circle at 85% 85%, rgba(0, 47, 167, 0.3) 0%, transparent 50%), /* Klein Bottom-Right */
+                        radial-gradient(circle at 50% 50%, rgba(255, 225, 53, 0.1) 0%, transparent 60%) /* Pine Center */
+                      `,
+                      filter: 'contrast(120%) blur(20px)', // Soften edges
+                    }}
+               />
+               
+               {/* Animated Floating Orb (Pine Yellow) */}
+               <motion.div 
+                 animate={{ 
+                   transform: ['translate(0,0) scale(1)', 'translate(5%, -5%) scale(1.1)', 'translate(-2%, 5%) scale(0.95)', 'translate(0,0) scale(1)']
+                 }}
+                 transition={{ duration: 20, repeat: Infinity, ease: "easeInOut" }}
+                 className="absolute inset-0 opacity-30 dark:opacity-20 will-change-transform"
+                 style={{
+                   background: `radial-gradient(circle at 70% 30%, rgba(255, 225, 53, 0.25) 0%, transparent 40%)`
+                 }}
+               />
 
-             {/* Animated Floating Orb (Klein Blue) */}
-             <motion.div 
-               animate={{ 
-                 transform: ['translate(0,0) scale(1)', 'translate(-5%, 5%) scale(1.1)', 'translate(5%, -2%) scale(0.95)', 'translate(0,0) scale(1)']
-               }}
-               transition={{ duration: 25, repeat: Infinity, ease: "easeInOut", delay: 2 }}
-               className="absolute inset-0 opacity-30 dark:opacity-20 will-change-transform"
-               style={{
-                 background: `radial-gradient(circle at 20% 80%, rgba(0, 47, 167, 0.25) 0%, transparent 40%)`
-               }}
-             />
-          </div>
+               {/* Animated Floating Orb (Klein Blue) */}
+               <motion.div 
+                 animate={{ 
+                   transform: ['translate(0,0) scale(1)', 'translate(-5%, 5%) scale(1.1)', 'translate(5%, -2%) scale(0.95)', 'translate(0,0) scale(1)']
+                 }}
+                 transition={{ duration: 25, repeat: Infinity, ease: "easeInOut", delay: 2 }}
+                 className="absolute inset-0 opacity-30 dark:opacity-20 will-change-transform"
+                 style={{
+                   background: `radial-gradient(circle at 20% 80%, rgba(0, 47, 167, 0.25) 0%, transparent 40%)`
+                 }}
+               />
+            </div>
 
-          <div className="relative z-10 flex flex-col min-h-screen">
-            <Header />
-            <main className="flex-grow">
-               <AnimatedRoutes />
-            </main>
-          </div>
-          
-          <PixelCat />
-        </Router>
-      </UserProvider>
+            <div className="relative z-10 flex flex-col min-h-screen">
+              <Header />
+              <main className="flex-grow">
+                 <AnimatedRoutes />
+              </main>
+            </div>
+            
+            <PixelCat />
+          </Router>
+        </UserProvider>
+      </I18nProvider>
     </ThemeProvider>
   );
 }

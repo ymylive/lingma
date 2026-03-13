@@ -10,8 +10,10 @@ import {
   type AIConfig,
 } from '../../services/aiService';
 import CodingExercise, { FillInBlank } from './CodingExercise';
+import { useI18n } from '../../contexts/I18nContext';
 import { useUser } from '../../contexts/UserContext';
 import { buildAiDefaults, getSkillLevelMeta } from '../../utils/userPersonalization';
+import { getTargetLanguageMeta } from '../../utils/targetLanguages';
 
 const PROVIDERS = [
   { id: 'aabao', name: 'AABao AI', baseUrl: 'https://api.aabao.top/v1/chat/completions', model: 'deepseek-v3.2-thinking' },
@@ -66,6 +68,7 @@ const LEARNING_STATE_LABELS = {
 
 export default function AIExerciseGenerator() {
   const { user, progress } = useUser();
+  const { isEnglish } = useI18n();
   const [showConfig, setShowConfig] = useState(false);
   const [config, setConfig] = useState<AIConfig>(getAIConfig());
   const [dataStructure, setDataStructure] = useState('链表');
@@ -82,11 +85,13 @@ export default function AIExerciseGenerator() {
 
   const aiDefaults = buildAiDefaults(progress, user?.skillLevel || progress.skillLevel);
   const levelMeta = getSkillLevelMeta(aiDefaults.effectiveLevel);
+  const targetLanguageMeta = getTargetLanguageMeta(user?.targetLanguage);
   const profileHint = [
-    `用户当前有效水平：${levelMeta.label}`,
-    `当前学习状态：${LEARNING_STATE_LABELS[aiDefaults.learningState]}`,
-    `系统推荐专题：${aiDefaults.suggestedCategories.slice(0, 3).join('、')}`,
-    `当前出题专题：${dataStructure}`,
+    isEnglish ? `Current effective level: ${levelMeta.label}` : `用户当前有效水平：${levelMeta.label}`,
+    isEnglish ? `Current learning state: ${LEARNING_STATE_LABELS[aiDefaults.learningState]}` : `当前学习状态：${LEARNING_STATE_LABELS[aiDefaults.learningState]}`,
+    isEnglish ? `Recommended topics: ${aiDefaults.suggestedCategories.slice(0, 3).join(', ')}` : `系统推荐专题：${aiDefaults.suggestedCategories.slice(0, 3).join('、')}`,
+    isEnglish ? `Primary programming language: ${targetLanguageMeta.label}` : `主学编程语言：${targetLanguageMeta.label}`,
+    isEnglish ? `Current requested topic: ${dataStructure}` : `当前出题专题：${dataStructure}`,
   ].join('\n');
 
   useEffect(() => {
