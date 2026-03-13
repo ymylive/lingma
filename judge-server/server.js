@@ -29,6 +29,15 @@ const MAX_CONCURRENT_JOBS = Math.max(1, Number(process.env.JUDGE_MAX_CONCURRENT_
 let activeJobs = 0;
 const TIMEOUT = 5000; // 5秒超时
 const MAX_OUTPUT = 65536; // 64KB最大输出
+const CSHARP_PROJECT_FILE = `<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>disable</Nullable>
+  </PropertyGroup>
+</Project>
+`;
 
 // 确保临时目录存在
 if (!fs.existsSync(TEMP_DIR)) {
@@ -93,6 +102,10 @@ const LANG_CONFIG = {
     run: (dir, className) => `java -cp "${dir}" -Xmx256m ${className}`,
     needCompile: true
   },
+  csharp: {
+    ext: '.cs',
+    needCompile: true
+  },
   python: {
     ext: '.py',
     run: (file) => `python3 -u "${file}"`,
@@ -129,6 +142,201 @@ function compareOutput(expected, actual) {
   };
   
   return normalize(expected) === normalize(actual);
+}
+
+function truncateText(value = '') {
+  return value.length > 200 ? `${value.substring(0, 200)}...` : value;
+}
+
+function inferCaseKind(index, total) {
+  if (total <= 1) return 'sample';
+  if (index === 0) return 'sample';
+  const ratio = (index + 1) / total;
+  if (ratio <= 0.5) return 'basic';
+  if (ratio < 1) return 'boundary';
+  return 'stress';
+}
+
+function inferCheckpointTitle(index, total, description) {
+  if (description) return description;
+
+  const kind = inferCaseKind(index, total);
+  if (kind === 'sample') return '样例检查';
+  if (kind === 'basic') return '基础检查';
+  if (kind === 'boundary') return '边界检查';
+  return '稳健性检查';
+}
+
+function normalizeTestCase(tc, index, total) {
+  const kind = tc.kind || inferCaseKind(index, total);
+  const checkpointTitle = tc.checkpoint || inferCheckpointTitle(index, total, tc.description);
+  const checkpointGroup = tc.group || (
+    kind === 'sample'
+      ? '样例'
+      : kind === 'basic'
+        ? '基础'
+        : kind === 'boundary'
+          ? '边界'
+          : '压力'
+  );
+  const checkpointId = `${checkpointGroup}-${checkpointTitle}`
+    .replace(/[^\w\u4e00-\u9fa5-]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+  const defaultWeight = kind === 'stress' ? 3 : kind === 'boundary' ? 2 : 1;
+  const weight = Number(tc.weight) > 0 ? Number(tc.weight) : defaultWeight;
+  const feedbackHint = tc.feedbackHint || (
+    kind === 'boundary'
+      ? '重点检查空输入、极值、重复元素和下标边界。'
+      : kind === 'stress'
+        ? '重点检查时间复杂度、空间占用和循环终止条件。'
+        : '先核对核心逻辑、输入解析和输出格式。'
+  );
+
+  return {
+    ...tc,
+    description: tc.description || checkpointTitle,
+    checkpointId,
+    checkpointTitle,
+    checkpointGroup,
+    weight,
+    hidden: Boolean(tc.hidden),
+    feedbackHint,
+    kind
+  };
+}
+
+function buildCaseFeedback(status, passed, testCase) {
+  if (passed) {
+    return {
+      feedbackLevel: 'pass',
+      feedbackTitle: '检查点通过',
+      feedbackMessage: '该检查点已经通过，可以继续推进下一层。',
+      nextAction: '继续保持当前思路，开始处理更高难度的测试。'
+    };
+  }
+
+  if (status === 'CE') {
+    return {
+      feedbackLevel: 'blocker',
+      feedbackTitle: '编译未通过',
+      feedbackMessage: '代码还没有通过编译，先修复语法、类型或缺失引用。',
+      nextAction: '先根据编译器报错定位行号，再重新提交。'
+    };
+  }
+
+  if (status === 'RE') {
+    return {
+      feedbackLevel: 'blocker',
+      feedbackTitle: '运行异常',
+      feedbackMessage: '程序在运行阶段异常退出，通常是越界、空指针、除零或输入处理问题。',
+      nextAction: testCase.feedbackHint || '先补齐边界保护，再重新运行样例和边界测试。'
+    };
+  }
+
+  if (status === 'TLE' || status === 'OLE') {
+    return {
+      feedbackLevel: 'warning',
+      feedbackTitle: status === 'TLE' ? '性能未达标' : '输出超限',
+      feedbackMessage: status === 'TLE'
+        ? '程序在限制时间内没有完成，复杂度或循环终止条件需要优化。'
+        : '输出量超过限制，通常是死循环或调试打印未移除。',
+      nextAction: testCase.feedbackHint || '检查循环边界、数据规模和无效输出。'
+    };
+  }
+
+  return {
+    feedbackLevel: testCase.kind === 'sample' || testCase.kind === 'basic' ? 'review' : 'warning',
+    feedbackTitle: testCase.kind === 'boundary' ? '边界检查未通过' : '结果不符合预期',
+    feedbackMessage: testCase.feedbackHint || '当前答案未通过该检查点，请先核对核心逻辑和输出格式。',
+    nextAction: testCase.feedbackHint || '先对照失败输入重跑，再缩小问题范围。'
+  };
+}
+
+function buildCheckpointSummaries(results) {
+  const groups = new Map();
+
+  for (const result of results) {
+    const id = result.checkpointId || `case-${result.testCase || 'unknown'}`;
+    const weight = result.weight || 1;
+    const current = groups.get(id) || {
+      id,
+      title: result.checkpointTitle || result.description || '未命名检查点',
+      group: result.checkpointGroup || '通用',
+      total: 0,
+      passedCount: 0,
+      score: 0,
+      maxScore: 0,
+      failedResult: null
+    };
+
+    current.total += 1;
+    current.maxScore += weight;
+    if (result.passed) {
+      current.passedCount += 1;
+      current.score += weight;
+    } else if (!current.failedResult) {
+      current.failedResult = result;
+    }
+
+    groups.set(id, current);
+  }
+
+  return Array.from(groups.values()).map((group) => {
+    const passed = group.total > 0 && group.passedCount === group.total;
+    const failedResult = group.failedResult;
+
+    return {
+      id: group.id,
+      title: group.title,
+      group: group.group,
+      passed,
+      passedCount: group.passedCount,
+      total: group.total,
+      score: group.score,
+      maxScore: group.maxScore,
+      feedbackLevel: passed ? 'pass' : (failedResult?.feedbackLevel || 'review'),
+      feedbackMessage: passed
+        ? '该组检查点已全部通过。'
+        : (failedResult?.feedbackMessage || failedResult?.feedbackHint || '先修复本组失败测试。')
+    };
+  });
+}
+
+function buildJudgeSummary(results, totalCases, checkpoints, allPassed) {
+  const passed = results.filter((result) => result.passed).length;
+  const maxScore = results.reduce((sum, result) => sum + (result.weight || 1), 0);
+  const earnedScore = results.reduce((sum, result) => sum + (result.passed ? (result.weight || 1) : 0), 0);
+  const score = maxScore ? Math.round((earnedScore / maxScore) * 100) : (allPassed ? 100 : 0);
+  const runtimeValues = results
+    .map((result) => result.time)
+    .filter((value) => typeof value === 'number');
+  const maxMs = runtimeValues.length ? Math.max(...runtimeValues) : 0;
+  const avgMs = runtimeValues.length ? Math.round(runtimeValues.reduce((sum, value) => sum + value, 0) / runtimeValues.length) : 0;
+  const firstFailed = results.find((result) => !result.passed);
+  const passedCheckpoints = checkpoints.filter((checkpoint) => checkpoint.passed).length;
+
+  return {
+    total: totalCases,
+    passed,
+    failed: Math.max(0, totalCases - passed),
+    verdict: allPassed ? 'Accepted' : (firstFailed?.status || 'WA'),
+    score,
+    passRate: totalCases ? Math.round((passed / totalCases) * 100) : 0,
+    passedCheckpoints,
+    totalCheckpoints: checkpoints.length,
+    feedbackLevel: allPassed ? 'excellent' : (firstFailed?.feedbackLevel || 'review'),
+    feedbackMessage: allPassed
+      ? '所有检查点已通过，可以进入下一层刷题。'
+      : (firstFailed?.feedbackMessage || '仍有关键检查点未通过，建议优先修复失败用例。'),
+    nextAction: allPassed
+      ? '继续挑战推荐下一题，保持难度递进。'
+      : (firstFailed?.nextAction || '先修复第一个失败检查点，再扩大验证范围。'),
+    runtime: {
+      avgMs,
+      maxMs
+    }
+  };
 }
 
 // 使用spawn运行程序（支持stdin输入）
@@ -201,6 +409,14 @@ async function compileCode(language, code, workDir) {
     sourceFile = path.join(workDir, `${className}.java`);
     fs.writeFileSync(sourceFile, code);
     executablePath = workDir;
+  } else if (language === 'csharp') {
+    const projectDir = path.join(workDir, 'csharp');
+    fs.mkdirSync(projectDir, { recursive: true });
+    sourceFile = path.join(projectDir, 'Program.cs');
+    const projectFile = path.join(projectDir, 'JudgeApp.csproj');
+    fs.writeFileSync(sourceFile, code);
+    fs.writeFileSync(projectFile, CSHARP_PROJECT_FILE);
+    executablePath = path.join(projectDir, 'bin', 'Release', 'net8.0', 'JudgeApp.dll');
   } else {
     sourceFile = path.join(workDir, `main${config.ext}`);
     fs.writeFileSync(sourceFile, code);
@@ -208,9 +424,11 @@ async function compileCode(language, code, workDir) {
   }
   
   if (config.needCompile) {
-    const compileCmd = language === 'java' 
+    const compileCmd = language === 'java'
       ? config.compile(sourceFile, workDir)
-      : config.compile(sourceFile, executablePath);
+      : language === 'csharp'
+        ? `dotnet build "${path.join(workDir, 'csharp', 'JudgeApp.csproj')}" -c Release -nologo --verbosity quiet --disable-build-servers 2>&1`
+        : config.compile(sourceFile, executablePath);
     
     try {
       execSync(compileCmd, { timeout: 30000, maxBuffer: 1024 * 1024 });
@@ -229,7 +447,7 @@ app.post('/api/judge', async (req, res) => {
   const { code, language, testCases } = req.body;
   let jobAcquired = false;
   
-  if (!code || !language || !testCases) {
+  if (!code || !language || !Array.isArray(testCases)) {
     return res.status(400).json({ error: '缺少必要参数' });
   }
   
@@ -248,17 +466,52 @@ app.post('/api/judge', async (req, res) => {
   fs.mkdirSync(workDir, { recursive: true });
   
   try {
+    const normalizedTestCases = testCases.map((tc, index) => normalizeTestCase(tc, index, testCases.length));
+
     // 编译
     const compileResult = await compileCode(language, code, workDir);
     if (!compileResult.success) {
+      const compileCase = normalizeTestCase({
+        input: '',
+        expectedOutput: '',
+        description: '编译检查',
+        checkpoint: '编译检查',
+        group: '编译',
+        weight: 1,
+        feedbackHint: '先修复编译错误，再重新运行样例和边界测试。',
+        kind: 'basic'
+      }, 0, 1);
+      const compileFeedback = buildCaseFeedback('CE', false, compileCase);
+      const compileResults = [{
+        passed: false,
+        testCase: 0,
+        input: '',
+        expectedOutput: '',
+        actualOutput: '',
+        error: `编译错误 (Compilation Error):\n${compileResult.error}`,
+        time: 0,
+        status: 'CE',
+        description: compileCase.description,
+        checkpoint: compileCase.checkpointTitle,
+        checkpointId: compileCase.checkpointId,
+        checkpointTitle: compileCase.checkpointTitle,
+        checkpointGroup: compileCase.checkpointGroup,
+        hidden: false,
+        weight: compileCase.weight,
+        feedbackHint: compileCase.feedbackHint,
+        kind: compileCase.kind,
+        ...compileFeedback
+      }];
+      const checkpoints = buildCheckpointSummaries(compileResults);
+      const summary = buildJudgeSummary(compileResults, normalizedTestCases.length || 1, checkpoints, false);
       cleanup(workDir);
       return res.json({
         success: false,
-        results: [{
-          passed: false,
-          error: `编译错误 (Compilation Error):\n${compileResult.error}`,
-          status: 'CE'
-        }]
+        error: compileResult.error,
+        results: compileResults,
+        allPassed: false,
+        checkpoints,
+        summary
       });
     }
     
@@ -268,8 +521,8 @@ app.post('/api/judge', async (req, res) => {
     const results = [];
     let allPassed = true;
     
-    for (let i = 0; i < testCases.length; i++) {
-      const tc = testCases[i];
+    for (let i = 0; i < normalizedTestCases.length; i++) {
+      const tc = normalizedTestCases[i];
       const input = tc.input || '';
       const expected = tc.expectedOutput || '';
       
@@ -278,6 +531,9 @@ app.post('/api/judge', async (req, res) => {
       if (language === 'java') {
         cmd = 'java';
         args = ['-cp', executablePath, '-Xmx256m', className];
+      } else if (language === 'csharp') {
+        cmd = 'dotnet';
+        args = [executablePath];
       } else if (language === 'python') {
         cmd = 'python3';
         args = ['-u', executablePath];
@@ -287,51 +543,71 @@ app.post('/api/judge', async (req, res) => {
       }
       
       const runResult = await runProgram(cmd, args, input, TIMEOUT);
+      const visibleInput = tc.hidden ? '[hidden input]' : truncateText(input);
+      const visibleExpected = tc.hidden ? '[hidden expected output]' : truncateText(expected);
       
       if (!runResult.success) {
         allPassed = false;
+        const feedback = buildCaseFeedback(runResult.status, false, tc);
         results.push({
           passed: false,
           testCase: i + 1,
-          input: input.length > 200 ? input.substring(0, 200) + '...' : input,
-          expectedOutput: expected.length > 200 ? expected.substring(0, 200) + '...' : expected,
+          input: visibleInput,
+          expectedOutput: visibleExpected,
           actualOutput: '',
           error: runResult.error,
           time: runResult.time,
-          status: runResult.status
+          status: runResult.status,
+          description: tc.description,
+          checkpoint: tc.checkpointTitle,
+          checkpointId: tc.checkpointId,
+          checkpointTitle: tc.checkpointTitle,
+          checkpointGroup: tc.checkpointGroup,
+          hidden: tc.hidden,
+          weight: tc.weight,
+          feedbackHint: tc.feedbackHint,
+          kind: tc.kind,
+          ...feedback
         });
       } else {
         const actual = runResult.output;
         const passed = compareOutput(expected, actual);
         
         if (!passed) allPassed = false;
+        const feedback = buildCaseFeedback(passed ? 'AC' : 'WA', passed, tc);
         
         results.push({
           passed,
           testCase: i + 1,
-          input: input.length > 200 ? input.substring(0, 200) + '...' : input,
-          expectedOutput: expected.length > 200 ? expected.substring(0, 200) + '...' : expected,
-          actualOutput: actual.length > 200 ? actual.substring(0, 200) + '...' : actual,
+          input: visibleInput,
+          expectedOutput: visibleExpected,
+          actualOutput: tc.hidden ? '[hidden actual output]' : truncateText(actual),
           time: runResult.time,
-          status: passed ? 'AC' : 'WA'  // Accepted / Wrong Answer
+          status: passed ? 'AC' : 'WA',
+          description: tc.description,
+          checkpoint: tc.checkpointTitle,
+          checkpointId: tc.checkpointId,
+          checkpointTitle: tc.checkpointTitle,
+          checkpointGroup: tc.checkpointGroup,
+          hidden: tc.hidden,
+          weight: tc.weight,
+          feedbackHint: tc.feedbackHint,
+          kind: tc.kind,
+          ...feedback
         });
       }
     }
     
     cleanup(workDir);
     
-    // ACM/OJ标准结果格式
-    const passedCount = results.filter(r => r.passed).length;
+    const checkpoints = buildCheckpointSummaries(results);
+    const summary = buildJudgeSummary(results, normalizedTestCases.length, checkpoints, allPassed);
     res.json({
       success: true,
       results,
       allPassed,
-      summary: {
-        total: testCases.length,
-        passed: passedCount,
-        failed: testCases.length - passedCount,
-        verdict: allPassed ? 'Accepted' : results.find(r => !r.passed)?.status || 'WA'
-      }
+      checkpoints,
+      summary
     });
     
   } catch (error) {
@@ -385,6 +661,9 @@ app.post('/api/run', async (req, res) => {
     if (language === 'java') {
       cmd = 'java';
       args = ['-cp', executablePath, '-Xmx256m', className];
+    } else if (language === 'csharp') {
+      cmd = 'dotnet';
+      args = [executablePath];
     } else if (language === 'python') {
       cmd = 'python3';
       args = ['-u', executablePath];

@@ -4,22 +4,41 @@ import { allClassicExercises, recursionExercises } from './classicExercises';
 import { digitalLogicExamExercises } from './digitalLogicExercises';
 import { moreArray2DExercises } from './moreArray2DExercises';
 
+export type ExerciseDifficulty = 'easy' | 'medium' | 'hard';
+export type ExerciseType = 'coding' | 'fillblank';
+export type PracticeStage = 'warmup' | 'solid' | 'upgrade' | 'sprint';
+
+export interface ExerciseTestCase {
+  input: string;
+  expectedOutput: string;
+  description: string;
+  checkpoint?: string;
+  group?: string;
+  hidden?: boolean;
+  weight?: number;
+  feedbackHint?: string;
+  kind?: 'sample' | 'basic' | 'boundary' | 'stress' | 'hidden';
+}
+
 export interface Exercise {
   id: string;
   category: string;
   title: string;
   description: string;
-  difficulty: 'easy' | 'medium' | 'hard';
-  type: 'coding' | 'fillblank';
-  templates?: { c?: string; cpp: string; java: string; python: string };
-  solutions?: { c?: string; cpp: string; java: string; python: string };
-  codeTemplate?: { c?: string; cpp: string; java: string; python: string };
+  difficulty: ExerciseDifficulty;
+  type: ExerciseType;
+  templates?: { c?: string; cpp: string; java: string; csharp?: string; python: string };
+  solutions?: { c?: string; cpp: string; java: string; csharp?: string; python: string };
+  codeTemplate?: { c?: string; cpp: string; java: string; csharp?: string; python: string };
   blanks?: { id: string; answer: string; hint: string }[];
-  testCases?: { input: string; expectedOutput: string; description: string }[];
+  testCases?: ExerciseTestCase[];
   hints?: string[];
   explanation: string;
   commonMistakes?: string[]; // 常见错误/易错点
   isExamFocus?: boolean; // 考试重点题目标记
+  practiceTrack?: string;
+  practiceStage?: PracticeStage;
+  practiceOrder?: number;
 }
 
 // ==================== 链表 ====================
