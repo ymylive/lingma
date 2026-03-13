@@ -11,6 +11,7 @@ export interface PracticeStageMeta {
   id: PracticeStage;
   label: string;
   summary: string;
+  difficultyLabel: string;
   accent: string;
   pill: string;
 }
@@ -33,6 +34,19 @@ export interface PracticePath {
   stages: PracticeStageBucket[];
 }
 
+export interface DifficultyMeta {
+  id: ExerciseDifficulty;
+  label: string;
+  stars: string;
+  accent: string;
+}
+
+export interface ExerciseProgressionMeta {
+  stageId: PracticeStage;
+  stageIndex: number;
+  orderInCategory: number;
+}
+
 const difficultyRank: Record<ExerciseDifficulty, number> = {
   easy: 0,
   medium: 1,
@@ -46,6 +60,7 @@ export const PRACTICE_STAGE_META: PracticeStageMeta[] = [
     id: 'warmup',
     label: '热身层',
     summary: '先用模板题和样例题把输入输出与解题套路跑通。',
+    difficultyLabel: '建议难度: 简单起步',
     accent: 'border-sky-200 bg-sky-50 text-sky-700',
     pill: 'bg-sky-100 text-sky-700',
   },
@@ -53,6 +68,7 @@ export const PRACTICE_STAGE_META: PracticeStageMeta[] = [
     id: 'solid',
     label: '巩固层',
     summary: '开始稳定通过同类题型，减少重复犯错。',
+    difficultyLabel: '建议难度: 简单进阶',
     accent: 'border-emerald-200 bg-emerald-50 text-emerald-700',
     pill: 'bg-emerald-100 text-emerald-700',
   },
@@ -60,6 +76,7 @@ export const PRACTICE_STAGE_META: PracticeStageMeta[] = [
     id: 'upgrade',
     label: '进阶层',
     summary: '拉高复杂度与边界覆盖，进入中阶题节奏。',
+    difficultyLabel: '建议难度: 中等主练',
     accent: 'border-amber-200 bg-amber-50 text-amber-700',
     pill: 'bg-amber-100 text-amber-700',
   },
@@ -67,10 +84,32 @@ export const PRACTICE_STAGE_META: PracticeStageMeta[] = [
     id: 'sprint',
     label: '冲刺层',
     summary: '集中处理高频难题、综合题和考试重点题。',
+    difficultyLabel: '建议难度: 困难与重点',
     accent: 'border-rose-200 bg-rose-50 text-rose-700',
     pill: 'bg-rose-100 text-rose-700',
   },
 ];
+
+export const DIFFICULTY_META: Record<ExerciseDifficulty, DifficultyMeta> = {
+  easy: {
+    id: 'easy',
+    label: '简单',
+    stars: '★',
+    accent: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300',
+  },
+  medium: {
+    id: 'medium',
+    label: '中等',
+    stars: '★★',
+    accent: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
+  },
+  hard: {
+    id: 'hard',
+    label: '困难',
+    stars: '★★★',
+    accent: 'bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300',
+  },
+};
 
 export const CATEGORY_GROUPS: Array<{ group: string; items: CategoryMeta[] }> = [
   {
@@ -164,6 +203,10 @@ export function getDifficultyRank(difficulty: ExerciseDifficulty): number {
   return difficultyRank[difficulty];
 }
 
+export function getDifficultyMeta(difficulty: ExerciseDifficulty): DifficultyMeta {
+  return DIFFICULTY_META[difficulty];
+}
+
 export function getCategoryMeta(category: string): CategoryMeta {
   for (const group of CATEGORY_GROUPS) {
     const found = group.items.find((item) => item.id === category);
@@ -181,6 +224,8 @@ export function getCategoryMeta(category: string): CategoryMeta {
 }
 
 export function sortExercisesForPractice(exercises: Exercise[], completedIds?: Set<string>): Exercise[] {
+  const stageMap = assignStageByDifficulty(exercises);
+
   return [...exercises].sort((left, right) => {
     if (completedIds) {
       const leftCompleted = completedIds.has(left.id);
@@ -190,8 +235,10 @@ export function sortExercisesForPractice(exercises: Exercise[], completedIds?: S
       }
     }
 
-    const leftStage = left.practiceStage ? stageOrder.indexOf(left.practiceStage) : -1;
-    const rightStage = right.practiceStage ? stageOrder.indexOf(right.practiceStage) : -1;
+    const leftStageId = left.practiceStage ?? stageMap.get(left.id);
+    const rightStageId = right.practiceStage ?? stageMap.get(right.id);
+    const leftStage = leftStageId ? stageOrder.indexOf(leftStageId) : -1;
+    const rightStage = rightStageId ? stageOrder.indexOf(rightStageId) : -1;
     if (leftStage !== rightStage) {
       return leftStage - rightStage;
     }
@@ -228,16 +275,77 @@ function assignStageByIndex(index: number, total: number): PracticeStage {
   return PRACTICE_STAGE_META[Math.min(PRACTICE_STAGE_META.length - 1, normalizedIndex)].id;
 }
 
+function assignStageByDifficulty(sorted: Exercise[]): Map<string, PracticeStage> {
+  const stageMap = new Map<string, PracticeStage>();
+  const easyExercises = sorted.filter((exercise) => exercise.difficulty === 'easy');
+  const mediumExercises = sorted.filter((exercise) => exercise.difficulty === 'medium');
+  const hardExercises = sorted.filter((exercise) => exercise.difficulty === 'hard');
+
+  const easyWarmupCount = easyExercises.length <= 1 ? easyExercises.length : Math.max(1, Math.ceil(easyExercises.length * 0.5));
+  const mediumSolidCount = easyExercises.length === 0 && mediumExercises.length > 1 ? Math.max(1, Math.floor(mediumExercises.length * 0.35)) : 0;
+  const hardUpgradeCount = mediumExercises.length === 0 && hardExercises.length > 1 ? Math.max(1, Math.floor(hardExercises.length * 0.4)) : 0;
+
+  easyExercises.forEach((exercise, index) => {
+    stageMap.set(exercise.id, index < easyWarmupCount ? 'warmup' : 'solid');
+  });
+
+  mediumExercises.forEach((exercise, index) => {
+    stageMap.set(exercise.id, index < mediumSolidCount ? 'solid' : 'upgrade');
+  });
+
+  hardExercises.forEach((exercise, index) => {
+    stageMap.set(exercise.id, index < hardUpgradeCount ? 'upgrade' : 'sprint');
+  });
+
+  sorted
+    .filter((exercise) => exercise.isExamFocus && exercise.difficulty !== 'easy')
+    .forEach((exercise) => {
+      stageMap.set(exercise.id, 'sprint');
+    });
+
+  return stageMap;
+}
+
 function groupIntoStages(exercises: Exercise[]): Map<PracticeStage, Exercise[]> {
   const sorted = sortExercisesForPractice(exercises);
   const grouped = new Map<PracticeStage, Exercise[]>(stageOrder.map((stage) => [stage, []]));
+  const difficultyStageMap = assignStageByDifficulty(sorted);
 
   sorted.forEach((exercise, index) => {
-    const stageId = exercise.practiceStage ?? assignStageByIndex(index, sorted.length);
+    const stageId = exercise.practiceStage ?? difficultyStageMap.get(exercise.id) ?? assignStageByIndex(index, sorted.length);
     grouped.get(stageId)?.push(exercise);
   });
 
   return grouped;
+}
+
+export function buildExerciseProgressionLookup(exercises: Exercise[]): Map<string, ExerciseProgressionMeta> {
+  const byCategory = new Map<string, Exercise[]>();
+  const lookup = new Map<string, ExerciseProgressionMeta>();
+
+  exercises.forEach((exercise) => {
+    const current = byCategory.get(exercise.category) ?? [];
+    current.push(exercise);
+    byCategory.set(exercise.category, current);
+  });
+
+  byCategory.forEach((categoryExercises) => {
+    const grouped = groupIntoStages(categoryExercises);
+    let orderInCategory = 1;
+    stageOrder.forEach((stageId) => {
+      const stageExercises = grouped.get(stageId) ?? [];
+      stageExercises.forEach((exercise) => {
+        lookup.set(exercise.id, {
+          stageId,
+          stageIndex: stageOrder.indexOf(stageId) + 1,
+          orderInCategory,
+        });
+        orderInCategory += 1;
+      });
+    });
+  });
+
+  return lookup;
 }
 
 export function getRecommendedExercise(exercises: Exercise[], completedIds: Set<string>): Exercise | null {

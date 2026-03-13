@@ -4,9 +4,12 @@ import { allExercises, type Exercise } from '../data/exercises';
 import { useUser } from '../contexts/UserContext';
 import {
   CATEGORY_GROUPS,
+  PRACTICE_STAGE_META,
   buildPracticePath,
+  buildExerciseProgressionLookup,
   dedupeExercises,
   getCategoryMeta,
+  getDifficultyMeta,
   getRecommendedExercise,
   sortExercisesForPractice,
 } from '../utils/practiceProgression';
@@ -86,6 +89,8 @@ export default function Practice() {
 
   const exercises = useMemo(() => dedupeExercises(allExercises), []);
   const completedSet = useMemo(() => new Set(progress.completedExercises), [progress.completedExercises]);
+  const progressionLookup = useMemo(() => buildExerciseProgressionLookup(exercises), [exercises]);
+  const stageMetaLookup = useMemo(() => new Map(PRACTICE_STAGE_META.map((item) => [item.id, item])), []);
   const latestAttemptMap = useMemo(() => {
     const map = new Map<string, (typeof progress.exerciseHistory)[number]>();
     for (const record of progress.exerciseHistory) {
@@ -194,13 +199,24 @@ export default function Practice() {
                     </div>
                     {recommendedExercise ? (
                       <div className="mt-4 rounded-2xl border border-indigo-200 bg-indigo-50 p-4 dark:border-indigo-800 dark:bg-indigo-900/20">
+                        {(() => {
+                          const progression = progressionLookup.get(recommendedExercise.id);
+                          const difficultyMeta = getDifficultyMeta(recommendedExercise.difficulty);
+                          const stageMeta = progression ? stageMetaLookup.get(progression.stageId) : undefined;
+                          return (
+                            <>
                         <div className="flex flex-wrap gap-2">
                           <span className="rounded-full bg-white px-3 py-1 text-xs font-medium text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-200">{recommendedExercise.category}</span>
-                          <span className="rounded-full bg-white px-3 py-1 text-xs font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-200">{recommendedExercise.difficulty}</span>
+                          <span className={`rounded-full px-3 py-1 text-xs font-medium ${difficultyMeta.accent}`}>{difficultyMeta.stars} {difficultyMeta.label}</span>
+                          {stageMeta && <span className="rounded-full bg-white px-3 py-1 text-xs font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-200">第 {progression?.stageIndex} 层 · {stageMeta.label}</span>}
                           {recommendedExercise.isExamFocus && <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">考试重点</span>}
                         </div>
                         <div className="mt-3 text-lg font-semibold text-slate-900 dark:text-white">{recommendedExercise.title}</div>
                         <p className="mt-2 line-clamp-3 text-sm text-slate-600 dark:text-slate-300">{recommendedExercise.description}</p>
+                        {stageMeta && <div className="mt-3 rounded-2xl bg-white/80 px-3 py-2 text-xs text-slate-600 dark:bg-slate-900/60 dark:text-slate-200">{stageMeta.difficultyLabel}</div>}
+                            </>
+                          );
+                        })()}
                       </div>
                     ) : <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-700 dark:border-emerald-800 dark:bg-emerald-900/20 dark:text-emerald-300">当前筛选范围已经全部完成，可以切换分类或挑战 AI 出题。</div>}
                   </div>
@@ -220,6 +236,7 @@ export default function Practice() {
                     <div>
                       <h2 className="text-lg font-semibold text-slate-900 dark:text-white">层级刷题路径</h2>
                       <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">{getCategoryMeta(activePath.category).summary}</p>
+                      <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{'默认顺序: 简单起步 -> 简单进阶 -> 中等主练 -> 困难与考试重点。'}</p>
                     </div>
                     <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600 dark:bg-slate-700 dark:text-slate-200">{activePath.completionRate}% 完成</span>
                   </div>
@@ -231,6 +248,7 @@ export default function Practice() {
                           <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${stage.pill}`}>{stage.completed}/{stage.total}</span>
                         </div>
                         <p className="mt-2 text-sm opacity-90">{stage.summary}</p>
+                        <div className="mt-2 text-xs font-medium opacity-90">{stage.difficultyLabel}</div>
                         <div className="mt-3 text-xs opacity-80">{stage.unlocked ? '当前可刷' : '完成前一层后解锁'}</div>
                       </div>
                     ))}
@@ -323,6 +341,9 @@ export default function Practice() {
                 {orderedExercises.map((exercise) => {
                   const latestAttempt = latestAttemptMap.get(exercise.id);
                   const completed = isExerciseCompleted(exercise.id);
+                  const progression = progressionLookup.get(exercise.id);
+                  const stageMeta = progression ? stageMetaLookup.get(progression.stageId) : undefined;
+                  const difficultyMeta = getDifficultyMeta(exercise.difficulty);
                   return (
                     <button
                       key={exercise.id}
@@ -331,17 +352,19 @@ export default function Practice() {
                     >
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <div className="flex flex-wrap gap-2">
-                          <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700 dark:bg-slate-700 dark:text-slate-200">{exercise.difficulty}</span>
+                          <span className={`rounded-full px-3 py-1 text-xs font-medium ${difficultyMeta.accent}`}>{difficultyMeta.stars} {difficultyMeta.label}</span>
                           <span className="rounded-full bg-indigo-100 px-3 py-1 text-xs font-medium text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300">{exercise.type}</span>
+                          {stageMeta && <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700 dark:bg-slate-700 dark:text-slate-200">第 {progression?.stageIndex} 层 · {stageMeta.label}</span>}
                           {exercise.isExamFocus && <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">考试重点</span>}
                         </div>
                         {completed && <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-medium text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">已完成</span>}
                       </div>
                       <div className="mt-4 text-lg font-semibold text-slate-900 dark:text-white">{exercise.title}</div>
                       <p className="mt-2 line-clamp-3 text-sm text-slate-600 dark:text-slate-300">{exercise.description}</p>
+                      {stageMeta && <div className="mt-3 text-xs text-slate-500 dark:text-slate-400">{stageMeta.difficultyLabel}</div>}
                       <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-4 text-sm dark:border-slate-700">
                         <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600 dark:bg-slate-700 dark:text-slate-200">{exercise.category}</span>
-                        <span className="text-slate-500 dark:text-slate-400">{latestAttempt ? `${latestAttempt.score} 分 · ${latestAttempt.verdict || '最近提交'}` : (completed ? '可再次练习' : '开始刷题')}</span>
+                        <span className="text-slate-500 dark:text-slate-400">{latestAttempt ? `${latestAttempt.score} 分 · ${latestAttempt.verdict || '最近提交'}` : (completed ? '可再次练习' : `路径序号 ${progression?.orderInCategory || '-'}`)}</span>
                       </div>
                     </button>
                   );
