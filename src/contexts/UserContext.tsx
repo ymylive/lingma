@@ -24,6 +24,12 @@ export interface ExerciseRecord {
   completedAt: string;
   score: number;
   isCorrect: boolean;
+  passRate?: number;
+  verdict?: string;
+  feedbackLevel?: string;
+  runtimeMs?: number;
+  checkpointsPassed?: number;
+  checkpointsTotal?: number;
 }
 
 export interface UserProgress {
@@ -46,7 +52,13 @@ interface UserContextType {
   logout: () => void;
   updateProgress: (updates: Partial<UserProgress>) => void;
   recordLessonVisit: (lessonId: string, lessonTitle: string, category: string) => void;
-  recordExerciseComplete: (exerciseId: string, exerciseTitle: string, category: string, isCorrect: boolean) => void;
+  recordExerciseComplete: (
+    exerciseId: string,
+    exerciseTitle: string,
+    category: string,
+    isCorrect: boolean,
+    details?: Partial<ExerciseRecord>
+  ) => void;
   isLessonCompleted: (lessonId: string) => boolean;
   isExerciseCompleted: (exerciseId: string) => boolean;
 }
@@ -372,15 +384,22 @@ export function UserProvider({ children }: { children: ReactNode }) {
     exerciseId: string,
     exerciseTitle: string,
     category: string,
-    isCorrect: boolean
+    isCorrect: boolean,
+    details: Partial<ExerciseRecord> = {}
   ) => {
     const record: ExerciseRecord = {
       exerciseId,
       exerciseTitle,
       category,
       completedAt: new Date().toISOString(),
-      score: isCorrect ? 100 : 0,
+      score: typeof details.score === 'number' ? details.score : (isCorrect ? 100 : 0),
       isCorrect,
+      passRate: details.passRate,
+      verdict: details.verdict,
+      feedbackLevel: details.feedbackLevel,
+      runtimeMs: details.runtimeMs,
+      checkpointsPassed: details.checkpointsPassed,
+      checkpointsTotal: details.checkpointsTotal,
     };
 
     setProgress((prev) => {
