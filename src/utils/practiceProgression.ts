@@ -262,7 +262,7 @@ export function sortExercisesForPractice(exercises: Exercise[], completedIds?: S
       return left.isExamFocus ? -1 : 1;
     }
 
-    return left.title.localeCompare(right.title, 'zh-CN');
+    return left.title.localeCompare(right.title);
   });
 }
 
