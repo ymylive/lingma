@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { useUser } from '../contexts/UserContext';
+import { SKILL_LEVEL_META, type UserSkillLevel } from '../utils/userPersonalization';
 
 export default function Auth() {
   const [isLogin, setIsLogin] = useState(true);
@@ -8,6 +9,7 @@ export default function Auth() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [skillLevel, setSkillLevel] = useState<UserSkillLevel>('beginner');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -58,7 +60,7 @@ export default function Auth() {
           return;
         }
 
-        const success = await register(username.trim(), email, password);
+        const success = await register(username.trim(), email, password, skillLevel);
         if (success) {
           navigate(from, { replace: true });
         } else {
@@ -106,6 +108,35 @@ export default function Auth() {
                   placeholder="请输入用户名"
                   required={!isLogin}
                 />
+              </div>
+            )}
+
+            {!isLogin && (
+              <div>
+                <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
+                  当前水平
+                </label>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {Object.values(SKILL_LEVEL_META).map((item) => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => setSkillLevel(item.id)}
+                      className={`min-h-[92px] cursor-pointer rounded-2xl border px-4 py-3 text-left transition-all ${
+                        skillLevel === item.id
+                          ? 'border-indigo-500 bg-indigo-50 shadow-sm dark:border-indigo-400 dark:bg-indigo-900/20'
+                          : 'border-slate-200 bg-slate-50 hover:border-indigo-300 dark:border-slate-700 dark:bg-slate-900/50'
+                      }`}
+                    >
+                      <div className="text-sm font-semibold text-slate-900 dark:text-white">{item.label}</div>
+                      <div className="mt-1 text-xs text-indigo-600 dark:text-indigo-300">{item.recommendedTrack}</div>
+                      <p className="mt-2 text-xs leading-5 text-slate-600 dark:text-slate-300">{item.description}</p>
+                    </button>
+                  ))}
+                </div>
+                <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+                  注册后会按你的水平自动推荐题库与 AI 出题难度。
+                </p>
               </div>
             )}
 

@@ -1,10 +1,12 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
+import { normalizeSkillLevel, type UserSkillLevel } from '../utils/userPersonalization';
 
 export interface User {
   id: string;
   username: string;
   email: string;
+  skillLevel: UserSkillLevel;
   avatar?: string;
   createdAt: string;
 }
@@ -37,6 +39,7 @@ export interface UserProgress {
   completedExercises: string[];
   learningHistory: LearningRecord[];
   exerciseHistory: ExerciseRecord[];
+  skillLevel: UserSkillLevel;
   totalLearningTime: number;
   lastVisit: string;
   streak: number;
@@ -48,7 +51,7 @@ interface UserContextType {
   isLoggedIn: boolean;
   isAuthLoading: boolean;
   login: (email: string, password: string) => Promise<boolean>;
-  register: (username: string, email: string, password: string) => Promise<boolean>;
+  register: (username: string, email: string, password: string, skillLevel: UserSkillLevel) => Promise<boolean>;
   logout: () => void;
   updateProgress: (updates: Partial<UserProgress>) => void;
   recordLessonVisit: (lessonId: string, lessonTitle: string, category: string) => void;
@@ -86,6 +89,7 @@ const defaultProgress: UserProgress = {
   completedExercises: [],
   learningHistory: [],
   exerciseHistory: [],
+  skillLevel: 'beginner',
   totalLearningTime: 0,
   lastVisit: '',
   streak: 0,
@@ -104,9 +108,17 @@ function normalizeProgress(input: unknown): UserProgress {
     completedExercises: Array.isArray(data.completedExercises) ? data.completedExercises : [],
     learningHistory: Array.isArray(data.learningHistory) ? data.learningHistory : [],
     exerciseHistory: Array.isArray(data.exerciseHistory) ? data.exerciseHistory : [],
+    skillLevel: normalizeSkillLevel(data.skillLevel),
     totalLearningTime: typeof data.totalLearningTime === 'number' ? data.totalLearningTime : 0,
     lastVisit: typeof data.lastVisit === 'string' ? data.lastVisit : '',
     streak: typeof data.streak === 'number' ? data.streak : 0,
+  };
+}
+
+function syncProgressSkillLevel(progress: UserProgress, skillLevel: UserSkillLevel): UserProgress {
+  return {
+    ...progress,
+    skillLevel: normalizeSkillLevel(skillLevel || progress.skillLevel),
   };
 }
 
@@ -200,8 +212,19 @@ async function fetchAuthSession() {
     throw new Error(await readAuthError(response));
   }
 
-  const data = (await response.json()) as { user?: User };
-  return data.user ?? null;
+  const data = (await response.json()) as { user?: Partial<User> };
+  if (!data.user) {
+    return null;
+  }
+
+  return {
+    id: String(data.user.id || ''),
+    username: String(data.user.username || ''),
+    email: String(data.user.email || ''),
+    createdAt: String(data.user.createdAt || ''),
+    avatar: data.user.avatar,
+    skillLevel: normalizeSkillLevel(data.user.skillLevel),
+  };
 }
 
 async function loginRequest(email: string, password: string) {
@@ -220,16 +243,27 @@ async function loginRequest(email: string, password: string) {
     throw new Error(await readAuthError(response));
   }
 
-  const data = (await response.json()) as { user?: User };
-  return data.user ?? null;
+  const data = (await response.json()) as { user?: Partial<User> };
+  if (!data.user) {
+    return null;
+  }
+
+  return {
+    id: String(data.user.id || ''),
+    username: String(data.user.username || ''),
+    email: String(data.user.email || ''),
+    createdAt: String(data.user.createdAt || ''),
+    avatar: data.user.avatar,
+    skillLevel: normalizeSkillLevel(data.user.skillLevel),
+  };
 }
 
-async function registerRequest(username: string, email: string, password: string) {
+async function registerRequest(username: string, email: string, password: string, skillLevel: UserSkillLevel) {
   const response = await fetch(`${AUTH_BASE_URL}/register`, {
     method: 'POST',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username, email, password }),
+    body: JSON.stringify({ username, email, password, skillLevel }),
   });
 
   if (response.status === 409) {
@@ -240,8 +274,19 @@ async function registerRequest(username: string, email: string, password: string
     throw new Error(await readAuthError(response));
   }
 
-  const data = (await response.json()) as { user?: User };
-  return data.user ?? null;
+  const data = (await response.json()) as { user?: Partial<User> };
+  if (!data.user) {
+    return null;
+  }
+
+  return {
+    id: String(data.user.id || ''),
+    username: String(data.user.username || ''),
+    email: String(data.user.email || ''),
+    createdAt: String(data.user.createdAt || ''),
+    avatar: data.user.avatar,
+    skillLevel: normalizeSkillLevel(data.user.skillLevel),
+  };
 }
 
 async function logoutRequest() {
@@ -276,7 +321,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
           return;
         }
 
-        const nextProgress = applyDailyStreak(loadProgressForUser(sessionUser.id));
+        const nextProgress = applyDailyStreak(syncProgressSkillLevel(loadProgressForUser(sessionUser.id), sessionUser.skillLevel));
         setUser(sessionUser);
         setProgress(nextProgress);
         persistProgress(sessionUser.id, nextProgress);
@@ -315,21 +360,21 @@ export function UserProvider({ children }: { children: ReactNode }) {
     }
 
     clearLegacyAuthStorage();
-    const nextProgress = applyDailyStreak(loadProgressForUser(nextUser.id));
+    const nextProgress = applyDailyStreak(syncProgressSkillLevel(loadProgressForUser(nextUser.id), nextUser.skillLevel));
     setUser(nextUser);
     setProgress(nextProgress);
     persistProgress(nextUser.id, nextProgress);
     return true;
   };
 
-  const register = async (username: string, email: string, password: string) => {
-    const nextUser = await registerRequest(username, email, password);
+  const register = async (username: string, email: string, password: string, skillLevel: UserSkillLevel) => {
+    const nextUser = await registerRequest(username, email, password, skillLevel);
     if (!nextUser) {
       return false;
     }
 
     clearLegacyAuthStorage();
-    const nextProgress = applyDailyStreak({ ...defaultProgress });
+    const nextProgress = applyDailyStreak(syncProgressSkillLevel({ ...defaultProgress }, nextUser.skillLevel));
     setUser(nextUser);
     setProgress(nextProgress);
     persistProgress(nextUser.id, nextProgress);
