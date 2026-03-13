@@ -64,6 +64,7 @@ SESSION_COOKIE_SECURE = os.getenv("SESSION_COOKIE_SECURE", "").strip().lower()
 PASSWORD_HASH_ITERATIONS = 120000
 ALLOWED_SKILL_LEVELS = {"beginner", "intermediate", "advanced"}
 VALID_SKILL_LEVELS = {"beginner", "foundation", "intermediate", "advanced"}
+VALID_TARGET_LANGUAGES = {"c", "cpp", "java", "csharp", "python"}
 
 
 def parse_allowed_origins() -> List[str]:
@@ -128,6 +129,7 @@ def init_auth_db() -> None:
                     password_hash TEXT NOT NULL,
                     password_salt TEXT NOT NULL,
                     skill_level TEXT NOT NULL DEFAULT 'beginner',
+                    target_language TEXT NOT NULL DEFAULT 'cpp',
                     created_at TEXT NOT NULL
                 );
                 CREATE TABLE IF NOT EXISTS user_sessions (
@@ -144,6 +146,8 @@ def init_auth_db() -> None:
             columns = {row["name"] for row in conn.execute("PRAGMA table_info(users)")}
             if "skill_level" not in columns:
                 conn.execute("ALTER TABLE users ADD COLUMN skill_level TEXT NOT NULL DEFAULT 'beginner'")
+            if "target_language" not in columns:
+                conn.execute("ALTER TABLE users ADD COLUMN target_language TEXT NOT NULL DEFAULT 'cpp'")
             conn.commit()
         finally:
             conn.close()
@@ -249,6 +253,13 @@ def sanitize_skill_level(skill_level: Any) -> str:
     return value
 
 
+def sanitize_target_language(target_language: Any) -> str:
+    value = str(target_language or "cpp").strip().lower()
+    if value not in VALID_TARGET_LANGUAGES:
+        raise ValueError("invalid target language")
+    return value
+
+
 def generate_user_id() -> str:
     return f"usr_{secrets.token_urlsafe(12)}"
 
@@ -277,6 +288,7 @@ def serialize_user(row: sqlite3.Row) -> Dict[str, str]:
         "username": row["username"],
         "email": row["email"],
         "skillLevel": row["skill_level"],
+        "targetLanguage": row["target_language"],
         "createdAt": row["created_at"],
     }
 
@@ -355,7 +367,7 @@ def get_authenticated_user(request: Request) -> sqlite3.Row | None:
             cleanup_expired_sessions(conn)
             row = conn.execute(
                 """
-                SELECT users.id, users.username, users.email, users.skill_level, users.created_at
+                SELECT users.id, users.username, users.email, users.skill_level, users.target_language, users.created_at
                 FROM user_sessions
                 JOIN users ON users.id = user_sessions.user_id
                 WHERE user_sessions.session_id = ? AND user_sessions.expires_at > ?
@@ -1022,6 +1034,7 @@ async def auth_register(request: Request):
         email = sanitize_email(body.get("email"))
         password = sanitize_password(body.get("password"))
         skill_level = sanitize_skill_level(body.get("skillLevel"))
+        target_language = sanitize_target_language(body.get("targetLanguage"))
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
@@ -1038,10 +1051,19 @@ async def auth_register(request: Request):
 
             conn.execute(
                 """
-                INSERT INTO users(id, username, email, password_hash, password_salt, skill_level, created_at)
-                VALUES(?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO users(id, username, email, password_hash, password_salt, skill_level, target_language, created_at)
+                VALUES(?, ?, ?, ?, ?, ?, ?, ?)
                 """,
-                (user_id, username, email, password_record["password_hash"], password_record["password_salt"], skill_level, created_at),
+                (
+                    user_id,
+                    username,
+                    email,
+                    password_record["password_hash"],
+                    password_record["password_salt"],
+                    skill_level,
+                    target_language,
+                    created_at,
+                ),
             )
             conn.commit()
         finally:
@@ -1055,6 +1077,7 @@ async def auth_register(request: Request):
                 "username": username,
                 "email": email,
                 "skillLevel": skill_level,
+                "targetLanguage": target_language,
                 "createdAt": created_at,
             }
         }
@@ -1069,7 +1092,6 @@ async def auth_login(request: Request):
     try:
         email = sanitize_email(body.get("email"))
         password = sanitize_password(body.get("password"))
-        skill_level = sanitize_skill_level(body.get("skillLevel"))
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
@@ -1078,7 +1100,7 @@ async def auth_login(request: Request):
         try:
             row = conn.execute(
                 """
-                SELECT id, username, email, password_hash, password_salt, skill_level, created_at
+                SELECT id, username, email, password_hash, password_salt, skill_level, target_language, created_at
                 FROM users
                 WHERE email = ?
                 """,
@@ -1101,9 +1123,8 @@ async def auth_update_profile(request: Request):
     user = require_authenticated_user(request)
     body = await request.json()
     try:
-        skill_level = sanitize_skill_level(body.get("skillLevel"))
-        if skill_level is None:
-            raise ValueError("skill level is required")
+        skill_level = sanitize_skill_level(body.get("skillLevel", user["skill_level"]))
+        target_language = sanitize_target_language(body.get("targetLanguage", user["target_language"]))
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
@@ -1113,14 +1134,14 @@ async def auth_update_profile(request: Request):
             conn.execute(
                 """
                 UPDATE users
-                SET skill_level = ?
+                SET skill_level = ?, target_language = ?
                 WHERE id = ?
                 """,
-                (skill_level, user["id"]),
+                (skill_level, target_language, user["id"]),
             )
             row = conn.execute(
                 """
-                SELECT id, username, email, created_at, skill_level
+                SELECT id, username, email, created_at, skill_level, target_language
                 FROM users
                 WHERE id = ?
                 """,

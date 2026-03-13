@@ -1,12 +1,14 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { normalizeSkillLevel, type UserSkillLevel } from '../utils/userPersonalization';
+import { normalizeTargetLanguage, type TargetLanguage } from '../utils/targetLanguages';
 
 export interface User {
   id: string;
   username: string;
   email: string;
   skillLevel: UserSkillLevel;
+  targetLanguage: TargetLanguage;
   avatar?: string;
   createdAt: string;
 }
@@ -51,7 +53,8 @@ interface UserContextType {
   isLoggedIn: boolean;
   isAuthLoading: boolean;
   login: (email: string, password: string) => Promise<boolean>;
-  register: (username: string, email: string, password: string, skillLevel: UserSkillLevel) => Promise<boolean>;
+  register: (username: string, email: string, password: string, skillLevel: UserSkillLevel, targetLanguage: TargetLanguage) => Promise<boolean>;
+  updatePreferences: (updates: { skillLevel?: UserSkillLevel; targetLanguage?: TargetLanguage }) => Promise<boolean>;
   logout: () => void;
   updateProgress: (updates: Partial<UserProgress>) => void;
   recordLessonVisit: (lessonId: string, lessonTitle: string, category: string) => void;
@@ -224,6 +227,7 @@ async function fetchAuthSession() {
     createdAt: String(data.user.createdAt || ''),
     avatar: data.user.avatar,
     skillLevel: normalizeSkillLevel(data.user.skillLevel),
+    targetLanguage: normalizeTargetLanguage(data.user.targetLanguage),
   };
 }
 
@@ -255,15 +259,22 @@ async function loginRequest(email: string, password: string) {
     createdAt: String(data.user.createdAt || ''),
     avatar: data.user.avatar,
     skillLevel: normalizeSkillLevel(data.user.skillLevel),
+    targetLanguage: normalizeTargetLanguage(data.user.targetLanguage),
   };
 }
 
-async function registerRequest(username: string, email: string, password: string, skillLevel: UserSkillLevel) {
+async function registerRequest(
+  username: string,
+  email: string,
+  password: string,
+  skillLevel: UserSkillLevel,
+  targetLanguage: TargetLanguage,
+) {
   const response = await fetch(`${AUTH_BASE_URL}/register`, {
     method: 'POST',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username, email, password, skillLevel }),
+    body: JSON.stringify({ username, email, password, skillLevel, targetLanguage }),
   });
 
   if (response.status === 409) {
@@ -286,6 +297,35 @@ async function registerRequest(username: string, email: string, password: string
     createdAt: String(data.user.createdAt || ''),
     avatar: data.user.avatar,
     skillLevel: normalizeSkillLevel(data.user.skillLevel),
+    targetLanguage: normalizeTargetLanguage(data.user.targetLanguage),
+  };
+}
+
+async function updateProfileRequest(updates: { skillLevel?: UserSkillLevel; targetLanguage?: TargetLanguage }) {
+  const response = await fetch(`${AUTH_BASE_URL}/profile`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(updates),
+  });
+
+  if (!response.ok) {
+    throw new Error(await readAuthError(response));
+  }
+
+  const data = (await response.json()) as { user?: Partial<User> };
+  if (!data.user) {
+    return null;
+  }
+
+  return {
+    id: String(data.user.id || ''),
+    username: String(data.user.username || ''),
+    email: String(data.user.email || ''),
+    createdAt: String(data.user.createdAt || ''),
+    avatar: data.user.avatar,
+    skillLevel: normalizeSkillLevel(data.user.skillLevel),
+    targetLanguage: normalizeTargetLanguage(data.user.targetLanguage),
   };
 }
 
@@ -367,8 +407,14 @@ export function UserProvider({ children }: { children: ReactNode }) {
     return true;
   };
 
-  const register = async (username: string, email: string, password: string, skillLevel: UserSkillLevel) => {
-    const nextUser = await registerRequest(username, email, password, skillLevel);
+  const register = async (
+    username: string,
+    email: string,
+    password: string,
+    skillLevel: UserSkillLevel,
+    targetLanguage: TargetLanguage,
+  ) => {
+    const nextUser = await registerRequest(username, email, password, skillLevel, targetLanguage);
     if (!nextUser) {
       return false;
     }
@@ -378,6 +424,17 @@ export function UserProvider({ children }: { children: ReactNode }) {
     setUser(nextUser);
     setProgress(nextProgress);
     persistProgress(nextUser.id, nextProgress);
+    return true;
+  };
+
+  const updatePreferences = async (updates: { skillLevel?: UserSkillLevel; targetLanguage?: TargetLanguage }) => {
+    const nextUser = await updateProfileRequest(updates);
+    if (!nextUser) {
+      return false;
+    }
+
+    setUser(nextUser);
+    setProgress((prev) => syncProgressSkillLevel(prev, nextUser.skillLevel));
     return true;
   };
 
@@ -473,6 +530,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
         isAuthLoading,
         login,
         register,
+        updatePreferences,
         logout,
         updateProgress,
         recordLessonVisit,
