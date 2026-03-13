@@ -82,6 +82,12 @@ export default function AIExerciseGenerator() {
 
   const aiDefaults = buildAiDefaults(progress, user?.skillLevel || progress.skillLevel);
   const levelMeta = getSkillLevelMeta(aiDefaults.effectiveLevel);
+  const profileHint = [
+    `用户当前有效水平：${levelMeta.label}`,
+    `当前学习状态：${LEARNING_STATE_LABELS[aiDefaults.learningState]}`,
+    `系统推荐专题：${aiDefaults.suggestedCategories.slice(0, 3).join('、')}`,
+    `当前出题专题：${dataStructure}`,
+  ].join('\n');
 
   useEffect(() => {
     loadAIConfig();
@@ -116,10 +122,10 @@ export default function AIExerciseGenerator() {
 
     try {
       if (exerciseType === 'coding') {
-        const exercise = await generateCodingExercise(finalTopic, difficulty, dataStructure);
+        const exercise = await generateCodingExercise(finalTopic, difficulty, dataStructure, undefined, profileHint);
         setGeneratedExercise(exercise);
       } else {
-        const fillBlank = await generateFillBlank(finalTopic, difficulty, dataStructure);
+        const fillBlank = await generateFillBlank(finalTopic, difficulty, dataStructure, undefined, profileHint);
         setGeneratedFillBlank(fillBlank);
       }
     } catch (e) {
