@@ -10,6 +10,8 @@ import {
   type AIConfig,
 } from '../../services/aiService';
 import CodingExercise, { FillInBlank } from './CodingExercise';
+import { useUser } from '../../contexts/UserContext';
+import { buildAiDefaults, getSkillLevelMeta } from '../../utils/userPersonalization';
 
 const PROVIDERS = [
   { id: 'aabao', name: 'AABao AI', baseUrl: 'https://api.aabao.top/v1/chat/completions', model: 'deepseek-v3.2-thinking' },
@@ -55,7 +57,15 @@ const TOPICS: Record<string, string[]> = {
   '贪心': ['活动选择', '零钱兑换', '任务调度', '哈夫曼编码'],
 };
 
+const LEARNING_STATE_LABELS = {
+  onboarding: '起步期',
+  review: '复盘期',
+  steady: '稳步期',
+  challenge: '挑战期',
+} as const;
+
 export default function AIExerciseGenerator() {
+  const { user, progress } = useUser();
   const [showConfig, setShowConfig] = useState(false);
   const [config, setConfig] = useState<AIConfig>(getAIConfig());
   const [dataStructure, setDataStructure] = useState('链表');
@@ -67,11 +77,27 @@ export default function AIExerciseGenerator() {
   const [error, setError] = useState('');
   const [generatedExercise, setGeneratedExercise] = useState<GeneratedExercise | null>(null);
   const [generatedFillBlank, setGeneratedFillBlank] = useState<GeneratedFillBlank | null>(null);
+  const [hasManualDifficulty, setHasManualDifficulty] = useState(false);
+  const [hasManualCategory, setHasManualCategory] = useState(false);
+
+  const aiDefaults = buildAiDefaults(progress, user?.skillLevel || progress.skillLevel);
+  const levelMeta = getSkillLevelMeta(aiDefaults.effectiveLevel);
 
   useEffect(() => {
     loadAIConfig();
     setConfig(getAIConfig());
   }, []);
+
+  useEffect(() => {
+    if (!hasManualDifficulty) {
+      setDifficulty(aiDefaults.difficulty);
+    }
+    if (!hasManualCategory) {
+      setDataStructure(aiDefaults.dataStructure);
+      setTopic('');
+      setCustomTopic('');
+    }
+  }, [aiDefaults.dataStructure, aiDefaults.difficulty, hasManualCategory, hasManualDifficulty]);
 
   const handleSaveConfig = () => {
     setAIConfig(config);
@@ -221,12 +247,12 @@ export default function AIExerciseGenerator() {
 
         {/* 选项区 */}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          {/* 知识点分类 */}
-          <div>
-            <label className="block text-sm font-medium text-white/80 mb-2">知识点</label>
+              {/* 知识点分类 */}
+              <div>
+                <label className="block text-sm font-medium text-white/80 mb-2">知识点</label>
             <select
               value={dataStructure}
-              onChange={e => { setDataStructure(e.target.value); setTopic(''); }}
+              onChange={e => { setDataStructure(e.target.value); setTopic(''); setHasManualCategory(true); }}
               className="min-h-[44px] w-full rounded-lg border border-white/30 bg-white/20 px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-white/50"
             >
               <optgroup label="C语言" className="text-slate-800">
@@ -273,7 +299,7 @@ export default function AIExerciseGenerator() {
               ].map(d => (
                 <button
                   key={d.id}
-                  onClick={() => setDifficulty(d.id as 'easy' | 'medium' | 'hard')}
+                  onClick={() => { setDifficulty(d.id as 'easy' | 'medium' | 'hard'); setHasManualDifficulty(true); }}
                   className={`min-h-[44px] cursor-pointer rounded-lg px-3 py-2 text-sm font-medium transition-all ${
                     difficulty === d.id
                       ? 'bg-white text-indigo-600'
@@ -326,6 +352,40 @@ export default function AIExerciseGenerator() {
             />
           </div>
         )}
+
+        <div className="mt-4 rounded-2xl border border-white/20 bg-white/10 p-4">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-indigo-600">{levelMeta.label}</span>
+            <span className="rounded-full bg-white/20 px-3 py-1 text-xs font-medium text-white">{LEARNING_STATE_LABELS[aiDefaults.learningState]}</span>
+          </div>
+          <p className="mt-3 text-sm text-white/85">{aiDefaults.message}</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {aiDefaults.suggestedCategories.map((item) => (
+              <button
+                key={item}
+                onClick={() => { setDataStructure(item); setTopic(''); setCustomTopic(''); setHasManualCategory(true); }}
+                className={`min-h-[40px] cursor-pointer rounded-full px-3 py-2 text-xs font-medium transition-all ${
+                  dataStructure === item ? 'bg-white text-indigo-600' : 'bg-white/15 text-white hover:bg-white/25'
+                }`}
+              >
+                {item}
+              </button>
+            ))}
+            <button
+              onClick={() => {
+                setDifficulty(aiDefaults.difficulty);
+                setDataStructure(aiDefaults.dataStructure);
+                setTopic('');
+                setCustomTopic('');
+                setHasManualCategory(false);
+                setHasManualDifficulty(false);
+              }}
+              className="min-h-[40px] cursor-pointer rounded-full bg-emerald-500 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-400"
+            >
+              恢复我的水平推荐
+            </button>
+          </div>
+        </div>
 
         {/* 生成按钮 */}
         <button
