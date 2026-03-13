@@ -1,6 +1,20 @@
+import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useTheme } from '../contexts/ThemeContext';
+import { useI18n } from '../contexts/I18nContext';
 import { motion, type Variants } from 'framer-motion';
+
+function syncPageMetadata(title: string, description: string) {
+  if (typeof document === 'undefined') return;
+  document.title = title;
+  let meta = document.querySelector<HTMLMetaElement>('meta[name="description"]');
+  if (!meta) {
+    meta = document.createElement('meta');
+    meta.name = 'description';
+    document.head.appendChild(meta);
+  }
+  meta.content = description;
+}
 
 const algorithms = [
   { id: 'link-head-node', name: '单链表', category: '线性表', icon: '🔗' },
@@ -57,6 +71,14 @@ const itemVariants: Variants = {
 
 export default function Home() {
   const { theme } = useTheme();
+  const { t, isEnglish } = useI18n();
+
+  useEffect(() => {
+    syncPageMetadata(
+      isEnglish ? 'Home | Tumafang' : '首页 | Tumafang',
+      `${t('交互式数据结构学习平台')} · ${t('告别枯燥的理论，通过交互式动画直观理解每一步操作。')}`,
+    );
+  }, [isEnglish, t]);
 
   const containerClass =
     theme === 'dark'

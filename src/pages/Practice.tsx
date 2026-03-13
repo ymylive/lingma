@@ -1,7 +1,8 @@
-import { useDeferredValue, useMemo, useState } from 'react';
+import { useDeferredValue, useEffect, useMemo, useState } from 'react';
 import { AIExerciseGenerator, CodingExercise, FillInBlank } from '../components/tutorials/TutorialPanel';
 import { allExercises, type Exercise } from '../data/exercises';
 import { useUser } from '../contexts/UserContext';
+import { useI18n } from '../contexts/I18nContext';
 import {
   CATEGORY_GROUPS,
   PRACTICE_STAGE_META,
@@ -75,6 +76,18 @@ const LEARNING_STATE_LABELS = {
   challenge: '挑战期',
 } as const;
 
+function syncPageMetadata(title: string, description: string) {
+  if (typeof document === 'undefined') return;
+  document.title = title;
+  let meta = document.querySelector<HTMLMetaElement>('meta[name="description"]');
+  if (!meta) {
+    meta = document.createElement('meta');
+    meta.name = 'description';
+    document.head.appendChild(meta);
+  }
+  meta.content = description;
+}
+
 function fuzzyMatch(text: string, query: string) {
   if (!query.trim()) return true;
   const source = text.toLowerCase();
@@ -85,6 +98,7 @@ function fuzzyMatch(text: string, query: string) {
 
 export default function Practice() {
   const { isExerciseCompleted, progress, user } = useUser();
+  const { formatDate, isEnglish, t } = useI18n();
   const [tab, setTab] = useState<'preset' | 'ai'>('preset');
   const [category, setCategory] = useState('all');
   const [difficulty, setDifficulty] = useState<'all' | 'easy' | 'medium' | 'hard'>('all');
@@ -114,9 +128,28 @@ export default function Practice() {
     if (focusOnly && !exercise.isExamFocus) return false;
     if (showCompleted === 'completed' && !completedSet.has(exercise.id)) return false;
     if (showCompleted === 'incomplete' && completedSet.has(exercise.id)) return false;
-    if (deferredQuery.trim() && !fuzzyMatch(`${exercise.title} ${exercise.description} ${exercise.category}`, deferredQuery)) return false;
+    if (deferredQuery.trim()) {
+      const categoryMeta = getCategoryMeta(exercise.category);
+      const difficultyMeta = getDifficultyMeta(exercise.difficulty);
+      const searchSource = [
+        exercise.title,
+        t(exercise.title),
+        exercise.description,
+        t(exercise.description),
+        exercise.category,
+        t(exercise.category),
+        categoryMeta.name,
+        t(categoryMeta.name),
+        categoryMeta.summary,
+        t(categoryMeta.summary),
+        t(exercise.type === 'coding' ? '编程题' : '填空题'),
+        difficultyMeta.label,
+        t(difficultyMeta.label),
+      ].join(' ');
+      if (!fuzzyMatch(searchSource, deferredQuery)) return false;
+    }
     return true;
-  }), [category, completedSet, deferredQuery, difficulty, exercises, focusOnly, showCompleted, typeFilter]);
+  }), [category, completedSet, deferredQuery, difficulty, exercises, focusOnly, showCompleted, t, typeFilter]);
 
   const orderedExercises = useMemo(() => sortExercisesForPractice(filteredExercises, completedSet), [completedSet, filteredExercises]);
   const recommendedExercise = useMemo(() => getRecommendedExercise(filteredExercises, completedSet), [completedSet, filteredExercises]);
@@ -136,6 +169,45 @@ export default function Practice() {
   const recentAttempts = progress.exerciseHistory.slice(0, 8);
   const recentScore = recentAttempts.length ? Math.round(recentAttempts.reduce((sum, record) => sum + record.score, 0) / recentAttempts.length) : 0;
   const activeFilters = [category !== 'all', difficulty !== 'all', typeFilter !== 'all', showCompleted !== 'all', focusOnly, Boolean(searchQuery.trim())].filter(Boolean).length;
+  const difficultyFilterOptions = [
+    { id: 'all' as const, label: isEnglish ? 'All' : '全部' },
+    { id: 'easy' as const, label: `${getDifficultyMeta('easy').stars} ${t(getDifficultyMeta('easy').label)}` },
+    { id: 'medium' as const, label: `${getDifficultyMeta('medium').stars} ${t(getDifficultyMeta('medium').label)}` },
+    { id: 'hard' as const, label: `${getDifficultyMeta('hard').stars} ${t(getDifficultyMeta('hard').label)}` },
+  ];
+  const typeFilterOptions = [
+    { id: 'all' as const, label: isEnglish ? 'All' : '全部' },
+    { id: 'coding' as const, label: t('编程题') },
+    { id: 'fillblank' as const, label: t('填空题') },
+  ];
+  const completionOptions = [
+    { id: 'all' as const, label: isEnglish ? 'All' : '全部' },
+    { id: 'incomplete' as const, label: isEnglish ? 'Incomplete' : '未完成' },
+    { id: 'completed' as const, label: isEnglish ? 'Completed' : '已完成' },
+  ];
+  const formatRecommendationDate = (dateKey: string) => {
+    const [year, month, day] = dateKey.split('-').map(Number);
+    if (![year, month, day].every(Number.isFinite)) return dateKey;
+    return formatDate(new Date(year, month - 1, day), { year: 'numeric', month: 'short', day: 'numeric' });
+  };
+  const formatStageLabel = (stageIndex?: number, label?: string) => {
+    if (!stageIndex || !label) return '';
+    return isEnglish ? `Stage ${stageIndex} · ${t(label)}` : `第 ${stageIndex} 层 · ${label}`;
+  };
+  const translateType = (type: Exercise['type']) => t(type === 'coding' ? '编程题' : '填空题');
+  const formatProblemCount = (count: number) => isEnglish ? `${count} problems` : `${count} 题`;
+  const formatCompletionCount = (completed: number, total: number) => isEnglish ? `${completed}/${total} completed` : `${completed}/${total} 已完成`;
+  const formatRecentAttempts = (count: number) => isEnglish ? `${count} submissions` : `${count} 次提交`;
+  const formatStageOrder = (order?: number) => isEnglish ? `Path order ${order ?? '-'}` : `路径序号 ${order ?? '-'}`;
+
+  useEffect(() => {
+    syncPageMetadata(
+      isEnglish ? 'Practice | Tumafang' : '刷题中心 | Tumafang',
+      isEnglish
+        ? 'Progressive practice paths with personalized recommendations, searchable problems, and online judging.'
+        : '层级刷题路径、个性化推荐、可搜索题库和在线判题。',
+    );
+  }, [isEnglish]);
 
   const openExercise = (exercise: Exercise) => {
     setSelectedExercise(exercise);
@@ -157,26 +229,26 @@ export default function Practice() {
         <div className="mb-8 grid gap-4 lg:grid-cols-[1.4fr_0.9fr]">
           <div className="rounded-3xl border border-slate-200 bg-[radial-gradient(circle_at_top_left,_rgba(37,99,235,0.16),_transparent_45%),linear-gradient(135deg,_rgba(255,255,255,0.96),_rgba(241,245,249,0.86))] p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="rounded-full bg-indigo-100 px-3 py-1 text-xs font-semibold text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300">LeetCode 风格刷题</span>
-              <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600 dark:bg-slate-700 dark:text-slate-200">层级递进</span>
+              <span className="rounded-full bg-indigo-100 px-3 py-1 text-xs font-semibold text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300">{isEnglish ? 'LeetCode-style Practice' : 'LeetCode 风格刷题'}</span>
+              <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600 dark:bg-slate-700 dark:text-slate-200">{t('层级递进')}</span>
             </div>
-            <h1 className="mt-4 text-3xl font-bold text-slate-900 dark:text-white">刷题路径 + 专业判题 + 多语言学习支持</h1>
+            <h1 className="mt-4 text-3xl font-bold text-slate-900 dark:text-white">{t('刷题路径 + 专业判题 + 多语言学习支持')}</h1>
             <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-600 dark:text-slate-300">
-              现在不再只是平铺题库。页面会按专题和难度自动生成热身、巩固、进阶、冲刺四层路径，并给出推荐下一题、待复盘题和检查点反馈。
+              {isEnglish ? 'The library is no longer a flat list. Practice now groups problems into warmup, solid, upgrade, and sprint stages, then surfaces the next recommended problem, review queue, and checkpoint feedback.' : '现在不再只是平铺题库。页面会按专题和难度自动生成热身、巩固、进阶、冲刺四层路径，并给出推荐下一题、待复盘题和检查点反馈。'}
             </p>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800"><div className="text-xs text-slate-500 dark:text-slate-400">去重后题量</div><div className="mt-2 text-3xl font-bold text-slate-900 dark:text-white">{exercises.length}</div></div>
-            <div className="rounded-3xl border border-emerald-200 bg-emerald-50 p-4 shadow-sm dark:border-emerald-800 dark:bg-emerald-900/20"><div className="text-xs text-emerald-700 dark:text-emerald-300">已完成</div><div className="mt-2 text-3xl font-bold text-emerald-700 dark:text-emerald-300">{progress.completedExercises.length}</div></div>
-            <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800"><div className="text-xs text-slate-500 dark:text-slate-400">待复盘</div><div className="mt-2 text-3xl font-bold text-slate-900 dark:text-white">{reviewQueue.length}</div></div>
-            <div className="rounded-3xl border border-indigo-200 bg-indigo-50 p-4 shadow-sm dark:border-indigo-800 dark:bg-indigo-900/20"><div className="text-xs text-indigo-700 dark:text-indigo-300">近期平均得分</div><div className="mt-2 text-3xl font-bold text-indigo-700 dark:text-indigo-300">{recentScore}</div></div>
+            <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800"><div className="text-xs text-slate-500 dark:text-slate-400">{isEnglish ? 'Unique Problems' : '去重后题量'}</div><div className="mt-2 text-3xl font-bold text-slate-900 dark:text-white">{exercises.length}</div></div>
+            <div className="rounded-3xl border border-emerald-200 bg-emerald-50 p-4 shadow-sm dark:border-emerald-800 dark:bg-emerald-900/20"><div className="text-xs text-emerald-700 dark:text-emerald-300">{isEnglish ? 'Completed' : '已完成'}</div><div className="mt-2 text-3xl font-bold text-emerald-700 dark:text-emerald-300">{progress.completedExercises.length}</div></div>
+            <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800"><div className="text-xs text-slate-500 dark:text-slate-400">{isEnglish ? 'Review Queue' : '待复盘'}</div><div className="mt-2 text-3xl font-bold text-slate-900 dark:text-white">{reviewQueue.length}</div></div>
+            <div className="rounded-3xl border border-indigo-200 bg-indigo-50 p-4 shadow-sm dark:border-indigo-800 dark:bg-indigo-900/20"><div className="text-xs text-indigo-700 dark:text-indigo-300">{isEnglish ? 'Recent Avg Score' : '近期平均得分'}</div><div className="mt-2 text-3xl font-bold text-indigo-700 dark:text-indigo-300">{recentScore}</div></div>
           </div>
         </div>
 
         <div className="mb-6 grid grid-cols-1 gap-2 sm:grid-cols-2">
-          <button onClick={() => setTab('preset')} className={`min-h-[48px] rounded-2xl px-6 py-3 text-sm font-semibold transition-all ${tab === 'preset' ? 'bg-indigo-600 text-white shadow-sm' : 'border border-slate-200 bg-white text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200'}`}>题库练习</button>
-          <button onClick={() => setTab('ai')} className={`min-h-[48px] rounded-2xl px-6 py-3 text-sm font-semibold transition-all ${tab === 'ai' ? 'bg-indigo-600 text-white shadow-sm' : 'border border-slate-200 bg-white text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200'}`}>AI 智能出题</button>
+          <button onClick={() => setTab('preset')} className={`min-h-[48px] rounded-2xl px-6 py-3 text-sm font-semibold transition-all ${tab === 'preset' ? 'bg-indigo-600 text-white shadow-sm' : 'border border-slate-200 bg-white text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200'}`}>{t('题库练习')}</button>
+          <button onClick={() => setTab('ai')} className={`min-h-[48px] rounded-2xl px-6 py-3 text-sm font-semibold transition-all ${tab === 'ai' ? 'bg-indigo-600 text-white shadow-sm' : 'border border-slate-200 bg-white text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200'}`}>{t('AI 智能出题')}</button>
         </div>
 
         {tab === 'ai' ? <AIExerciseGenerator /> : (
@@ -187,26 +259,26 @@ export default function Practice() {
                   <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                     <div className="space-y-3">
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="rounded-full bg-indigo-600 px-3 py-1 text-xs font-semibold text-white">每日推荐</span>
-                        <span className="rounded-full bg-white px-3 py-1 text-xs font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-200">{levelMeta.label}</span>
-                        <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-medium text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">{LEARNING_STATE_LABELS[dailyRecommendation.learningState]}</span>
+                        <span className="rounded-full bg-indigo-600 px-3 py-1 text-xs font-semibold text-white">{t('每日推荐')}</span>
+                        <span className="rounded-full bg-white px-3 py-1 text-xs font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-200">{t(levelMeta.label)}</span>
+                        <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-medium text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">{t(LEARNING_STATE_LABELS[dailyRecommendation.learningState])}</span>
                       </div>
                       <div>
-                        <h2 className="text-xl font-bold text-slate-900 dark:text-white">今天建议先刷 {dailyRecommendation.focusCategory}</h2>
-                        <p className="mt-2 text-sm leading-7 text-slate-600 dark:text-slate-300">{dailyRecommendation.reason}</p>
+                        <h2 className="text-xl font-bold text-slate-900 dark:text-white">{isEnglish ? `Recommended focus today: ${t(dailyRecommendation.focusCategory)}` : `今天建议先刷 ${dailyRecommendation.focusCategory}`}</h2>
+                        <p className="mt-2 text-sm leading-7 text-slate-600 dark:text-slate-300">{t(dailyRecommendation.reason)}</p>
                       </div>
                       <div className="grid gap-3 sm:grid-cols-3">
                         <div className="rounded-2xl border border-white/70 bg-white/80 p-4 dark:border-slate-700 dark:bg-slate-800/80">
-                          <div className="text-xs text-slate-500 dark:text-slate-400">目标难度</div>
-                          <div className="mt-1 text-base font-semibold text-slate-900 dark:text-white">{getDifficultyMeta(dailyRecommendation.recommendedDifficulty).label}</div>
+                          <div className="text-xs text-slate-500 dark:text-slate-400">{t('目标难度')}</div>
+                          <div className="mt-1 text-base font-semibold text-slate-900 dark:text-white">{t(getDifficultyMeta(dailyRecommendation.recommendedDifficulty).label)}</div>
                         </div>
                         <div className="rounded-2xl border border-white/70 bg-white/80 p-4 dark:border-slate-700 dark:bg-slate-800/80">
-                          <div className="text-xs text-slate-500 dark:text-slate-400">推荐路径</div>
-                          <div className="mt-1 text-base font-semibold text-slate-900 dark:text-white">{dailyRecommendation.recommendedTrack}</div>
+                          <div className="text-xs text-slate-500 dark:text-slate-400">{t('推荐路径')}</div>
+                          <div className="mt-1 text-base font-semibold text-slate-900 dark:text-white">{t(dailyRecommendation.recommendedTrack)}</div>
                         </div>
                         <div className="rounded-2xl border border-white/70 bg-white/80 p-4 dark:border-slate-700 dark:bg-slate-800/80">
-                          <div className="text-xs text-slate-500 dark:text-slate-400">今日日期</div>
-                          <div className="mt-1 text-base font-semibold text-slate-900 dark:text-white">{dailyRecommendation.dateKey}</div>
+                          <div className="text-xs text-slate-500 dark:text-slate-400">{t('今日日期')}</div>
+                          <div className="mt-1 text-base font-semibold text-slate-900 dark:text-white">{formatRecommendationDate(dailyRecommendation.dateKey)}</div>
                         </div>
                       </div>
                     </div>
@@ -216,19 +288,19 @@ export default function Practice() {
                         <>
                           <div className="flex flex-wrap gap-2">
                             <span className={`rounded-full px-3 py-1 text-xs font-medium ${getDifficultyMeta(dailyRecommendation.exercise.difficulty).accent}`}>
-                              {getDifficultyMeta(dailyRecommendation.exercise.difficulty).stars} {getDifficultyMeta(dailyRecommendation.exercise.difficulty).label}
+                              {getDifficultyMeta(dailyRecommendation.exercise.difficulty).stars} {t(getDifficultyMeta(dailyRecommendation.exercise.difficulty).label)}
                             </span>
-                            <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700 dark:bg-slate-700 dark:text-slate-200">{dailyRecommendation.exercise.category}</span>
+                            <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700 dark:bg-slate-700 dark:text-slate-200">{t(dailyRecommendation.exercise.category)}</span>
                           </div>
-                          <div className="mt-3 text-lg font-semibold text-slate-900 dark:text-white">{dailyRecommendation.exercise.title}</div>
-                          <p className="mt-2 line-clamp-3 text-sm text-slate-600 dark:text-slate-300">{dailyRecommendation.exercise.description}</p>
+                          <div className="mt-3 text-lg font-semibold text-slate-900 dark:text-white">{t(dailyRecommendation.exercise.title)}</div>
+                          <p className="mt-2 line-clamp-3 text-sm text-slate-600 dark:text-slate-300">{t(dailyRecommendation.exercise.description)}</p>
                           <div className="mt-4 flex flex-col gap-3 sm:flex-row">
-                            <button onClick={() => openExercise(dailyRecommendation.exercise!)} className="min-h-[44px] cursor-pointer rounded-2xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700">{dailyRecommendation.ctaLabel}</button>
-                            <button onClick={() => { setCategory(dailyRecommendation.exercise!.category); setShowCompleted('incomplete'); }} className="min-h-[44px] cursor-pointer rounded-2xl bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700 dark:bg-slate-700 dark:text-slate-100">切到对应题库</button>
+                            <button onClick={() => openExercise(dailyRecommendation.exercise!)} className="min-h-[44px] cursor-pointer rounded-2xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700">{t(dailyRecommendation.ctaLabel)}</button>
+                            <button onClick={() => { setCategory(dailyRecommendation.exercise!.category); setShowCompleted('incomplete'); }} className="min-h-[44px] cursor-pointer rounded-2xl bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700 dark:bg-slate-700 dark:text-slate-100">{t('切到对应题库')}</button>
                           </div>
                         </>
                       ) : (
-                        <div className="text-sm text-slate-600 dark:text-slate-300">当前题库都已完成，今天可以切到 AI 出题或更高层级继续训练。</div>
+                        <div className="text-sm text-slate-600 dark:text-slate-300">{t('当前题库都已完成，今天可以切到 AI 出题或更高层级继续训练。')}</div>
                       )}
                     </div>
                   </div>
@@ -245,7 +317,7 @@ export default function Practice() {
                   <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
                     {LANGUAGE_SUPPORT.map((item) => (
                       <div key={item.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-900">
-                        <div className="text-sm font-semibold text-slate-900 dark:text-white">{item.name}</div>
+                        <div className="text-sm font-semibold text-slate-900 dark:text-white">{t(item.name)}</div>
                         <div className="mt-1 text-xs text-indigo-600 dark:text-indigo-300">{item.status}</div>
                         <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">{item.summary}</p>
                         <div className="mt-4 space-y-2">
@@ -261,10 +333,10 @@ export default function Practice() {
                   <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800">
                     <div className="flex flex-wrap items-center justify-between gap-3">
                       <div>
-                        <div className="text-sm font-semibold text-slate-900 dark:text-white">推荐下一题</div>
-                        <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">{getCategoryMeta(activePathCategory).name}</div>
+                        <div className="text-sm font-semibold text-slate-900 dark:text-white">{t('推荐下一题')}</div>
+                        <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">{t(getCategoryMeta(activePathCategory).name)}</div>
                       </div>
-                      {recommendedExercise && <button onClick={() => openExercise(recommendedExercise)} className="min-h-[44px] rounded-2xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white">继续刷题</button>}
+                      {recommendedExercise && <button onClick={() => openExercise(recommendedExercise)} className="min-h-[44px] rounded-2xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white">{isEnglish ? 'Continue Practice' : '继续刷题'}</button>}
                     </div>
                     {recommendedExercise ? (
                       <div className="mt-4 rounded-2xl border border-indigo-200 bg-indigo-50 p-4 dark:border-indigo-800 dark:bg-indigo-900/20">
@@ -275,27 +347,27 @@ export default function Practice() {
                           return (
                             <>
                         <div className="flex flex-wrap gap-2">
-                          <span className="rounded-full bg-white px-3 py-1 text-xs font-medium text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-200">{recommendedExercise.category}</span>
-                          <span className={`rounded-full px-3 py-1 text-xs font-medium ${difficultyMeta.accent}`}>{difficultyMeta.stars} {difficultyMeta.label}</span>
-                          {stageMeta && <span className="rounded-full bg-white px-3 py-1 text-xs font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-200">第 {progression?.stageIndex} 层 · {stageMeta.label}</span>}
-                          {recommendedExercise.isExamFocus && <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">考试重点</span>}
+                          <span className="rounded-full bg-white px-3 py-1 text-xs font-medium text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-200">{t(recommendedExercise.category)}</span>
+                          <span className={`rounded-full px-3 py-1 text-xs font-medium ${difficultyMeta.accent}`}>{difficultyMeta.stars} {t(difficultyMeta.label)}</span>
+                          {stageMeta && <span className="rounded-full bg-white px-3 py-1 text-xs font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-200">{formatStageLabel(progression?.stageIndex, stageMeta.label)}</span>}
+                          {recommendedExercise.isExamFocus && <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">{t('考试重点')}</span>}
                         </div>
-                        <div className="mt-3 text-lg font-semibold text-slate-900 dark:text-white">{recommendedExercise.title}</div>
-                        <p className="mt-2 line-clamp-3 text-sm text-slate-600 dark:text-slate-300">{recommendedExercise.description}</p>
-                        {stageMeta && <div className="mt-3 rounded-2xl bg-white/80 px-3 py-2 text-xs text-slate-600 dark:bg-slate-900/60 dark:text-slate-200">{stageMeta.difficultyLabel}</div>}
+                        <div className="mt-3 text-lg font-semibold text-slate-900 dark:text-white">{t(recommendedExercise.title)}</div>
+                        <p className="mt-2 line-clamp-3 text-sm text-slate-600 dark:text-slate-300">{t(recommendedExercise.description)}</p>
+                        {stageMeta && <div className="mt-3 rounded-2xl bg-white/80 px-3 py-2 text-xs text-slate-600 dark:bg-slate-900/60 dark:text-slate-200">{t(stageMeta.difficultyLabel)}</div>}
                             </>
                           );
                         })()}
                       </div>
-                    ) : <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-700 dark:border-emerald-800 dark:bg-emerald-900/20 dark:text-emerald-300">当前筛选范围已经全部完成，可以切换分类或挑战 AI 出题。</div>}
+                    ) : <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-700 dark:border-emerald-800 dark:bg-emerald-900/20 dark:text-emerald-300">{isEnglish ? 'Everything in the current filter is complete. Switch categories or challenge the AI generator next.' : '当前筛选范围已经全部完成，可以切换分类或挑战 AI 出题。'}</div>}
                   </div>
 
                   <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800">
-                    <div className="text-sm font-semibold text-slate-900 dark:text-white">刷题效率面板</div>
+                    <div className="text-sm font-semibold text-slate-900 dark:text-white">{t('刷题效率面板')}</div>
                     <div className="mt-4 space-y-3">
-                      <div className="rounded-2xl bg-slate-50 p-4 dark:bg-slate-900"><div className="text-xs text-slate-500 dark:text-slate-400">当前路径</div><div className="mt-1 text-base font-semibold text-slate-900 dark:text-white">{getCategoryMeta(activePath.category).name}</div><div className="mt-1 text-sm text-slate-600 dark:text-slate-300">{activePath.completed}/{activePath.total} 已完成</div></div>
-                      <div className="rounded-2xl bg-slate-50 p-4 dark:bg-slate-900"><div className="text-xs text-slate-500 dark:text-slate-400">待复盘题</div><div className="mt-1 text-base font-semibold text-slate-900 dark:text-white">{reviewQueue.length} 题</div><div className="mt-1 text-sm text-slate-600 dark:text-slate-300">{reviewQueue[0]?.exerciseTitle || '继续提交后会自动沉淀错题记录。'}</div></div>
-                      <div className="rounded-2xl bg-slate-50 p-4 dark:bg-slate-900"><div className="text-xs text-slate-500 dark:text-slate-400">最近状态</div><div className="mt-1 text-base font-semibold text-slate-900 dark:text-white">{recentAttempts.length ? `${recentAttempts.length} 次提交` : '暂无提交'}</div><div className="mt-1 text-sm text-slate-600 dark:text-slate-300">{recentAttempts[0]?.verdict || '开始刷题后这里会显示你的近期表现。'}</div></div>
+                      <div className="rounded-2xl bg-slate-50 p-4 dark:bg-slate-900"><div className="text-xs text-slate-500 dark:text-slate-400">{t('当前路径')}</div><div className="mt-1 text-base font-semibold text-slate-900 dark:text-white">{t(getCategoryMeta(activePath.category).name)}</div><div className="mt-1 text-sm text-slate-600 dark:text-slate-300">{formatCompletionCount(activePath.completed, activePath.total)}</div></div>
+                      <div className="rounded-2xl bg-slate-50 p-4 dark:bg-slate-900"><div className="text-xs text-slate-500 dark:text-slate-400">{t('待复盘题')}</div><div className="mt-1 text-base font-semibold text-slate-900 dark:text-white">{formatProblemCount(reviewQueue.length)}</div><div className="mt-1 text-sm text-slate-600 dark:text-slate-300">{reviewQueue[0] ? t(reviewQueue[0].exerciseTitle) : (isEnglish ? 'Keep submitting and incorrect attempts will be collected here.' : '继续提交后会自动沉淀错题记录。')}</div></div>
+                      <div className="rounded-2xl bg-slate-50 p-4 dark:bg-slate-900"><div className="text-xs text-slate-500 dark:text-slate-400">{t('最近状态')}</div><div className="mt-1 text-base font-semibold text-slate-900 dark:text-white">{recentAttempts.length ? formatRecentAttempts(recentAttempts.length) : (isEnglish ? 'No submissions yet' : '暂无提交')}</div><div className="mt-1 text-sm text-slate-600 dark:text-slate-300">{recentAttempts[0]?.verdict ? t(recentAttempts[0].verdict) : (isEnglish ? 'Your recent performance will appear here after you start practicing.' : '开始刷题后这里会显示你的近期表现。')}</div></div>
                     </div>
                   </div>
                 </div>
@@ -303,22 +375,22 @@ export default function Practice() {
                 <div className="mb-6 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800">
                   <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                     <div>
-                      <h2 className="text-lg font-semibold text-slate-900 dark:text-white">层级刷题路径</h2>
-                      <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">{getCategoryMeta(activePath.category).summary}</p>
-                      <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{'默认顺序: 简单起步 -> 简单进阶 -> 中等主练 -> 困难与考试重点。'}</p>
+                      <h2 className="text-lg font-semibold text-slate-900 dark:text-white">{t('层级刷题路径')}</h2>
+                      <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">{t(getCategoryMeta(activePath.category).summary)}</p>
+                      <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{isEnglish ? 'Default order: easy warmup -> easy solid -> medium upgrade -> hard and exam focus.' : '默认顺序: 简单起步 -> 简单进阶 -> 中等主练 -> 困难与考试重点。'}</p>
                     </div>
-                    <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600 dark:bg-slate-700 dark:text-slate-200">{activePath.completionRate}% 完成</span>
+                    <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600 dark:bg-slate-700 dark:text-slate-200">{isEnglish ? `${activePath.completionRate}% complete` : `${activePath.completionRate}% 完成`}</span>
                   </div>
                   <div className="grid gap-3 lg:grid-cols-4">
                     {activePath.stages.filter((stage) => stage.total > 0).map((stage) => (
                       <div key={stage.id} className={`rounded-2xl border p-4 ${stage.accent} ${activePath.currentStageId === stage.id ? 'ring-2 ring-indigo-400/60' : ''}`}>
                         <div className="flex items-center justify-between gap-3">
-                          <div className="text-sm font-semibold">{stage.label}</div>
+                          <div className="text-sm font-semibold">{t(stage.label)}</div>
                           <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${stage.pill}`}>{stage.completed}/{stage.total}</span>
                         </div>
-                        <p className="mt-2 text-sm opacity-90">{stage.summary}</p>
-                        <div className="mt-2 text-xs font-medium opacity-90">{stage.difficultyLabel}</div>
-                        <div className="mt-3 text-xs opacity-80">{stage.unlocked ? '当前可刷' : '完成前一层后解锁'}</div>
+                        <p className="mt-2 text-sm opacity-90">{t(stage.summary)}</p>
+                        <div className="mt-2 text-xs font-medium opacity-90">{t(stage.difficultyLabel)}</div>
+                        <div className="mt-3 text-xs opacity-80">{stage.unlocked ? (isEnglish ? 'Available now' : '当前可刷') : (isEnglish ? 'Unlock after the previous stage' : '完成前一层后解锁')}</div>
                       </div>
                     ))}
                   </div>
@@ -328,20 +400,20 @@ export default function Practice() {
 
             <div className="mb-6 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800">
               <div className="grid gap-3 lg:grid-cols-[1fr_auto]">
-                <input value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} placeholder="搜索题目、描述、分类" className="min-h-[48px] rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm outline-none focus:border-indigo-500 dark:border-slate-600 dark:bg-slate-700 dark:text-white" />
-                {activeFilters > 0 && <button onClick={clearFilters} className="min-h-[48px] rounded-2xl bg-rose-100 px-4 text-sm font-semibold text-rose-700 dark:bg-rose-900/30 dark:text-rose-300">清空筛选 {activeFilters}</button>}
+                <input value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} placeholder={t('搜索题目、描述、分类')} className="min-h-[48px] rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm outline-none focus:border-indigo-500 dark:border-slate-600 dark:bg-slate-700 dark:text-white" />
+                {activeFilters > 0 && <button onClick={clearFilters} className="min-h-[48px] rounded-2xl bg-rose-100 px-4 text-sm font-semibold text-rose-700 dark:bg-rose-900/30 dark:text-rose-300">{t('清空筛选')} {activeFilters}</button>}
               </div>
 
               <div className="mt-4 space-y-4">
                 <div>
-                  <div className="mb-2 text-sm font-semibold text-slate-900 dark:text-white">专题分类</div>
+                  <div className="mb-2 text-sm font-semibold text-slate-900 dark:text-white">{t('专题分类')}</div>
                   <div className="space-y-3">
                     {CATEGORY_GROUPS.map((group) => (
                       <div key={group.group} className="flex flex-col gap-2 lg:flex-row lg:items-start">
-                        <span className="shrink-0 text-xs font-medium text-slate-500 dark:text-slate-400 lg:w-20 lg:pt-2">{group.group}</span>
+                        <span className="shrink-0 text-xs font-medium text-slate-500 dark:text-slate-400 lg:w-20 lg:pt-2">{t(group.group)}</span>
                         <div className="flex flex-wrap gap-2">
                           {group.items.map((item) => (
-                            <button key={item.id} onClick={() => setCategory(item.id)} className={`min-h-[40px] rounded-2xl px-3 py-2 text-sm font-medium transition-colors ${category === item.id ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-200'}`}>{item.name}</button>
+                            <button key={item.id} onClick={() => setCategory(item.id)} className={`min-h-[40px] rounded-2xl px-3 py-2 text-sm font-medium transition-colors ${category === item.id ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-200'}`}>{t(item.name)}</button>
                           ))}
                         </div>
                       </div>
@@ -351,23 +423,23 @@ export default function Practice() {
 
                 <div className="flex flex-col gap-4 border-t border-slate-100 pt-4 dark:border-slate-700 lg:flex-row lg:flex-wrap">
                   <div>
-                    <div className="mb-2 text-sm font-semibold text-slate-900 dark:text-white">难度</div>
-                    <div className="flex flex-wrap gap-2">{['all', 'easy', 'medium', 'hard'].map((item) => <button key={item} onClick={() => setDifficulty(item as typeof difficulty)} className={`min-h-[40px] rounded-2xl px-3 py-2 text-sm font-medium ${difficulty === item ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-200'}`}>{item}</button>)}</div>
+                    <div className="mb-2 text-sm font-semibold text-slate-900 dark:text-white">{t('难度')}</div>
+                    <div className="flex flex-wrap gap-2">{difficultyFilterOptions.map((item) => <button key={item.id} onClick={() => setDifficulty(item.id)} className={`min-h-[40px] rounded-2xl px-3 py-2 text-sm font-medium ${difficulty === item.id ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-200'}`}>{item.label}</button>)}</div>
                   </div>
                   <div>
-                    <div className="mb-2 text-sm font-semibold text-slate-900 dark:text-white">题型</div>
-                    <div className="flex flex-wrap gap-2">{['all', 'coding', 'fillblank'].map((item) => <button key={item} onClick={() => setTypeFilter(item as typeof typeFilter)} className={`min-h-[40px] rounded-2xl px-3 py-2 text-sm font-medium ${typeFilter === item ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-200'}`}>{item}</button>)}</div>
+                    <div className="mb-2 text-sm font-semibold text-slate-900 dark:text-white">{t('题型')}</div>
+                    <div className="flex flex-wrap gap-2">{typeFilterOptions.map((item) => <button key={item.id} onClick={() => setTypeFilter(item.id)} className={`min-h-[40px] rounded-2xl px-3 py-2 text-sm font-medium ${typeFilter === item.id ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-200'}`}>{item.label}</button>)}</div>
                   </div>
                   <div>
-                    <div className="mb-2 text-sm font-semibold text-slate-900 dark:text-white">完成状态</div>
-                    <div className="flex flex-wrap gap-2">{['all', 'incomplete', 'completed'].map((item) => <button key={item} onClick={() => setShowCompleted(item as typeof showCompleted)} className={`min-h-[40px] rounded-2xl px-3 py-2 text-sm font-medium ${showCompleted === item ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-200'}`}>{item}</button>)}</div>
+                    <div className="mb-2 text-sm font-semibold text-slate-900 dark:text-white">{t('完成状态')}</div>
+                    <div className="flex flex-wrap gap-2">{completionOptions.map((item) => <button key={item.id} onClick={() => setShowCompleted(item.id)} className={`min-h-[40px] rounded-2xl px-3 py-2 text-sm font-medium ${showCompleted === item.id ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-200'}`}>{item.label}</button>)}</div>
                   </div>
                   <div>
-                    <div className="mb-2 text-sm font-semibold text-slate-900 dark:text-white">效率快捷项</div>
+                    <div className="mb-2 text-sm font-semibold text-slate-900 dark:text-white">{t('效率快捷项')}</div>
                     <div className="flex flex-wrap gap-2">
-                      <button onClick={() => recommendedExercise && openExercise(recommendedExercise)} disabled={!recommendedExercise} className="min-h-[40px] rounded-2xl bg-indigo-600 px-3 py-2 text-sm font-medium text-white disabled:opacity-50">推荐下一题</button>
-                      <button onClick={() => setShowCompleted('incomplete')} className="min-h-[40px] rounded-2xl bg-slate-100 px-3 py-2 text-sm font-medium text-slate-700 dark:bg-slate-700 dark:text-slate-200">继续未完成</button>
-                      <button onClick={() => setFocusOnly((value) => !value)} className={`min-h-[40px] rounded-2xl px-3 py-2 text-sm font-medium ${focusOnly ? 'bg-amber-500 text-white' : 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-200'}`}>考试重点</button>
+                      <button onClick={() => recommendedExercise && openExercise(recommendedExercise)} disabled={!recommendedExercise} className="min-h-[40px] rounded-2xl bg-indigo-600 px-3 py-2 text-sm font-medium text-white disabled:opacity-50">{t('推荐下一题')}</button>
+                      <button onClick={() => setShowCompleted('incomplete')} className="min-h-[40px] rounded-2xl bg-slate-100 px-3 py-2 text-sm font-medium text-slate-700 dark:bg-slate-700 dark:text-slate-200">{t('继续未完成')}</button>
+                      <button onClick={() => setFocusOnly((value) => !value)} className={`min-h-[40px] rounded-2xl px-3 py-2 text-sm font-medium ${focusOnly ? 'bg-amber-500 text-white' : 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-200'}`}>{t('考试重点')}</button>
                     </div>
                   </div>
                 </div>
@@ -376,7 +448,7 @@ export default function Practice() {
 
             {selectedExercise ? (
               <div className="animate-fadeIn">
-                <button onClick={() => setSelectedExercise(null)} className="mb-4 min-h-[44px] rounded-2xl bg-slate-100 px-4 py-2 text-sm font-medium text-slate-700 dark:bg-slate-700 dark:text-slate-100">返回题目列表</button>
+                <button onClick={() => setSelectedExercise(null)} className="mb-4 min-h-[44px] rounded-2xl bg-slate-100 px-4 py-2 text-sm font-medium text-slate-700 dark:bg-slate-700 dark:text-slate-100">{t('返回题目列表')}</button>
                 {selectedExercise.type === 'coding' && selectedExercise.templates && selectedExercise.solutions && (
                   <CodingExercise
                     exerciseId={selectedExercise.id}
@@ -421,26 +493,26 @@ export default function Practice() {
                     >
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <div className="flex flex-wrap gap-2">
-                          <span className={`rounded-full px-3 py-1 text-xs font-medium ${difficultyMeta.accent}`}>{difficultyMeta.stars} {difficultyMeta.label}</span>
-                          <span className="rounded-full bg-indigo-100 px-3 py-1 text-xs font-medium text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300">{exercise.type}</span>
-                          {stageMeta && <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700 dark:bg-slate-700 dark:text-slate-200">第 {progression?.stageIndex} 层 · {stageMeta.label}</span>}
-                          {exercise.isExamFocus && <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">考试重点</span>}
+                          <span className={`rounded-full px-3 py-1 text-xs font-medium ${difficultyMeta.accent}`}>{difficultyMeta.stars} {t(difficultyMeta.label)}</span>
+                          <span className="rounded-full bg-indigo-100 px-3 py-1 text-xs font-medium text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300">{translateType(exercise.type)}</span>
+                          {stageMeta && <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700 dark:bg-slate-700 dark:text-slate-200">{formatStageLabel(progression?.stageIndex, stageMeta.label)}</span>}
+                          {exercise.isExamFocus && <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">{t('考试重点')}</span>}
                         </div>
-                        {completed && <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-medium text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">已完成</span>}
+                        {completed && <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-medium text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">{isEnglish ? 'Completed' : '已完成'}</span>}
                       </div>
-                      <div className="mt-4 text-lg font-semibold text-slate-900 dark:text-white">{exercise.title}</div>
-                      <p className="mt-2 line-clamp-3 text-sm text-slate-600 dark:text-slate-300">{exercise.description}</p>
-                      {stageMeta && <div className="mt-3 text-xs text-slate-500 dark:text-slate-400">{stageMeta.difficultyLabel}</div>}
+                      <div className="mt-4 text-lg font-semibold text-slate-900 dark:text-white">{t(exercise.title)}</div>
+                      <p className="mt-2 line-clamp-3 text-sm text-slate-600 dark:text-slate-300">{t(exercise.description)}</p>
+                      {stageMeta && <div className="mt-3 text-xs text-slate-500 dark:text-slate-400">{t(stageMeta.difficultyLabel)}</div>}
                       <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-4 text-sm dark:border-slate-700">
-                        <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600 dark:bg-slate-700 dark:text-slate-200">{exercise.category}</span>
-                        <span className="text-slate-500 dark:text-slate-400">{latestAttempt ? `${latestAttempt.score} 分 · ${latestAttempt.verdict || '最近提交'}` : (completed ? '可再次练习' : `路径序号 ${progression?.orderInCategory || '-'}`)}</span>
+                        <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600 dark:bg-slate-700 dark:text-slate-200">{t(exercise.category)}</span>
+                        <span className="text-slate-500 dark:text-slate-400">{latestAttempt ? (isEnglish ? `${latestAttempt.score} pts · ${latestAttempt.verdict ? t(latestAttempt.verdict) : 'Recent submission'}` : `${latestAttempt.score} 分 · ${latestAttempt.verdict || '最近提交'}`) : (completed ? (isEnglish ? 'Practice Again' : '可再次练习') : formatStageOrder(progression?.orderInCategory))}</span>
                       </div>
                     </button>
                   );
                 })}
               </div>
             ) : (
-              <div className="rounded-3xl border border-slate-200 bg-white px-6 py-12 text-center text-slate-500 shadow-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">当前筛选范围没有题目，建议清空筛选或切换专题。</div>
+              <div className="rounded-3xl border border-slate-200 bg-white px-6 py-12 text-center text-slate-500 shadow-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">{isEnglish ? 'No problems match the current filters. Clear filters or switch categories.' : '当前筛选范围没有题目，建议清空筛选或切换专题。'}</div>
             )}
           </>
         )}

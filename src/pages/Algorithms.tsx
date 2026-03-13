@@ -1,5 +1,19 @@
+import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, type Variants } from 'framer-motion';
+import { useI18n } from '../contexts/I18nContext';
+
+function syncPageMetadata(title: string, description: string) {
+  if (typeof document === 'undefined') return;
+  document.title = title;
+  let meta = document.querySelector<HTMLMetaElement>('meta[name="description"]');
+  if (!meta) {
+    meta = document.createElement('meta');
+    meta.name = 'description';
+    document.head.appendChild(meta);
+  }
+  meta.content = description;
+}
 
 const categories = [
   {
@@ -82,6 +96,15 @@ const itemVariants: Variants = {
 };
 
 export default function Algorithms() {
+  const { t, isEnglish } = useI18n();
+
+  useEffect(() => {
+    syncPageMetadata(
+      isEnglish ? 'Algorithms | Tumafang' : '算法可视化 | Tumafang',
+      t('通过交互式动画探索数据结构与算法的魅力。点击下方卡片开始你的学习旅程。'),
+    );
+  }, [isEnglish, t]);
+
   return (
     <div className="min-h-screen pt-28 pb-12 transition-colors duration-500">
       <div className="max-w-5xl mx-auto px-6">
@@ -91,10 +114,10 @@ export default function Algorithms() {
           className="mb-12"
         >
           <h1 className="text-4xl font-extrabold text-slate-900 dark:text-white mb-4 tracking-tight">
-            算法<span className="text-gradient">可视化</span>
+            {isEnglish ? <>Algorithm<span className="text-gradient"> Visualization</span></> : <>算法<span className="text-gradient">可视化</span></>}
           </h1>
           <p className="text-lg text-slate-600 dark:text-slate-400 max-w-2xl">
-            通过交互式动画探索数据结构与算法的魅力。点击下方卡片开始你的学习旅程。
+            {t('通过交互式动画探索数据结构与算法的魅力。点击下方卡片开始你的学习旅程。')}
           </p>
         </motion.div>
 
@@ -115,7 +138,7 @@ export default function Algorithms() {
                   {cat.icon}
                 </span>
                 <h2 className="text-xl font-bold text-slate-900 dark:text-white">
-                  {cat.name}
+                  {t(cat.name)}
                 </h2>
                 <div className="h-px flex-1 bg-gradient-to-r from-slate-200 dark:from-slate-700 to-transparent ml-4"></div>
               </div>
@@ -133,7 +156,7 @@ export default function Algorithms() {
                     
                     <div className="relative z-10 flex items-center justify-between">
                       <span className="font-semibold text-slate-800 dark:text-slate-200 group-hover:text-klein-600 dark:group-hover:text-pine-400 transition-colors">
-                        {item.name}
+                        {t(item.name)}
                       </span>
                       <svg 
                         className={`w-5 h-5 transform group-hover:translate-x-1 transition-all ${

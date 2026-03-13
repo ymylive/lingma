@@ -1,7 +1,20 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useUser } from '../contexts/UserContext';
+import { useI18n } from '../contexts/I18nContext';
 import { curriculum, type Chapter } from '../data/curriculum';
+
+function syncPageMetadata(title: string, description: string) {
+  if (typeof document === 'undefined') return;
+  document.title = title;
+  let meta = document.querySelector<HTMLMetaElement>('meta[name="description"]');
+  if (!meta) {
+    meta = document.createElement('meta');
+    meta.name = 'description';
+    document.head.appendChild(meta);
+  }
+  meta.content = description;
+}
 
 const colorMap: Record<string, { bg: string; text: string; light: string; border: string }> = {
   indigo: { bg: 'bg-indigo-500', text: 'text-indigo-600', light: 'bg-indigo-50', border: 'border-indigo-200' },
@@ -21,6 +34,14 @@ const difficultyConfig = {
 export default function Book() {
   const [expandedChapter, setExpandedChapter] = useState<string | null>('intro');
   const { progress, isLoggedIn } = useUser();
+  const { t, isEnglish } = useI18n();
+
+  useEffect(() => {
+    syncPageMetadata(
+      isEnglish ? 'Book | Tumafang' : '教程 | Tumafang',
+      t('系统学习数据结构与算法，从入门到精通'),
+    );
+  }, [isEnglish, t]);
 
   const totalTopics = curriculum.reduce((sum, ch) => sum + ch.topics.length, 0);
   const completedCount = progress.completedLessons.length;
@@ -36,31 +57,45 @@ export default function Book() {
     return chapter.topics.filter(t => isCompleted(t.link)).length;
   };
 
+  const chapterCountLabel = isEnglish ? 'Chapters' : '章节';
+  const topicCountLabel = isEnglish ? 'Topics' : '知识点';
+  const learnedCountLabel = isEnglish ? 'Learned' : '已学习';
+  const hourCountLabel = isEnglish ? 'Hours' : '小时';
+  const chapterProgressLabel = (completed: number, total: number) => isEnglish ? `${completed}/${total} learned` : `${completed}/${total} 已学`;
+  const topicCountSummary = (count: number) => isEnglish ? `${count} lessons` : `${count} 节`;
+  const chapterBadgeLabel = (index: number) => t(`第${index}章`);
+  const topicDifficultyLabel = (difficulty: keyof typeof difficultyConfig) => {
+    if (!isEnglish) return difficultyConfig[difficulty].label;
+    if (difficulty === 'easy') return 'Beginner';
+    if (difficulty === 'medium') return 'Intermediate';
+    return 'Advanced';
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white dark:from-slate-900 dark:to-slate-800 transition-colors duration-300 pt-20 pb-12">
       <div className="max-w-5xl mx-auto px-6">
         {/* 页面标题 */}
         <div className="text-center mb-10">
-          <h1 className="text-4xl font-bold text-slate-900 dark:text-white mb-3">📖 数据结构教程</h1>
-          <p className="text-slate-600 dark:text-slate-300 text-lg">系统学习数据结构与算法，从入门到精通</p>
+          <h1 className="text-4xl font-bold text-slate-900 dark:text-white mb-3">📖 {isEnglish ? 'Data Structure Tutorials' : '数据结构教程'}</h1>
+          <p className="text-slate-600 dark:text-slate-300 text-lg">{t('系统学习数据结构与算法，从入门到精通')}</p>
           <div className="flex justify-center gap-6 mt-6">
             <div className="text-center">
               <div className="text-3xl font-bold text-indigo-600 dark:text-indigo-400">{curriculum.length}</div>
-              <div className="text-sm text-slate-500 dark:text-slate-400">章节</div>
+              <div className="text-sm text-slate-500 dark:text-slate-400">{chapterCountLabel}</div>
             </div>
             <div className="text-center">
               <div className="text-3xl font-bold text-emerald-600 dark:text-emerald-400">{totalTopics}</div>
-              <div className="text-sm text-slate-500 dark:text-slate-400">知识点</div>
+              <div className="text-sm text-slate-500 dark:text-slate-400">{topicCountLabel}</div>
             </div>
             {isLoggedIn && (
               <div className="text-center">
                 <div className="text-3xl font-bold text-amber-600 dark:text-amber-400">{completedCount}</div>
-                <div className="text-sm text-slate-500 dark:text-slate-400">已学习</div>
+                <div className="text-sm text-slate-500 dark:text-slate-400">{learnedCountLabel}</div>
               </div>
             )}
             <div className="text-center">
               <div className="text-3xl font-bold text-rose-600 dark:text-rose-400">15+</div>
-              <div className="text-sm text-slate-500 dark:text-slate-400">小时</div>
+              <div className="text-sm text-slate-500 dark:text-slate-400">{hourCountLabel}</div>
             </div>
           </div>
         </div>
@@ -70,7 +105,7 @@ export default function Book() {
           <div className="flex items-start gap-4">
             <span className="text-4xl">🎯</span>
             <div>
-              <h3 className="font-bold text-lg mb-1">推荐学习路径</h3>
+              <h3 className="font-bold text-lg mb-1">{t('推荐学习路径')}</h3>
               <p className="text-indigo-100 text-sm leading-relaxed">
                 建议按顺序学习：先掌握<strong>绑论</strong>中的复杂度分析，然后学习<strong>线性表</strong>打好基础，
                 再进阶<strong>树</strong>和<strong>图</strong>，最后通过<strong>查找</strong>和<strong>排序</strong>综合应用所学知识。
@@ -103,20 +138,20 @@ export default function Book() {
                   <div className="flex-1 text-left">
                     <div className="flex items-center gap-2">
                       <span className={`text-xs font-medium ${colors.text} ${colors.light} dark:bg-${chapter.color}-900/30 dark:text-${chapter.color}-400 px-2 py-0.5 rounded`}>
-                        第{index + 1}章
+                        {chapterBadgeLabel(index + 1)}
                       </span>
-                      <h2 className="text-xl font-bold text-slate-900 dark:text-white">{chapter.name}</h2>
+                      <h2 className="text-xl font-bold text-slate-900 dark:text-white">{t(chapter.name)}</h2>
                     </div>
-                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{chapter.desc}</p>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{t(chapter.desc)}</p>
                   </div>
                   <div className="flex items-center gap-3">
                     {isLoggedIn && (
                       <span className="text-sm text-emerald-600 dark:text-emerald-400 font-medium">
-                        {getChapterProgress(chapter)}/{chapter.topics.length} 已学
+                        {chapterProgressLabel(getChapterProgress(chapter), chapter.topics.length)}
                       </span>
                     )}
                     {!isLoggedIn && (
-                      <span className="text-sm text-slate-400">{chapter.topics.length} 节</span>
+                      <span className="text-sm text-slate-400">{topicCountSummary(chapter.topics.length)}</span>
                     )}
                     <svg
                       className={`w-5 h-5 text-slate-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
@@ -135,7 +170,7 @@ export default function Book() {
                     <div className="grid gap-3 mt-4">
                       {chapter.topics.map((topic, topicIndex) => (
                         <Link
-                          key={topic.name}
+                          key={t(topic.name)}
                           to={topic.link}
                           className={`group flex items-center gap-4 p-4 rounded-xl transition-all ${
                             isCompleted(topic.link)
@@ -163,16 +198,16 @@ export default function Book() {
                                   ? 'text-emerald-700 dark:text-emerald-400 group-hover:text-emerald-800 dark:group-hover:text-emerald-300'
                                   : 'text-slate-800 dark:text-slate-200 group-hover:text-indigo-600 dark:group-hover:text-indigo-400'
                               }`}>
-                                {topic.name}
+                                {t(topic.name)}
                               </span>
                               <span className={`text-xs px-1.5 py-0.5 rounded ${difficultyConfig[topic.difficulty].color} dark:bg-opacity-20`}>
-                                {difficultyConfig[topic.difficulty].label}
+                                {topicDifficultyLabel(topic.difficulty)}
                               </span>
                               {isCompleted(topic.link) && (
-                                <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">已学习</span>
+                                <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">{learnedCountLabel}</span>
                               )}
                             </div>
-                            <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">{topic.desc}</p>
+                            <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">{t(topic.desc)}</p>
                           </div>
                           <div className="text-xs text-slate-400 flex items-center gap-1">
                             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -201,7 +236,7 @@ export default function Book() {
         <div className="mt-10 text-center">
           <div className="inline-flex items-center gap-2 bg-slate-100 dark:bg-slate-800 rounded-full px-4 py-2 text-sm text-slate-600 dark:text-slate-400">
             <span>💡</span>
-            <span>点击章节展开查看详细内容，点击具体知识点进入学习</span>
+            <span>{isEnglish ? 'Expand a chapter to browse lessons, then open a topic to start learning.' : '点击章节展开查看详细内容，点击具体知识点进入学习'}</span>
           </div>
         </div>
       </div>

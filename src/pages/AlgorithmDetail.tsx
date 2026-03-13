@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { useI18n } from '../contexts/I18nContext';
 import LinkedListVisualization from '../components/visualizations/LinkedListVisualization';
 import StackVisualization from '../components/visualizations/StackVisualization';
 import QueueVisualization from '../components/visualizations/QueueVisualization';
@@ -8,6 +9,18 @@ import TreeVisualization from '../components/visualizations/TreeVisualization';
 import { LinkedListTutorial, SortTutorial, TreeTutorial, StackTutorial } from '../components/tutorials';
 
 type VisType = 'list' | 'stack' | 'queue' | 'sort' | 'tree';
+
+function syncPageMetadata(title: string, description: string) {
+  if (typeof document === 'undefined') return;
+  document.title = title;
+  let meta = document.querySelector<HTMLMetaElement>('meta[name="description"]');
+  if (!meta) {
+    meta = document.createElement('meta');
+    meta.name = 'description';
+    document.head.appendChild(meta);
+  }
+  meta.content = description;
+}
 
 const algorithms: Record<string, { title: string; desc: string; category: string; vis: VisType }> = {
   'link-head-node': { title: '单链表（带头结点）', desc: '带头结点的单向链表，便于操作统一处理', category: '线性表', vis: 'list' },
@@ -37,16 +50,29 @@ export default function AlgorithmDetail() {
   const { id } = useParams<{ id: string }>();
   const info = id ? algorithms[id] : null;
   const [activeTab, setActiveTab] = useState<'visual' | 'tutorial'>('visual');
+  const { t, isEnglish } = useI18n();
+
+  useEffect(() => {
+    if (!info) {
+      syncPageMetadata(
+        isEnglish ? 'Algorithm Not Found | Tumafang' : '算法不存在 | Tumafang',
+        isEnglish ? 'The requested algorithm demo or tutorial could not be found.' : '请求的算法演示或教程不存在。',
+      );
+      return;
+    }
+
+    syncPageMetadata(`${t(info.title)} | ${t('算法可视化')} | Tumafang`, t(info.desc));
+  }, [info, isEnglish, t]);
 
   if (!info) {
     return (
       <div className="min-h-screen pt-24 px-6 bg-slate-50 dark:bg-slate-900 transition-colors duration-300">
         <div className="max-w-4xl mx-auto text-center">
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-4">
-            算法不存在
+            {t('算法不存在')}
           </h1>
           <Link to="/algorithms" className="text-indigo-600 dark:text-indigo-400 hover:underline">
-            返回算法列表
+            {t('返回算法列表')}
           </Link>
         </div>
       </div>
@@ -57,7 +83,7 @@ export default function AlgorithmDetail() {
     switch (info.vis) {
       case 'list': return <LinkedListTutorial />;
       case 'stack': return <StackTutorial />;
-      case 'queue': return <StackTutorial />; // 队列教程复用栈教程
+      case 'queue': return <StackTutorial />;
       case 'sort': return <SortTutorial />;
       case 'tree': return <TreeTutorial />;
     }
@@ -76,27 +102,24 @@ export default function AlgorithmDetail() {
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900 pt-20 pb-12 transition-colors duration-300">
       <div className="max-w-6xl mx-auto px-6">
-        {/* 面包屑 */}
         <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400 mb-6">
           <Link to="/algorithms" className="hover:text-indigo-600 dark:hover:text-indigo-400">
-            算法列表
+            {t('算法列表')}
           </Link>
           <span>/</span>
-          <span className="text-slate-900 dark:text-white">{info.title}</span>
+          <span className="text-slate-900 dark:text-white">{t(info.title)}</span>
         </div>
 
-        {/* 标题区域 */}
         <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-6 mb-6">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
               <span className="text-xs text-indigo-600 dark:text-indigo-400 font-medium bg-indigo-50 dark:bg-indigo-900/30 px-2 py-1 rounded">
-                {info.category}
+                {t(info.category)}
               </span>
-              <h1 className="text-2xl font-bold text-slate-900 dark:text-white mt-3">{info.title}</h1>
-              <p className="text-slate-600 dark:text-slate-400 mt-2">{info.desc}</p>
+              <h1 className="text-2xl font-bold text-slate-900 dark:text-white mt-3">{t(info.title)}</h1>
+              <p className="text-slate-600 dark:text-slate-400 mt-2">{t(info.desc)}</p>
             </div>
             
-            {/* 模式切换 */}
             <div className="flex bg-slate-100 dark:bg-slate-700/50 rounded-xl p-1">
               <button
                 onClick={() => setActiveTab('visual')}
@@ -106,7 +129,7 @@ export default function AlgorithmDetail() {
                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
-                <span>🎬</span> 动画演示
+                <span>🎬</span> {t('动画演示')}
               </button>
               <button
                 onClick={() => setActiveTab('tutorial')}
@@ -116,13 +139,12 @@ export default function AlgorithmDetail() {
                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
-                <span>📚</span> 学习教程
+                <span>📚</span> {t('学习教程')}
               </button>
             </div>
           </div>
         </div>
 
-        {/* 内容区域 */}
         {activeTab === 'visual' ? renderVisualization() : renderTutorial()}
       </div>
     </div>
