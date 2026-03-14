@@ -28,6 +28,9 @@ def get_ai_proxy_config() -> Dict[str, str]:
         or "https://api.aabao.top/v1/chat/completions",
         "AI_MODEL": os.getenv("LINGMA_AI_MODEL", "deepseek-v3.2-exp-thinking").strip()
         or "deepseek-v3.2-exp-thinking",
+        "JUDGE_BASE_URL": os.getenv("LINGMA_JUDGE_BASE_URL", "http://127.0.0.1:3002").strip()
+        or "http://127.0.0.1:3002",
+        "JUDGE_INTERNAL_TOKEN": read_required_env("LINGMA_JUDGE_INTERNAL_TOKEN"),
     }
 
 

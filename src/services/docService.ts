@@ -19,6 +19,7 @@ export interface DocFetchResult {
 export async function fetchDocumentFromUrl(targetUrl: string, maxLength = 16000): Promise<DocFetchResult> {
   const response = await fetch(DOC_PROXY_URL, {
     method: 'POST',
+    credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ url: targetUrl, maxLength }),
   });

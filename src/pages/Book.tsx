@@ -16,19 +16,25 @@ function syncPageMetadata(title: string, description: string) {
   meta.content = description;
 }
 
-const colorMap: Record<string, { bg: string; text: string; light: string; border: string }> = {
-  indigo: { bg: 'bg-indigo-500', text: 'text-indigo-600', light: 'bg-indigo-50', border: 'border-indigo-200' },
-  emerald: { bg: 'bg-emerald-500', text: 'text-emerald-600', light: 'bg-emerald-50', border: 'border-emerald-200' },
-  amber: { bg: 'bg-amber-500', text: 'text-amber-600', light: 'bg-amber-50', border: 'border-amber-200' },
-  rose: { bg: 'bg-rose-500', text: 'text-rose-600', light: 'bg-rose-50', border: 'border-rose-200' },
-  cyan: { bg: 'bg-cyan-500', text: 'text-cyan-600', light: 'bg-cyan-50', border: 'border-cyan-200' },
-  purple: { bg: 'bg-purple-500', text: 'text-purple-600', light: 'bg-purple-50', border: 'border-purple-200' },
+const colorMap: Record<string, { bg: string; text: string; light: string; border: string; darkSurface: string; darkText: string; darkBorder: string }> = {
+  indigo: { bg: 'bg-indigo-500', text: 'text-indigo-600', light: 'bg-indigo-50', border: 'border-indigo-200', darkSurface: 'dark:bg-indigo-950/40', darkText: 'dark:text-indigo-300', darkBorder: 'dark:border-indigo-500/50' },
+  emerald: { bg: 'bg-emerald-500', text: 'text-emerald-600', light: 'bg-emerald-50', border: 'border-emerald-200', darkSurface: 'dark:bg-emerald-950/40', darkText: 'dark:text-emerald-300', darkBorder: 'dark:border-emerald-500/50' },
+  amber: { bg: 'bg-amber-500', text: 'text-amber-600', light: 'bg-amber-50', border: 'border-amber-200', darkSurface: 'dark:bg-amber-950/40', darkText: 'dark:text-amber-300', darkBorder: 'dark:border-amber-500/50' },
+  rose: { bg: 'bg-rose-500', text: 'text-rose-600', light: 'bg-rose-50', border: 'border-rose-200', darkSurface: 'dark:bg-rose-950/40', darkText: 'dark:text-rose-300', darkBorder: 'dark:border-rose-500/50' },
+  cyan: { bg: 'bg-cyan-500', text: 'text-cyan-600', light: 'bg-cyan-50', border: 'border-cyan-200', darkSurface: 'dark:bg-cyan-950/40', darkText: 'dark:text-cyan-300', darkBorder: 'dark:border-cyan-500/50' },
+  purple: { bg: 'bg-purple-500', text: 'text-purple-600', light: 'bg-purple-50', border: 'border-purple-200', darkSurface: 'dark:bg-purple-950/40', darkText: 'dark:text-purple-300', darkBorder: 'dark:border-purple-500/50' },
 };
 
 const difficultyConfig = {
   easy: { label: '入门', color: 'bg-emerald-100 text-emerald-700' },
   medium: { label: '进阶', color: 'bg-amber-100 text-amber-700' },
   hard: { label: '困难', color: 'bg-rose-100 text-rose-700' },
+};
+
+const difficultyToneClass: Record<keyof typeof difficultyConfig, string> = {
+  easy: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300',
+  medium: 'bg-amber-100 text-amber-700 dark:bg-amber-900/20 dark:text-amber-300',
+  hard: 'bg-rose-100 text-rose-700 dark:bg-rose-900/20 dark:text-rose-300',
 };
 
 export default function Book() {
@@ -124,20 +130,20 @@ export default function Book() {
               <div
                 key={chapter.id}
                 className={`bg-white dark:bg-slate-800 rounded-2xl border-2 transition-all duration-300 overflow-hidden ${
-                  isExpanded ? `${colors.border} dark:border-${chapter.color}-500/50` : 'border-slate-200 dark:border-slate-700'
+                  isExpanded ? `${colors.border} ${colors.darkBorder}` : 'border-slate-200 dark:border-slate-700'
                 }`}
               >
                 {/* 章节头部 */}
                 <button
                   onClick={() => setExpandedChapter(isExpanded ? null : chapter.id)}
-                  className="w-full p-5 flex items-center gap-4 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
+                  className="w-full cursor-pointer p-5 flex items-center gap-4 transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/60 focus-visible:ring-inset dark:hover:bg-slate-700/50"
                 >
-                  <div className={`w-12 h-12 ${colors.light} dark:bg-${chapter.color}-900/30 rounded-xl flex items-center justify-center text-2xl`}>
+                  <div className={`w-12 h-12 ${colors.light} ${colors.darkSurface} rounded-xl flex items-center justify-center text-2xl`}>
                     {chapter.icon}
                   </div>
                   <div className="flex-1 text-left">
                     <div className="flex items-center gap-2">
-                      <span className={`text-xs font-medium ${colors.text} ${colors.light} dark:bg-${chapter.color}-900/30 dark:text-${chapter.color}-400 px-2 py-0.5 rounded`}>
+                      <span className={`text-xs font-medium ${colors.text} ${colors.light} ${colors.darkSurface} ${colors.darkText} px-2 py-0.5 rounded`}>
                         {chapterBadgeLabel(index + 1)}
                       </span>
                       <h2 className="text-xl font-bold text-slate-900 dark:text-white">{t(chapter.name)}</h2>
@@ -181,8 +187,8 @@ export default function Book() {
                           <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold ${
                             isCompleted(topic.link)
                               ? 'bg-emerald-500 text-white'
-                              : `${colors.light} dark:bg-${chapter.color}-900/30 ${colors.text} dark:text-${chapter.color}-400`
-                          }`}>
+                              : `${colors.light} ${colors.darkSurface} ${colors.text} ${colors.darkText}`
+                           }`}>
                             {isCompleted(topic.link) ? (
                               <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                                 <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
@@ -200,7 +206,7 @@ export default function Book() {
                               }`}>
                                 {t(topic.name)}
                               </span>
-                              <span className={`text-xs px-1.5 py-0.5 rounded ${difficultyConfig[topic.difficulty].color} dark:bg-opacity-20`}>
+                              <span className={`text-xs px-1.5 py-0.5 rounded ${difficultyToneClass[topic.difficulty]}`}>
                                 {topicDifficultyLabel(topic.difficulty)}
                               </span>
                               {isCompleted(topic.link) && (

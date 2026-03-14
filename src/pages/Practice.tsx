@@ -1,5 +1,6 @@
 import { useDeferredValue, useEffect, useMemo, useState } from 'react';
 import { AIExerciseGenerator, CodingExercise, FillInBlank } from '../components/tutorials/TutorialPanel';
+import VibeCodingLab from '../components/tutorials/VibeCodingLab';
 import { allExercises, type Exercise } from '../data/exercises';
 import { useUser } from '../contexts/UserContext';
 import { useI18n } from '../contexts/I18nContext';
@@ -99,7 +100,7 @@ function fuzzyMatch(text: string, query: string) {
 export default function Practice() {
   const { isExerciseCompleted, progress, user } = useUser();
   const { formatDate, isEnglish, t } = useI18n();
-  const [tab, setTab] = useState<'preset' | 'ai'>('preset');
+  const [tab, setTab] = useState<'preset' | 'ai' | 'vibe'>('preset');
   const [category, setCategory] = useState('all');
   const [difficulty, setDifficulty] = useState<'all' | 'easy' | 'medium' | 'hard'>('all');
   const [typeFilter, setTypeFilter] = useState<'all' | 'coding' | 'fillblank'>('all');
@@ -227,7 +228,7 @@ export default function Practice() {
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white pt-20 pb-12 dark:from-slate-900 dark:to-slate-800">
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
         <div className="mb-8 grid gap-4 lg:grid-cols-[1.4fr_0.9fr]">
-          <div className="rounded-3xl border border-slate-200 bg-[radial-gradient(circle_at_top_left,_rgba(37,99,235,0.16),_transparent_45%),linear-gradient(135deg,_rgba(255,255,255,0.96),_rgba(241,245,249,0.86))] p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+          <div className="rounded-3xl border border-slate-200 bg-[radial-gradient(circle_at_top_left,_rgba(37,99,235,0.16),_transparent_45%),linear-gradient(135deg,_rgba(255,255,255,0.96),_rgba(241,245,249,0.86))] p-6 shadow-sm dark:border-slate-700 dark:bg-[radial-gradient(circle_at_top_left,_rgba(59,130,246,0.2),_transparent_42%),linear-gradient(135deg,_rgba(15,23,42,0.98),_rgba(30,41,59,0.94))]">
             <div className="flex flex-wrap items-center gap-2">
               <span className="rounded-full bg-indigo-100 px-3 py-1 text-xs font-semibold text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300">{isEnglish ? 'LeetCode-style Practice' : 'LeetCode 风格刷题'}</span>
               <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600 dark:bg-slate-700 dark:text-slate-200">{t('层级递进')}</span>
@@ -246,16 +247,25 @@ export default function Practice() {
           </div>
         </div>
 
-        <div className="mb-6 grid grid-cols-1 gap-2 sm:grid-cols-2">
+        <div className="mb-6 grid grid-cols-1 gap-2 sm:grid-cols-3">
           <button onClick={() => setTab('preset')} className={`min-h-[48px] rounded-2xl px-6 py-3 text-sm font-semibold transition-all ${tab === 'preset' ? 'bg-indigo-600 text-white shadow-sm' : 'border border-slate-200 bg-white text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200'}`}>{t('题库练习')}</button>
           <button onClick={() => setTab('ai')} className={`min-h-[48px] rounded-2xl px-6 py-3 text-sm font-semibold transition-all ${tab === 'ai' ? 'bg-indigo-600 text-white shadow-sm' : 'border border-slate-200 bg-white text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200'}`}>{t('AI 智能出题')}</button>
+          <button onClick={() => setTab('vibe')} className={`min-h-[48px] rounded-2xl px-6 py-3 text-sm font-semibold transition-all ${tab === 'vibe' ? 'bg-indigo-600 text-white shadow-sm' : 'border border-slate-200 bg-white text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200'}`}>{isEnglish ? 'Vibe Coding Lab' : 'Vibe Coding 学习'}</button>
         </div>
 
-        {tab === 'ai' ? <AIExerciseGenerator /> : (
+        {tab === 'ai' ? <AIExerciseGenerator /> : tab === 'vibe' ? (
+          <VibeCodingLab
+            onOpenAiGenerator={() => setTab('ai')}
+            onOpenPracticeLibrary={() => {
+              setSelectedExercise(null);
+              setTab('preset');
+            }}
+          />
+        ) : (
           <>
             {!selectedExercise && (
               <>
-                <div className="mb-6 rounded-3xl border border-indigo-200 bg-[radial-gradient(circle_at_top_left,_rgba(79,70,229,0.16),_transparent_45%),linear-gradient(135deg,_rgba(238,242,255,0.95),_rgba(255,255,255,0.92))] p-5 shadow-sm dark:border-indigo-800 dark:bg-slate-900">
+                <div className="mb-6 rounded-3xl border border-indigo-200 bg-[radial-gradient(circle_at_top_left,_rgba(79,70,229,0.16),_transparent_45%),linear-gradient(135deg,_rgba(238,242,255,0.95),_rgba(255,255,255,0.92))] p-5 shadow-sm dark:border-indigo-800 dark:bg-[radial-gradient(circle_at_top_left,_rgba(99,102,241,0.22),_transparent_42%),linear-gradient(135deg,_rgba(15,23,42,0.98),_rgba(30,41,59,0.94))]">
                   <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                     <div className="space-y-3">
                       <div className="flex flex-wrap items-center gap-2">
@@ -400,7 +410,7 @@ export default function Practice() {
 
             <div className="mb-6 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800">
               <div className="grid gap-3 lg:grid-cols-[1fr_auto]">
-                <input value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} placeholder={t('搜索题目、描述、分类')} className="min-h-[48px] rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm outline-none focus:border-indigo-500 dark:border-slate-600 dark:bg-slate-700 dark:text-white" />
+                <input value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} placeholder={t('搜索题目、描述、分类')} className="min-h-[48px] rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm outline-none transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white dark:focus:ring-indigo-400/20" />
                 {activeFilters > 0 && <button onClick={clearFilters} className="min-h-[48px] rounded-2xl bg-rose-100 px-4 text-sm font-semibold text-rose-700 dark:bg-rose-900/30 dark:text-rose-300">{t('清空筛选')} {activeFilters}</button>}
               </div>
 

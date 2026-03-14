@@ -54,7 +54,7 @@ export default function Header() {
                 <Link
                   key={item.path}
                   to={item.path}
-                  className={`relative cursor-pointer rounded-full px-4 py-1.5 text-sm font-medium transition-all duration-300 ${
+                  className={`relative cursor-pointer rounded-full px-4 py-1.5 text-sm font-medium transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-klein-500/60 ${
                     isActive
                       ? 'text-klein-600 dark:text-white'
                       : 'text-slate-600 hover:bg-white/50 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-700/50 dark:hover:text-white'
@@ -79,7 +79,7 @@ export default function Header() {
               <button
                 type="button"
                 onClick={() => setLocale('zh-CN')}
-                className={`min-h-[36px] min-w-[44px] cursor-pointer rounded-full px-3 transition-colors ${
+                  className={`min-h-[36px] min-w-[44px] cursor-pointer rounded-full px-3 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-klein-500/60 ${
                   locale === 'zh-CN'
                     ? 'bg-klein-600 text-white'
                     : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'
@@ -90,7 +90,7 @@ export default function Header() {
               <button
                 type="button"
                 onClick={() => setLocale('en-US')}
-                className={`min-h-[36px] min-w-[44px] cursor-pointer rounded-full px-3 transition-colors ${
+                  className={`min-h-[36px] min-w-[44px] cursor-pointer rounded-full px-3 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-klein-500/60 ${
                   locale === 'en-US'
                     ? 'bg-klein-600 text-white'
                     : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'
@@ -103,7 +103,7 @@ export default function Header() {
             <button
               type="button"
               onClick={toggleTheme}
-              className="relative rounded-full p-2 text-slate-500 transition-all hover:scale-105 hover:bg-slate-100 active:scale-95 dark:text-slate-400 dark:hover:bg-slate-800"
+              className="relative cursor-pointer rounded-full p-2 text-slate-500 transition-all hover:scale-105 hover:bg-slate-100 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-klein-500/60 dark:text-slate-400 dark:hover:bg-slate-800"
               title={isAuto ? t('自动模式 (19:30-7:30开启夜间)') : t('点击切换主题')}
             >
               {theme === 'light' ? (
@@ -129,7 +129,7 @@ export default function Header() {
                 <button
                   type="button"
                   onClick={() => setShowDropdown((value) => !value)}
-                  className="flex cursor-pointer items-center gap-2 rounded-full border border-slate-200 bg-white p-1 pl-2 pr-1 transition-all hover:border-klein-300 dark:border-slate-700 dark:bg-slate-900 dark:hover:border-pine-500"
+                  className="flex cursor-pointer items-center gap-2 rounded-full border border-slate-200 bg-white p-1 pl-2 pr-1 transition-all hover:border-klein-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-klein-500/60 dark:border-slate-700 dark:bg-slate-900 dark:hover:border-pine-500"
                 >
                   <div className="hidden text-right sm:block">
                     <div className="mb-0.5 text-xs font-bold leading-none text-slate-900 dark:text-white">{user?.username}</div>
@@ -161,7 +161,7 @@ export default function Header() {
                           <Link
                             to="/dashboard"
                             onClick={() => setShowDropdown(false)}
-                            className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700/50"
+                            className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-klein-500/60 dark:text-slate-300 dark:hover:bg-slate-700/50"
                           >
                             <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-50 text-lg dark:bg-indigo-900/30">📊</span>
                             {isEnglish ? 'Dashboard' : '学习中心'}
@@ -184,7 +184,7 @@ export default function Header() {
                               logout();
                               setShowDropdown(false);
                             }}
-                            className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium text-rose-600 transition-colors hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-900/10"
+                            className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium text-rose-600 transition-colors hover:bg-rose-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500/60 dark:text-rose-400 dark:hover:bg-rose-900/10"
                           >
                             🚪 {isEnglish ? 'Sign Out' : '退出登录'}
                           </button>
@@ -197,7 +197,7 @@ export default function Header() {
             ) : (
               <Link
                 to="/auth"
-                className="rounded-full bg-indigo-600 px-5 py-2 text-sm font-medium text-white shadow-lg shadow-indigo-500/20 transition-all hover:-translate-y-0.5 hover:bg-indigo-700 hover:shadow-indigo-500/40"
+                className="rounded-full bg-indigo-600 px-5 py-2 text-sm font-medium text-white shadow-lg shadow-indigo-500/20 transition-all hover:-translate-y-0.5 hover:bg-indigo-700 hover:shadow-indigo-500/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/60"
               >
                 {isEnglish ? 'Sign In' : '登录'}
               </Link>

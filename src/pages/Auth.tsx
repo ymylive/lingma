@@ -148,7 +148,7 @@ export default function Auth() {
                       key={item.id}
                       type="button"
                       onClick={() => setSkillLevel(item.id)}
-                      className={`min-h-[96px] cursor-pointer rounded-2xl border px-4 py-3 text-left transition-all ${
+                      className={`min-h-[96px] cursor-pointer rounded-2xl border px-4 py-3 text-left transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/60 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900 ${
                         skillLevel === item.id
                           ? 'border-indigo-500 bg-indigo-50 shadow-sm dark:border-indigo-400 dark:bg-indigo-900/20'
                           : 'border-slate-200 bg-slate-50 hover:border-indigo-300 dark:border-slate-700 dark:bg-slate-900/50'
@@ -173,7 +173,7 @@ export default function Auth() {
                       key={item.id}
                       type="button"
                       onClick={() => setTargetLanguage(item.id)}
-                      className={`min-h-[84px] cursor-pointer rounded-2xl border px-4 py-3 text-left transition-all ${
+                      className={`min-h-[84px] cursor-pointer rounded-2xl border px-4 py-3 text-left transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/60 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900 ${
                         targetLanguage === item.id
                           ? 'border-emerald-500 bg-emerald-50 shadow-sm dark:border-emerald-400 dark:bg-emerald-900/20'
                           : 'border-slate-200 bg-slate-50 hover:border-emerald-300 dark:border-slate-700 dark:bg-slate-900/50'

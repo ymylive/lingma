@@ -174,12 +174,12 @@ const lessons: Record<string, LessonContent> = {
               <p className="mb-2">算法是解决特定问题的<strong>有限步骤</strong>的精确描述。</p>
               <p className="text-sm text-slate-500">就像做菜的菜谱、组装家具的说明书一样，算法告诉计算机"怎么做"。</p>
             </KnowledgeCard>
-            <div className="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl p-6 border border-emerald-100">
-              <h4 className="text-lg font-bold text-emerald-800 mb-3">🍳 用"炒鸡蛋"理解算法</h4>
+            <div className="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl border border-emerald-100 p-6 dark:from-emerald-950/40 dark:to-teal-950/30 dark:border-emerald-800/60">
+              <h4 className="text-lg font-bold text-emerald-800 mb-3 dark:text-emerald-200">🍳 用"炒鸡蛋"理解算法</h4>
               <div className="grid md:grid-cols-2 gap-4 text-sm">
-                <div className="bg-white rounded-lg p-4">
+                <div className="bg-white dark:bg-slate-900/70 rounded-lg p-4">
                   <p className="font-medium text-slate-800 mb-2">炒鸡蛋的"算法"：</p>
-                  <ol className="list-decimal list-inside text-slate-600 space-y-1">
+                  <ol className="list-decimal list-inside text-slate-600 dark:text-slate-300 space-y-1">
                     <li>打鸡蛋到碗里</li>
                     <li>加盐搅拌均匀</li>
                     <li>热锅加油</li>
@@ -187,9 +187,9 @@ const lessons: Record<string, LessonContent> = {
                     <li>出锅装盘</li>
                   </ol>
                 </div>
-                <div className="bg-white rounded-lg p-4">
+                <div className="bg-white dark:bg-slate-900/70 rounded-lg p-4">
                   <p className="font-medium text-slate-800 mb-2">这就是算法！</p>
-                  <ul className="text-slate-600 space-y-1 text-sm">
+                  <ul className="text-slate-600 dark:text-slate-300 space-y-1 text-sm">
                     <li>✓ 有限步骤（5步）</li>
                     <li>✓ 每步明确（不含糊）</li>
                     <li>✓ 有输入（鸡蛋、盐、油）</li>
@@ -277,16 +277,16 @@ const lessons: Record<string, LessonContent> = {
         title: '用"找人"的例子理解时间复杂度',
         content: (
           <div className="space-y-4">
-            <div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-xl p-6 border border-amber-100">
-              <h4 className="text-lg font-bold text-amber-800 mb-3">🏫 假设你要在学校里找一个人...</h4>
+            <div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-xl border border-amber-100 p-6 dark:from-amber-950/40 dark:to-orange-950/30 dark:border-amber-800/60">
+              <h4 className="text-lg font-bold text-amber-800 mb-3 dark:text-amber-200">🏫 假设你要在学校里找一个人...</h4>
               <div className="grid md:grid-cols-2 gap-4 text-sm">
-                <div className="bg-white rounded-lg p-4">
+                <div className="bg-white dark:bg-slate-900/70 rounded-lg p-4">
                   <div className="text-2xl mb-2">🔍 方法A：挨个问</div>
                   <p className="text-slate-600">从第1个人问到第n个人</p>
                   <p className="text-slate-500 mt-2">学校有1000人 → 最多问1000次</p>
                   <p className="text-indigo-600 font-medium mt-2">时间复杂度：O(n)</p>
                 </div>
-                <div className="bg-white rounded-lg p-4">
+                <div className="bg-white dark:bg-slate-900/70 rounded-lg p-4">
                   <div className="text-2xl mb-2">📋 方法B：查花名册</div>
                   <p className="text-slate-600">按名字排序，二分查找</p>
                   <p className="text-slate-500 mt-2">学校有1000人 → 最多问10次</p>
@@ -558,10 +558,10 @@ void quickSort(int a[], int l, int r) {
         title: '用社交网络理解"图"',
         content: (
           <div className="space-y-4">
-            <div className="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-xl p-6 border border-blue-100">
-              <h4 className="text-lg font-bold text-blue-800 mb-3">📱 想象你的微信好友关系...</h4>
+            <div className="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-xl border border-blue-100 p-6 dark:from-blue-950/40 dark:to-cyan-950/30 dark:border-blue-800/60">
+              <h4 className="text-lg font-bold text-blue-800 mb-3 dark:text-blue-200">📱 想象你的微信好友关系...</h4>
               <div className="grid md:grid-cols-2 gap-4">
-                <div className="bg-white rounded-lg p-4">
+                <div className="bg-white dark:bg-slate-900/70 rounded-lg p-4">
                   <div className="text-center mb-4">
                     <span className="text-3xl">👤</span>
                     <span className="text-slate-400 mx-2">━━━</span>
@@ -575,7 +575,7 @@ void quickSort(int a[], int l, int r) {
                   </p>
                   <p className="text-sm text-blue-600 mt-2">这种"多对多"的复杂关系，就是图！</p>
                 </div>
-                <div className="bg-white rounded-lg p-4">
+                <div className="bg-white dark:bg-slate-900/70 rounded-lg p-4">
                   <p className="font-medium text-slate-800 mb-2">🔍 图的组成</p>
                   <ul className="text-sm text-slate-600 space-y-2">
                     <li>👤 <strong>顶点(Vertex)</strong> = 每个人</li>
@@ -1829,9 +1829,9 @@ TreeNode* insert(TreeNode* root, int key) {
               <p><strong>大顶堆</strong>：每个节点 ≥ 其子节点（根是最大值）</p>
               <p><strong>小顶堆</strong>：每个节点 ≤ 其子节点（根是最小值）</p>
             </KnowledgeCard>
-            <div className="bg-gradient-to-r from-rose-50 to-pink-50 rounded-xl p-6 border border-rose-100">
-              <h4 className="text-lg font-bold text-rose-800 mb-3">🏆 生活例子：公司层级</h4>
-              <p className="text-slate-600 text-sm">大顶堆就像公司：老板(根)工资最高，每个上级工资都比下属高。</p>
+            <div className="bg-gradient-to-r from-rose-50 to-pink-50 rounded-xl border border-rose-100 p-6 dark:from-rose-950/40 dark:to-pink-950/30 dark:border-rose-800/60">
+              <h4 className="text-lg font-bold text-rose-800 mb-3 dark:text-rose-200">🏆 生活例子：公司层级</h4>
+              <p className="text-slate-600 text-sm dark:text-slate-300">大顶堆就像公司：老板(根)工资最高，每个上级工资都比下属高。</p>
             </div>
             <CompareTable
               headers={['操作', '时间复杂度', '说明']}
@@ -1930,9 +1930,9 @@ int seqSearchWithGuard(int arr[], int n, int key) {
               <p>通过<strong>哈希函数</strong>将key映射到数组下标，实现O(1)查找</p>
               <p className="text-sm text-slate-500 mt-2">就像字典按拼音查字，不用从头翻</p>
             </KnowledgeCard>
-            <div className="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl p-6 border border-emerald-100">
-              <h4 className="text-lg font-bold text-emerald-800 mb-3">📞 生活例子：通讯录</h4>
-              <p className="text-slate-600 text-sm mb-3">按姓氏首字母分组查找联系人：</p>
+            <div className="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl border border-emerald-100 p-6 dark:from-emerald-950/40 dark:to-teal-950/30 dark:border-emerald-800/60">
+              <h4 className="text-lg font-bold text-emerald-800 mb-3 dark:text-emerald-200">📞 生活例子：通讯录</h4>
+              <p className="text-slate-600 text-sm mb-3 dark:text-slate-300">按姓氏首字母分组查找联系人：</p>
               <div className="flex gap-2 flex-wrap">
                 <span className="bg-white px-2 py-1 rounded text-sm">A → 阿明</span>
                 <span className="bg-white px-2 py-1 rounded text-sm">B → 小白</span>
@@ -2022,8 +2022,8 @@ public:
               <p>反复遍历数组，每次比较相邻元素，如果顺序错误就交换。</p>
               <p className="text-sm text-slate-500 mt-2">像气泡一样，大的元素慢慢"冒"到后面。</p>
             </KnowledgeCard>
-            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6 border border-blue-100">
-              <h4 className="text-lg font-bold text-blue-800 mb-3">🎯 排序过程演示</h4>
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-100 p-6 dark:from-blue-950/40 dark:to-indigo-950/30 dark:border-blue-800/60">
+              <h4 className="text-lg font-bold text-blue-800 mb-3 dark:text-blue-200">🎯 排序过程演示</h4>
               <div className="space-y-2 font-mono text-sm">
                 <p>原数组：[5, 3, 8, 1, 2]</p>
                 <p>第1轮：[3, 5, 1, 2, <span className="text-rose-600 font-bold">8</span>] ← 8冒到最后</p>
@@ -2082,8 +2082,8 @@ void bubbleSort(int arr[], int n) {
             <KnowledgeCard title="👆 选择排序 = 每次选最小的放前面" color="emerald">
               <p>每轮从未排序部分选出最小元素，放到已排序部分的末尾。</p>
             </KnowledgeCard>
-            <div className="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl p-6 border border-emerald-100">
-              <h4 className="text-lg font-bold text-emerald-800 mb-3">🎯 排序过程演示</h4>
+            <div className="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl border border-emerald-100 p-6 dark:from-emerald-950/40 dark:to-teal-950/30 dark:border-emerald-800/60">
+              <h4 className="text-lg font-bold text-emerald-800 mb-3 dark:text-emerald-200">🎯 排序过程演示</h4>
               <div className="space-y-2 font-mono text-sm">
                 <p>原数组：[5, 3, 8, 1, 2]</p>
                 <p>第1轮：[<span className="text-emerald-600 font-bold">1</span>, 3, 8, 5, 2] ← 选出1放第一</p>
@@ -2143,8 +2143,8 @@ void selectSort(int arr[], int n) {
               <p>把每个元素插入到前面已排序序列的正确位置。</p>
               <p className="text-sm text-slate-500 mt-2">就像整理手中的扑克牌，每抓一张就插到合适位置。</p>
             </KnowledgeCard>
-            <div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-xl p-6 border border-amber-100">
-              <h4 className="text-lg font-bold text-amber-800 mb-3">🎯 排序过程演示</h4>
+            <div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-xl border border-amber-100 p-6 dark:from-amber-950/40 dark:to-orange-950/30 dark:border-amber-800/60">
+              <h4 className="text-lg font-bold text-amber-800 mb-3 dark:text-amber-200">🎯 排序过程演示</h4>
               <div className="space-y-2 font-mono text-sm">
                 <p>原数组：[5, 3, 8, 1, 2]</p>
                 <p>插入3：[<span className="text-amber-600 font-bold">3, 5</span>, 8, 1, 2] ← 3插到5前面</p>
@@ -2352,12 +2352,12 @@ bool ListDelete(SqList &L, int i, int &e) {
               <p>每个节点包含<strong>数据域</strong>和<strong>指针域</strong>（指向下一个节点）。</p>
               <p className="text-sm text-slate-500 mt-2">就像寻宝游戏，每个地点都有下一个地点的线索。</p>
             </KnowledgeCard>
-            <div className="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl p-6 border border-emerald-100">
-              <h4 className="text-lg font-bold text-emerald-800 mb-3">🚂 生活例子：火车车厢</h4>
+            <div className="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl border border-emerald-100 p-6 dark:from-emerald-950/40 dark:to-teal-950/30 dark:border-emerald-800/60">
+              <h4 className="text-lg font-bold text-emerald-800 mb-3 dark:text-emerald-200">🚂 生活例子：火车车厢</h4>
               <div className="flex items-center justify-center gap-2 text-2xl my-4">
                 <span>🚃</span><span>→</span><span>🚃</span><span>→</span><span>🚃</span><span>→</span><span>🚃</span><span>→</span><span className="text-slate-400">NULL</span>
               </div>
-              <ul className="text-sm text-slate-600 space-y-1">
+              <ul className="text-sm text-slate-600 dark:text-slate-300 space-y-1">
                 <li>• 每节车厢只知道下一节在哪（单向）</li>
                 <li>• 要找第n节车厢，必须从头数（O(n)）</li>
                 <li>• 插入/删除只需改挂钩，不用移动车厢（O(1)）</li>
@@ -2484,20 +2484,20 @@ free(q);`} />
               <p>只能在一端（栈顶）进行插入和删除操作。</p>
               <p className="text-sm text-slate-500 mt-2">就像一摞盘子，只能从最上面拿。</p>
             </KnowledgeCard>
-            <div className="bg-gradient-to-r from-rose-50 to-pink-50 rounded-xl p-6 border border-rose-100">
-              <h4 className="text-lg font-bold text-rose-800 mb-3">🍽️ 生活例子</h4>
+            <div className="bg-gradient-to-r from-rose-50 to-pink-50 rounded-xl border border-rose-100 p-6 dark:from-rose-950/40 dark:to-pink-950/30 dark:border-rose-800/60">
+              <h4 className="text-lg font-bold text-rose-800 mb-3 dark:text-rose-200">🍽️ 生活例子</h4>
               <div className="grid md:grid-cols-3 gap-4 text-sm">
-                <div className="bg-white rounded-lg p-4 text-center">
+                <div className="bg-white dark:bg-slate-900/70 rounded-lg p-4 text-center">
                   <div className="text-3xl mb-2">🍽️</div>
                   <p className="font-medium">一摞盘子</p>
                   <p className="text-slate-500">最后放的先拿</p>
                 </div>
-                <div className="bg-white rounded-lg p-4 text-center">
+                <div className="bg-white dark:bg-slate-900/70 rounded-lg p-4 text-center">
                   <div className="text-3xl mb-2">↩️</div>
                   <p className="font-medium">浏览器后退</p>
                   <p className="text-slate-500">最近访问的先返回</p>
                 </div>
-                <div className="bg-white rounded-lg p-4 text-center">
+                <div className="bg-white dark:bg-slate-900/70 rounded-lg p-4 text-center">
                   <div className="text-3xl mb-2">📝</div>
                   <p className="font-medium">撤销操作</p>
                   <p className="text-slate-500">最后操作先撤销</p>
@@ -2507,7 +2507,7 @@ free(q);`} />
             <div className="flex items-center justify-center">
               <div className="border-2 border-slate-300 rounded-lg p-4 w-32">
                 <div className="text-center text-slate-400 mb-2">栈顶 ↓</div>
-                <div className="space-y-1">
+                <div className="space-y-1 [&>div:nth-child(n+2)]:text-rose-950 dark:[&>div:nth-child(n+2)]:text-white">
                   <div className="bg-rose-500 text-white text-center py-1 rounded">3 ← 后进</div>
                   <div className="bg-rose-400 text-white text-center py-1 rounded">2</div>
                   <div className="bg-rose-300 text-white text-center py-1 rounded">1 ← 先进</div>
@@ -2571,20 +2571,20 @@ bool Pop(SqStack &S, int &e) {
               <p>只能在队尾插入，队头删除。</p>
               <p className="text-sm text-slate-500 mt-2">就像排队买东西，先来先服务。</p>
             </KnowledgeCard>
-            <div className="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl p-6 border border-emerald-100">
-              <h4 className="text-lg font-bold text-emerald-800 mb-3">🎢 生活例子</h4>
+            <div className="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl border border-emerald-100 p-6 dark:from-emerald-950/40 dark:to-teal-950/30 dark:border-emerald-800/60">
+              <h4 className="text-lg font-bold text-emerald-800 mb-3 dark:text-emerald-200">🎢 生活例子</h4>
               <div className="grid md:grid-cols-3 gap-4 text-sm">
-                <div className="bg-white rounded-lg p-4 text-center">
+                <div className="bg-white dark:bg-slate-900/70 rounded-lg p-4 text-center">
                   <div className="text-3xl mb-2">🧑‍🤝‍🧑</div>
                   <p className="font-medium">排队</p>
                   <p className="text-slate-500">先来先服务</p>
                 </div>
-                <div className="bg-white rounded-lg p-4 text-center">
+                <div className="bg-white dark:bg-slate-900/70 rounded-lg p-4 text-center">
                   <div className="text-3xl mb-2">🖨️</div>
                   <p className="font-medium">打印任务</p>
                   <p className="text-slate-500">先提交先打印</p>
                 </div>
-                <div className="bg-white rounded-lg p-4 text-center">
+                <div className="bg-white dark:bg-slate-900/70 rounded-lg p-4 text-center">
                   <div className="text-3xl mb-2">📬</div>
                   <p className="font-medium">消息队列</p>
                   <p className="text-slate-500">按顺序处理</p>
@@ -2593,7 +2593,7 @@ bool Pop(SqStack &S, int &e) {
             </div>
             <div className="flex items-center justify-center gap-2">
               <div className="text-slate-500">出队 ←</div>
-              <div className="flex border-2 border-slate-300 rounded-lg p-2">
+              <div className="flex border-2 border-slate-300 rounded-lg p-2 [&>div:nth-child(-n+2)]:text-emerald-950 dark:[&>div:nth-child(-n+2)]:text-white">
                 <div className="bg-emerald-300 text-white px-3 py-1 rounded mx-1">1</div>
                 <div className="bg-emerald-400 text-white px-3 py-1 rounded mx-1">2</div>
                 <div className="bg-emerald-500 text-white px-3 py-1 rounded mx-1">3</div>

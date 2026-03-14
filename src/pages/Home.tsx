@@ -49,6 +49,28 @@ const learningPaths = [
   },
 ];
 
+const learningPathToneClass: Record<string, { glow: string; step: string }> = {
+  emerald: {
+    glow: 'bg-emerald-500/5 group-hover:bg-emerald-500/10 dark:bg-emerald-400/10 dark:group-hover:bg-emerald-400/15',
+    step: 'bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-900/20 dark:text-emerald-300 dark:border-emerald-800',
+  },
+  indigo: {
+    glow: 'bg-indigo-500/5 group-hover:bg-indigo-500/10 dark:bg-indigo-400/10 dark:group-hover:bg-indigo-400/15',
+    step: 'bg-indigo-50 text-indigo-600 border-indigo-100 dark:bg-indigo-900/20 dark:text-indigo-300 dark:border-indigo-800',
+  },
+  amber: {
+    glow: 'bg-amber-500/5 group-hover:bg-amber-500/10 dark:bg-amber-400/10 dark:group-hover:bg-amber-400/15',
+    step: 'bg-amber-50 text-amber-600 border-amber-100 dark:bg-amber-900/20 dark:text-amber-300 dark:border-amber-800',
+  },
+};
+
+const featureToneClass: Record<string, string> = {
+  indigo: 'bg-indigo-100 dark:bg-indigo-900/30',
+  emerald: 'bg-emerald-100 dark:bg-emerald-900/30',
+  amber: 'bg-amber-100 dark:bg-amber-900/30',
+  rose: 'bg-rose-100 dark:bg-rose-900/30',
+};
+
 const containerVariants: Variants = {
   hidden: { opacity: 0 },
   visible: {
@@ -183,11 +205,14 @@ export default function Home() {
           >
             {learningPaths.map((path) => (
               <motion.div key={path.title} variants={itemVariants}>
+                {(() => {
+                  const tone = learningPathToneClass[path.color] || learningPathToneClass.indigo;
+                  return (
                 <Link
                   to={path.link}
-                  className="block h-full bg-white dark:bg-slate-800 rounded-3xl border border-slate-100 dark:border-slate-700/50 p-8 hover:border-indigo-300 dark:hover:border-indigo-500/50 hover:shadow-2xl hover:shadow-indigo-500/10 hover:-translate-y-2 transition-all duration-300 relative overflow-hidden group"
+                  className="block h-full rounded-3xl border border-slate-100 bg-white p-8 transition-all duration-300 relative overflow-hidden group hover:-translate-y-2 hover:border-indigo-300 hover:shadow-2xl hover:shadow-indigo-500/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/60 dark:border-slate-700/50 dark:bg-slate-800 dark:hover:border-indigo-500/50"
                 >
-                  <div className={`absolute top-0 right-0 w-32 h-32 bg-${path.color}-500/5 rounded-full blur-3xl -mr-16 -mt-16 transition-all group-hover:bg-${path.color}-500/10`} />
+                  <div className={`absolute top-0 right-0 w-32 h-32 rounded-full blur-3xl -mr-16 -mt-16 transition-all ${tone.glow}`} />
                   
                   <h3 className="font-bold text-xl text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 mb-3 relative z-10">
                     {path.title}
@@ -197,7 +222,7 @@ export default function Home() {
                   <div className="space-y-4 relative z-10">
                     {path.steps.map((step, i) => (
                       <div key={i} className="flex items-center gap-3">
-                        <span className={`w-6 h-6 rounded-full bg-${path.color}-50 dark:bg-${path.color}-900/20 text-${path.color}-600 dark:text-${path.color}-400 flex items-center justify-center text-xs font-bold border border-${path.color}-100 dark:border-${path.color}-800`}>
+                        <span className={`flex h-6 w-6 items-center justify-center rounded-full border text-xs font-bold ${tone.step}`}>
                           {i + 1}
                         </span>
                         <span className="text-sm text-slate-700 dark:text-slate-300 font-medium">{step}</span>
@@ -205,6 +230,8 @@ export default function Home() {
                     ))}
                   </div>
                 </Link>
+                  );
+                })()}
               </motion.div>
             ))}
           </motion.div>
@@ -235,7 +262,7 @@ export default function Home() {
               >
                 <Link
                   to={`/algorithms/${algo.id}`}
-                  className="flex items-center gap-4 p-6 bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 hover:border-indigo-300 dark:hover:border-indigo-500 hover:shadow-xl hover:shadow-indigo-500/5 hover:-translate-y-1 transition-all duration-300 group"
+                  className="group flex items-center gap-4 rounded-2xl border border-slate-100 bg-white p-6 transition-all duration-300 hover:-translate-y-1 hover:border-indigo-300 hover:shadow-xl hover:shadow-indigo-500/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/60 dark:border-slate-700 dark:bg-slate-800 dark:hover:border-indigo-500"
                 >
                   <span className="text-3xl bg-slate-50 dark:bg-slate-700 w-12 h-12 flex items-center justify-center rounded-xl group-hover:scale-110 transition-transform">{algo.icon}</span>
                   <div>
@@ -281,7 +308,7 @@ export default function Home() {
                 viewport={{ once: true }}
                 transition={{ delay: idx * 0.1 }}
               >
-                <div className={`w-16 h-16 bg-${feature.color}-100 dark:bg-${feature.color}-900/30 rounded-2xl flex items-center justify-center mx-auto mb-6 rotate-3 hover:rotate-6 transition-transform`}>
+                <div className={`mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl rotate-3 transition-transform hover:rotate-6 ${featureToneClass[feature.color] || featureToneClass.indigo}`}>
                   <span className="text-3xl">{feature.icon}</span>
                 </div>
                 <h3 className="font-bold text-lg text-slate-900 dark:text-white mb-3">{feature.title}</h3>
@@ -302,9 +329,9 @@ export default function Home() {
           whileInView={{ opacity: 1, scale: 1 }}
           viewport={{ once: true }}
         >
-          <div className="relative overflow-hidden bg-gradient-to-r from-indigo-600 to-purple-700 rounded-[2.5rem] p-12 text-center text-white shadow-2xl shadow-indigo-500/30">
-            <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none" />
-            <div className="absolute bottom-0 left-0 w-64 h-64 bg-purple-500/20 rounded-full blur-3xl -ml-16 -mb-16 pointer-events-none" />
+          <div className="relative overflow-hidden rounded-[2.5rem] bg-gradient-to-r from-indigo-600 to-purple-700 p-12 text-center text-white shadow-2xl shadow-indigo-500/30 dark:from-slate-900 dark:to-indigo-950 dark:shadow-slate-950/60">
+            <div className="absolute top-0 right-0 w-64 h-64 rounded-full bg-white/10 blur-3xl -mr-16 -mt-16 pointer-events-none dark:bg-indigo-300/10" />
+            <div className="absolute bottom-0 left-0 w-64 h-64 rounded-full bg-purple-500/20 blur-3xl -ml-16 -mb-16 pointer-events-none dark:bg-indigo-500/20" />
             
             <h2 className="text-4xl font-bold mb-6 relative z-10">准备好开启算法之旅了吗？</h2>
             <p className="text-indigo-100 mb-10 text-lg max-w-xl mx-auto relative z-10">
@@ -313,7 +340,7 @@ export default function Home() {
             </p>
             <Link
               to="/book"
-              className="relative z-10 inline-flex items-center gap-2 px-10 py-5 bg-white text-indigo-700 rounded-2xl font-bold hover:bg-indigo-50 transition-colors shadow-lg shadow-black/10 hover:shadow-black/20 hover:-translate-y-0.5"
+              className="relative z-10 inline-flex items-center gap-2 rounded-2xl bg-white px-10 py-5 font-bold text-indigo-700 shadow-lg shadow-black/10 transition-colors hover:-translate-y-0.5 hover:bg-indigo-50 hover:shadow-black/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 dark:bg-slate-100 dark:text-indigo-800"
             >
               <span>🚀</span> 立即免费开始
             </Link>

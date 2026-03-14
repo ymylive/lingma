@@ -1,6 +1,8 @@
 #!/bin/bash
 set -e
 
+: "${LINGMA_JUDGE_INTERNAL_TOKEN:?Missing LINGMA_JUDGE_INTERNAL_TOKEN}"
+
 echo "🔧 安装判题系统依赖..."
 
 # 安装Node.js (如果未安装)
@@ -41,6 +43,15 @@ cd /var/www/judge-server
 # 安装npm依赖
 echo "📦 安装Node.js依赖..."
 npm install
+id -u judge >/dev/null 2>&1 || useradd --system --create-home --home-dir /var/www/judge-server --shell /sbin/nologin judge
+chown -R judge:judge /var/www/judge-server
+
+mkdir -p /etc/lingma
+cat > /etc/lingma/judge.env <<EOF
+JUDGE_HOST=127.0.0.1
+JUDGE_INTERNAL_TOKEN=${LINGMA_JUDGE_INTERNAL_TOKEN}
+EOF
+chmod 600 /etc/lingma/judge.env
 
 # 创建systemd服务
 cat > /etc/systemd/system/lingma-judge.service << 'EOF'
@@ -50,12 +61,15 @@ After=network.target
 
 [Service]
 Type=simple
-User=root
+User=judge
 WorkingDirectory=/var/www/judge-server
 ExecStart=/usr/bin/node server.js
 Restart=always
 RestartSec=10
 Environment=NODE_ENV=production
+EnvironmentFile=-/etc/lingma/judge.env
+NoNewPrivileges=true
+PrivateTmp=true
 
 [Install]
 WantedBy=multi-user.target

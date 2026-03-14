@@ -176,7 +176,7 @@ export default function Dashboard() {
                         key={item.id}
                         type="button"
                         onClick={() => setSkillLevel(item.id)}
-                        className={`min-h-[44px] cursor-pointer rounded-xl border px-4 py-3 text-left text-sm transition-all ${
+                        className={`min-h-[44px] cursor-pointer rounded-xl border px-4 py-3 text-left text-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/60 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900 ${
                           skillLevel === item.id
                             ? 'border-indigo-500 bg-indigo-50 text-indigo-700 dark:border-indigo-400 dark:bg-indigo-900/20 dark:text-indigo-200'
                             : 'border-slate-200 bg-slate-50 text-slate-700 dark:border-slate-700 dark:bg-slate-900/40 dark:text-slate-200'
@@ -197,7 +197,7 @@ export default function Dashboard() {
                         key={item.id}
                         type="button"
                         onClick={() => setTargetLanguage(item.id)}
-                        className={`min-h-[44px] cursor-pointer rounded-xl border px-4 py-3 text-left text-sm transition-all ${
+                        className={`min-h-[44px] cursor-pointer rounded-xl border px-4 py-3 text-left text-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/60 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900 ${
                           targetLanguage === item.id
                             ? 'border-emerald-500 bg-emerald-50 text-emerald-700 dark:border-emerald-400 dark:bg-emerald-900/20 dark:text-emerald-200'
                             : 'border-slate-200 bg-slate-50 text-slate-700 dark:border-slate-700 dark:bg-slate-900/40 dark:text-slate-200'

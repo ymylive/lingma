@@ -1,24 +1,26 @@
 import base64
 import hashlib
 import html
+import http.client
 import ipaddress
 import json
+import logging
 import os
 import re
 import secrets
 import socket
 import sqlite3
+import ssl
 import threading
+from collections import defaultdict
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from typing import Any, Dict, Iterator, List, Optional, Tuple
-from urllib.error import HTTPError, URLError
 from urllib.parse import urlparse
-from urllib.request import Request as UrlRequest
-from urllib.request import urlopen
 
 import requests
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, Response
+from fastapi.concurrency import run_in_threadpool
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
 
@@ -34,6 +36,8 @@ DEFAULT_ALLOWED_ORIGINS = [
     "http://8.134.33.19:8080",
     "https://8.134.33.19:8080",
 ]
+
+logger = logging.getLogger("lingma.api_proxy")
 
 MAX_MAPS_PER_USER = 200
 MAX_MAPS_PAYLOAD_BYTES = 3 * 1024 * 1024
@@ -72,6 +76,9 @@ AI_REQUEST_TIMEOUT_SECONDS = max(30, int(os.getenv("AI_REQUEST_TIMEOUT_SECONDS",
 AI_CONNECT_TIMEOUT_SECONDS = max(5.0, float(os.getenv("AI_CONNECT_TIMEOUT_SECONDS", "20") or "20"))
 AI_TRUST_ENV = env_bool("AI_TRUST_ENV", "NOFX_AI_TRUST_ENV", default=False)
 ENABLE_REMOTE_MINDMAP_SYNC = os.getenv("ENABLE_REMOTE_MINDMAP_SYNC", "false").strip().lower() in {"1", "true", "yes", "on"}
+JUDGE_BASE_URL = (os.getenv("JUDGE_BASE_URL") or "http://127.0.0.1:3002").strip().rstrip("/")
+JUDGE_INTERNAL_TOKEN = (os.getenv("JUDGE_INTERNAL_TOKEN") or "local-judge-token").strip()
+JUDGE_REQUEST_TIMEOUT_SECONDS = max(5.0, float(os.getenv("JUDGE_REQUEST_TIMEOUT_SECONDS", "40") or "40"))
 
 AI_PROTOCOL_RESPONSES = "responses"
 SUPPORTED_REASONING_EFFORTS = {"low", "medium", "high"}
@@ -86,6 +93,18 @@ PASSWORD_HASH_ITERATIONS = 120000
 ALLOWED_SKILL_LEVELS = {"beginner", "intermediate", "advanced"}
 VALID_SKILL_LEVELS = {"beginner", "foundation", "intermediate", "advanced"}
 VALID_TARGET_LANGUAGES = {"c", "cpp", "java", "csharp", "python"}
+VIBE_TRACKS = {"frontend", "backend", "debugging", "refactoring", "review"}
+VIBE_DIFFICULTIES = {"beginner", "intermediate", "advanced"}
+VIBE_DIMENSION_LIMITS = {
+    "goal_clarity": 30,
+    "boundary_constraints": 25,
+    "verification_design": 25,
+    "output_format": 20,
+}
+VIBE_MIN_PROMPT_LENGTH = 24
+VIBE_MAX_PROMPT_LENGTH = 12000
+VIBE_HISTORY_LIMIT = 20
+VIBE_PROFILE_WINDOW = 5
 
 
 def parse_allowed_origins() -> List[str]:
@@ -162,6 +181,57 @@ def init_auth_db() -> None:
                 );
                 CREATE INDEX IF NOT EXISTS idx_user_sessions_user_id ON user_sessions(user_id);
                 CREATE INDEX IF NOT EXISTS idx_user_sessions_expires_at ON user_sessions(expires_at);
+                CREATE TABLE IF NOT EXISTS vibe_challenges (
+                    id TEXT PRIMARY KEY,
+                    user_id TEXT NOT NULL,
+                    track TEXT NOT NULL,
+                    difficulty TEXT NOT NULL,
+                    title TEXT NOT NULL,
+                    scenario TEXT NOT NULL,
+                    requirements_json TEXT NOT NULL,
+                    constraints_json TEXT NOT NULL,
+                    success_criteria_json TEXT NOT NULL,
+                    expected_focus_json TEXT NOT NULL,
+                    created_at TEXT NOT NULL,
+                    FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+                );
+                CREATE INDEX IF NOT EXISTS idx_vibe_challenges_user_id ON vibe_challenges(user_id);
+                CREATE INDEX IF NOT EXISTS idx_vibe_challenges_created_at ON vibe_challenges(created_at);
+                CREATE TABLE IF NOT EXISTS vibe_prompt_attempts (
+                    id TEXT PRIMARY KEY,
+                    challenge_id TEXT NOT NULL,
+                    user_id TEXT NOT NULL,
+                    prompt_text TEXT NOT NULL,
+                    total_score INTEGER NOT NULL,
+                    goal_clarity_score INTEGER NOT NULL,
+                    boundary_constraints_score INTEGER NOT NULL,
+                    verification_design_score INTEGER NOT NULL,
+                    output_format_score INTEGER NOT NULL,
+                    strengths_json TEXT NOT NULL,
+                    weaknesses_json TEXT NOT NULL,
+                    rewrite_example TEXT NOT NULL,
+                    next_difficulty_recommendation TEXT NOT NULL,
+                    created_at TEXT NOT NULL,
+                    FOREIGN KEY(challenge_id) REFERENCES vibe_challenges(id) ON DELETE CASCADE,
+                    FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+                );
+                CREATE INDEX IF NOT EXISTS idx_vibe_attempts_user_id ON vibe_prompt_attempts(user_id);
+                CREATE INDEX IF NOT EXISTS idx_vibe_attempts_challenge_id ON vibe_prompt_attempts(challenge_id);
+                CREATE INDEX IF NOT EXISTS idx_vibe_attempts_created_at ON vibe_prompt_attempts(created_at);
+                CREATE TABLE IF NOT EXISTS vibe_user_profiles (
+                    user_id TEXT PRIMARY KEY,
+                    recommended_track TEXT NOT NULL,
+                    recommended_difficulty TEXT NOT NULL,
+                    weakest_dimension TEXT,
+                    recent_average_score REAL,
+                    frontend_score REAL,
+                    backend_score REAL,
+                    debugging_score REAL,
+                    refactoring_score REAL,
+                    review_score REAL,
+                    updated_at TEXT NOT NULL,
+                    FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+                );
                 """
             )
             columns = {row["name"] for row in conn.execute("PRAGMA table_info(users)")}
@@ -169,9 +239,520 @@ def init_auth_db() -> None:
                 conn.execute("ALTER TABLE users ADD COLUMN skill_level TEXT NOT NULL DEFAULT 'beginner'")
             if "target_language" not in columns:
                 conn.execute("ALTER TABLE users ADD COLUMN target_language TEXT NOT NULL DEFAULT 'cpp'")
+            vibe_profile_columns = {row["name"] for row in conn.execute("PRAGMA table_info(vibe_user_profiles)")}
+            profile_column_defaults = {
+                "recommended_track": "'frontend'",
+                "recommended_difficulty": "'beginner'",
+                "weakest_dimension": "NULL",
+                "recent_average_score": "NULL",
+                "frontend_score": "NULL",
+                "backend_score": "NULL",
+                "debugging_score": "NULL",
+                "refactoring_score": "NULL",
+                "review_score": "NULL",
+                "updated_at": f"'{now_iso()}'",
+            }
+            for column_name, default_value in profile_column_defaults.items():
+                if column_name not in vibe_profile_columns:
+                    conn.execute(
+                        f"ALTER TABLE vibe_user_profiles ADD COLUMN {column_name} "
+                        f"{'TEXT' if column_name in {'recommended_track', 'recommended_difficulty', 'weakest_dimension', 'updated_at'} else 'REAL'} "
+                        f"DEFAULT {default_value}"
+                    )
             conn.commit()
         finally:
             conn.close()
+
+
+def default_vibe_difficulty_for_skill(skill_level: str) -> str:
+    normalized = str(skill_level or "").strip().lower()
+    if normalized in {"advanced"}:
+        return "advanced"
+    if normalized in {"intermediate"}:
+        return "intermediate"
+    return "beginner"
+
+
+def sanitize_vibe_track(track: Any, fallback: str = "frontend") -> str:
+    value = str(track or "").strip().lower() or fallback
+    if value not in VIBE_TRACKS:
+        raise ValueError("Invalid vibe track")
+    return value
+
+
+def sanitize_vibe_difficulty(difficulty: Any, fallback: str = "beginner") -> str:
+    value = str(difficulty or "").strip().lower() or fallback
+    if value not in VIBE_DIFFICULTIES:
+        raise ValueError("Invalid vibe difficulty")
+    return value
+
+
+def sanitize_vibe_prompt(prompt: Any) -> str:
+    value = str(prompt or "").strip()
+    if len(value) < VIBE_MIN_PROMPT_LENGTH:
+        raise ValueError("prompt is too short")
+    if len(value) > VIBE_MAX_PROMPT_LENGTH:
+        raise ValueError("prompt is too long")
+    return value
+
+
+def sanitize_string_list(values: Any, field_name: str, min_items: int = 1, max_items: int = 8) -> List[str]:
+    if not isinstance(values, list):
+        raise ValueError(f"{field_name} must be a list")
+    sanitized: List[str] = []
+    for item in values:
+        text = str(item or "").strip()
+        if text:
+            sanitized.append(text[:800])
+    if len(sanitized) < min_items:
+        raise ValueError(f"{field_name} must contain at least {min_items} item")
+    return sanitized[:max_items]
+
+
+def normalize_expected_focus(values: Any) -> List[str]:
+    raw_values = sanitize_string_list(values, "expected_focus", min_items=1, max_items=4)
+    normalized: List[str] = []
+    for value in raw_values:
+        key = value.strip().lower().replace("-", "_").replace(" ", "_")
+        if key in VIBE_DIMENSION_LIMITS and key not in normalized:
+            normalized.append(key)
+    if not normalized:
+        raise ValueError("expected_focus must reference known scoring dimensions")
+    return normalized
+
+
+def parse_upstream_json_object(data: Dict[str, Any]) -> Dict[str, Any]:
+    if not isinstance(data, dict):
+        raise HTTPException(status_code=502, detail="invalid upstream response payload")
+
+    text, _ = extract_responses_json_text(data)
+    raw_payload = text.strip()
+    if not raw_payload:
+        raw_payload = json.dumps(data, ensure_ascii=False)
+
+    try:
+        parsed = json.loads(raw_payload)
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail="invalid structured AI output") from exc
+
+    if not isinstance(parsed, dict):
+        raise HTTPException(status_code=502, detail="invalid structured AI output")
+    return parsed
+
+
+def normalize_generated_challenge_payload(payload: Dict[str, Any], track: str, difficulty: str, user_id: str) -> Dict[str, Any]:
+    try:
+        title = str(payload.get("title") or "").strip()
+        scenario = str(payload.get("scenario") or "").strip()
+        if not title:
+            raise ValueError("title is required")
+        if not scenario:
+            raise ValueError("scenario is required")
+        requirements = sanitize_string_list(payload.get("requirements"), "requirements")
+        constraints = sanitize_string_list(payload.get("constraints"), "constraints")
+        success_criteria = sanitize_string_list(payload.get("success_criteria"), "success_criteria")
+        expected_focus = normalize_expected_focus(payload.get("expected_focus"))
+    except ValueError as exc:
+        raise HTTPException(status_code=502, detail=f"invalid challenge payload: {exc}") from exc
+
+    return {
+        "id": f"challenge_{secrets.token_urlsafe(12)}",
+        "userId": user_id,
+        "track": track,
+        "difficulty": difficulty,
+        "title": title[:200],
+        "scenario": scenario[:4000],
+        "requirements": requirements,
+        "constraints": constraints,
+        "successCriteria": success_criteria,
+        "expectedFocus": expected_focus,
+        "createdAt": now_iso(),
+    }
+
+
+def normalize_dimension_scores(values: Any) -> Dict[str, int]:
+    if not isinstance(values, dict):
+        raise ValueError("dimension_scores must be an object")
+    normalized: Dict[str, int] = {}
+    for key, max_score in VIBE_DIMENSION_LIMITS.items():
+        raw_value = values.get(key)
+        if raw_value is None:
+            raise ValueError(f"{key} is required")
+        score = int(raw_value)
+        if score < 0 or score > max_score:
+            raise ValueError(f"{key} must be between 0 and {max_score}")
+        normalized[key] = score
+    return normalized
+
+
+def normalize_evaluation_payload(payload: Dict[str, Any], challenge_id: str) -> Dict[str, Any]:
+    try:
+        total_score = int(payload.get("total_score"))
+        if total_score < 0 or total_score > 100:
+            raise ValueError("total_score must be between 0 and 100")
+        dimension_scores = normalize_dimension_scores(payload.get("dimension_scores"))
+        strengths = sanitize_string_list(payload.get("strengths"), "strengths", min_items=1, max_items=4)
+        weaknesses = sanitize_string_list(payload.get("weaknesses"), "weaknesses", min_items=1, max_items=4)
+        rewrite_example = str(payload.get("rewrite_example") or "").strip()
+        if not rewrite_example:
+            raise ValueError("rewrite_example is required")
+        next_difficulty = sanitize_vibe_difficulty(payload.get("next_difficulty_recommendation"))
+    except ValueError as exc:
+        raise HTTPException(status_code=502, detail=f"invalid evaluation payload: {exc}") from exc
+
+    return {
+        "challengeId": challenge_id,
+        "total_score": total_score,
+        "dimension_scores": dimension_scores,
+        "strengths": strengths,
+        "weaknesses": weaknesses,
+        "rewrite_example": rewrite_example[:6000],
+        "next_difficulty_recommendation": next_difficulty,
+        "createdAt": now_iso(),
+    }
+
+
+def serialize_vibe_challenge_row(row: sqlite3.Row) -> Dict[str, Any]:
+    return {
+        "id": row["id"],
+        "userId": row["user_id"],
+        "track": row["track"],
+        "difficulty": row["difficulty"],
+        "title": row["title"],
+        "scenario": row["scenario"],
+        "requirements": json.loads(row["requirements_json"]),
+        "constraints": json.loads(row["constraints_json"]),
+        "successCriteria": json.loads(row["success_criteria_json"]),
+        "expectedFocus": json.loads(row["expected_focus_json"]),
+        "createdAt": row["created_at"],
+    }
+
+
+def serialize_vibe_evaluation_row(row: sqlite3.Row) -> Dict[str, Any]:
+    return {
+        "id": row["id"],
+        "challengeId": row["challenge_id"],
+        "promptText": row["prompt_text"],
+        "total_score": row["total_score"],
+        "dimension_scores": {
+            "goal_clarity": row["goal_clarity_score"],
+            "boundary_constraints": row["boundary_constraints_score"],
+            "verification_design": row["verification_design_score"],
+            "output_format": row["output_format_score"],
+        },
+        "strengths": json.loads(row["strengths_json"]),
+        "weaknesses": json.loads(row["weaknesses_json"]),
+        "rewrite_example": row["rewrite_example"],
+        "next_difficulty_recommendation": row["next_difficulty_recommendation"],
+        "createdAt": row["created_at"],
+    }
+
+
+def insert_vibe_challenge(conn: sqlite3.Connection, challenge: Dict[str, Any]) -> None:
+    conn.execute(
+        """
+        INSERT INTO vibe_challenges(
+            id, user_id, track, difficulty, title, scenario,
+            requirements_json, constraints_json, success_criteria_json,
+            expected_focus_json, created_at
+        )
+        VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            challenge["id"],
+            challenge["userId"],
+            challenge["track"],
+            challenge["difficulty"],
+            challenge["title"],
+            challenge["scenario"],
+            json.dumps(challenge["requirements"], ensure_ascii=False),
+            json.dumps(challenge["constraints"], ensure_ascii=False),
+            json.dumps(challenge["successCriteria"], ensure_ascii=False),
+            json.dumps(challenge["expectedFocus"], ensure_ascii=False),
+            challenge["createdAt"],
+        ),
+    )
+
+
+def get_vibe_challenge(conn: sqlite3.Connection, challenge_id: str, user_id: str) -> Optional[sqlite3.Row]:
+    return conn.execute(
+        """
+        SELECT *
+        FROM vibe_challenges
+        WHERE id = ? AND user_id = ?
+        """,
+        (challenge_id, user_id),
+    ).fetchone()
+
+
+def insert_vibe_attempt(conn: sqlite3.Connection, attempt_id: str, user_id: str, prompt_text: str, evaluation: Dict[str, Any]) -> None:
+    scores = evaluation["dimension_scores"]
+    conn.execute(
+        """
+        INSERT INTO vibe_prompt_attempts(
+            id, challenge_id, user_id, prompt_text, total_score,
+            goal_clarity_score, boundary_constraints_score, verification_design_score,
+            output_format_score, strengths_json, weaknesses_json, rewrite_example,
+            next_difficulty_recommendation, created_at
+        )
+        VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            attempt_id,
+            evaluation["challengeId"],
+            user_id,
+            prompt_text,
+            evaluation["total_score"],
+            scores["goal_clarity"],
+            scores["boundary_constraints"],
+            scores["verification_design"],
+            scores["output_format"],
+            json.dumps(evaluation["strengths"], ensure_ascii=False),
+            json.dumps(evaluation["weaknesses"], ensure_ascii=False),
+            evaluation["rewrite_example"],
+            evaluation["next_difficulty_recommendation"],
+            evaluation["createdAt"],
+        ),
+    )
+
+
+def get_recent_vibe_attempt_rows(conn: sqlite3.Connection, user_id: str, limit: int = VIBE_PROFILE_WINDOW) -> List[sqlite3.Row]:
+    return conn.execute(
+        """
+        SELECT
+            vibe_prompt_attempts.*,
+            vibe_challenges.track,
+            vibe_challenges.difficulty
+        FROM vibe_prompt_attempts
+        JOIN vibe_challenges ON vibe_challenges.id = vibe_prompt_attempts.challenge_id
+        WHERE vibe_prompt_attempts.user_id = ?
+        ORDER BY vibe_prompt_attempts.created_at DESC
+        LIMIT ?
+        """,
+        (user_id, limit),
+    ).fetchall()
+
+
+def list_vibe_history_rows(conn: sqlite3.Connection, user_id: str, limit: int = VIBE_HISTORY_LIMIT) -> List[sqlite3.Row]:
+    return conn.execute(
+        """
+        SELECT
+            vibe_prompt_attempts.*,
+            vibe_challenges.track,
+            vibe_challenges.difficulty,
+            vibe_challenges.title,
+            vibe_challenges.scenario,
+            vibe_challenges.requirements_json,
+            vibe_challenges.constraints_json,
+            vibe_challenges.success_criteria_json,
+            vibe_challenges.expected_focus_json,
+            vibe_challenges.created_at AS challenge_created_at
+        FROM vibe_prompt_attempts
+        JOIN vibe_challenges ON vibe_challenges.id = vibe_prompt_attempts.challenge_id
+        WHERE vibe_prompt_attempts.user_id = ?
+        ORDER BY vibe_prompt_attempts.created_at DESC
+        LIMIT ?
+        """,
+        (user_id, limit),
+    ).fetchall()
+
+
+def calculate_vibe_profile_snapshot(attempt_rows: List[sqlite3.Row], fallback_track: str, fallback_difficulty: str) -> Dict[str, Any]:
+    if not attempt_rows:
+        return {
+            "recommended_track": fallback_track,
+            "recommended_difficulty": fallback_difficulty,
+            "weakest_dimension": None,
+            "recent_average_score": None,
+            "track_scores": {track: None for track in sorted(VIBE_TRACKS)},
+        }
+
+    recent_average = round(sum(int(row["total_score"]) for row in attempt_rows) / len(attempt_rows), 2)
+    if recent_average >= 85:
+        recommended_difficulty = "advanced"
+    elif recent_average >= 60:
+        recommended_difficulty = "intermediate"
+    else:
+        recommended_difficulty = "beginner"
+
+    track_values: Dict[str, List[int]] = defaultdict(list)
+    dimension_values: Dict[str, List[int]] = defaultdict(list)
+    for row in attempt_rows:
+        track_values[str(row["track"])].append(int(row["total_score"]))
+        dimension_values["goal_clarity"].append(int(row["goal_clarity_score"]))
+        dimension_values["boundary_constraints"].append(int(row["boundary_constraints_score"]))
+        dimension_values["verification_design"].append(int(row["verification_design_score"]))
+        dimension_values["output_format"].append(int(row["output_format_score"]))
+
+    track_scores = {
+        track: round(sum(values) / len(values), 2) if values else None
+        for track, values in ((track_name, track_values.get(track_name, [])) for track_name in sorted(VIBE_TRACKS))
+    }
+    attempted_tracks = {track: score for track, score in track_scores.items() if score is not None}
+    if attempted_tracks:
+        recommended_track = min(attempted_tracks.items(), key=lambda item: (item[1], item[0]))[0]
+    else:
+        recommended_track = fallback_track
+
+    weakest_dimension = min(
+        (
+            (dimension, round(sum(scores) / len(scores), 2))
+            for dimension, scores in dimension_values.items()
+            if scores
+        ),
+        key=lambda item: (item[1], item[0]),
+    )[0]
+
+    return {
+        "recommended_track": recommended_track,
+        "recommended_difficulty": recommended_difficulty,
+        "weakest_dimension": weakest_dimension,
+        "recent_average_score": recent_average,
+        "track_scores": track_scores,
+    }
+
+
+def upsert_vibe_profile(conn: sqlite3.Connection, user_id: str, profile_snapshot: Dict[str, Any]) -> None:
+    track_scores = profile_snapshot["track_scores"]
+    conn.execute(
+        """
+        INSERT INTO vibe_user_profiles(
+            user_id, recommended_track, recommended_difficulty, weakest_dimension,
+            recent_average_score, frontend_score, backend_score, debugging_score,
+            refactoring_score, review_score, updated_at
+        )
+        VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(user_id) DO UPDATE SET
+            recommended_track = excluded.recommended_track,
+            recommended_difficulty = excluded.recommended_difficulty,
+            weakest_dimension = excluded.weakest_dimension,
+            recent_average_score = excluded.recent_average_score,
+            frontend_score = excluded.frontend_score,
+            backend_score = excluded.backend_score,
+            debugging_score = excluded.debugging_score,
+            refactoring_score = excluded.refactoring_score,
+            review_score = excluded.review_score,
+            updated_at = excluded.updated_at
+        """,
+        (
+            user_id,
+            profile_snapshot["recommended_track"],
+            profile_snapshot["recommended_difficulty"],
+            profile_snapshot["weakest_dimension"],
+            profile_snapshot["recent_average_score"],
+            track_scores["frontend"],
+            track_scores["backend"],
+            track_scores["debugging"],
+            track_scores["refactoring"],
+            track_scores["review"],
+            now_iso(),
+        ),
+    )
+
+
+def get_stored_vibe_profile(conn: sqlite3.Connection, user_id: str) -> Optional[sqlite3.Row]:
+    return conn.execute(
+        "SELECT * FROM vibe_user_profiles WHERE user_id = ?",
+        (user_id,),
+    ).fetchone()
+
+
+def serialize_vibe_profile_row(row: Optional[sqlite3.Row], fallback_track: str, fallback_difficulty: str) -> Dict[str, Any]:
+    if row is None:
+        return {
+            "recommendedTrack": fallback_track,
+            "recommendedDifficulty": fallback_difficulty,
+            "weakestDimension": None,
+            "recentAverageScore": None,
+            "trackScores": {track: None for track in sorted(VIBE_TRACKS)},
+        }
+
+    return {
+        "recommendedTrack": row["recommended_track"],
+        "recommendedDifficulty": row["recommended_difficulty"],
+        "weakestDimension": row["weakest_dimension"],
+        "recentAverageScore": row["recent_average_score"],
+        "trackScores": {
+            "frontend": row["frontend_score"],
+            "backend": row["backend_score"],
+            "debugging": row["debugging_score"],
+            "refactoring": row["refactoring_score"],
+            "review": row["review_score"],
+        },
+    }
+
+
+def build_vibe_generation_prompt(track: str, difficulty: str, profile: Dict[str, Any], user: sqlite3.Row) -> Dict[str, Any]:
+    profile_summary = (
+        f"recommendedTrack={profile['recommendedTrack']}, "
+        f"recommendedDifficulty={profile['recommendedDifficulty']}, "
+        f"weakestDimension={profile['weakestDimension'] or 'none'}, "
+        f"skillLevel={user['skill_level']}, targetLanguage={user['target_language']}"
+    )
+    instructions = (
+        "Generate one prompt-writing exercise for AI-assisted software engineering. "
+        "Return JSON only with keys: title, scenario, requirements, constraints, success_criteria, expected_focus. "
+        "Make the challenge concrete, scorable, and aligned to the selected track and difficulty. "
+        "expected_focus must use only: goal_clarity, boundary_constraints, verification_design, output_format."
+    )
+    user_text = (
+        f"track={track}\n"
+        f"difficulty={difficulty}\n"
+        f"profile={profile_summary}\n"
+        "Make the exercise realistic, professional, and bounded."
+    )
+    return {
+        "model": AI_MODEL,
+        "input": [
+            {
+                "role": "system",
+                "content": [{"type": "input_text", "text": instructions}],
+            },
+            {
+                "role": "user",
+                "content": [{"type": "input_text", "text": user_text}],
+            },
+        ],
+        "max_output_tokens": 900,
+    }
+
+
+def build_vibe_evaluation_prompt(challenge: Dict[str, Any], prompt_text: str) -> Dict[str, Any]:
+    instructions = (
+        "You are evaluating the quality of a user's software-engineering prompt only. "
+        "Do not score hypothetical code quality. Return JSON only with keys: "
+        "total_score, dimension_scores, strengths, weaknesses, rewrite_example, next_difficulty_recommendation. "
+        "dimension_scores must include goal_clarity (0-30), boundary_constraints (0-25), "
+        "verification_design (0-25), output_format (0-20). "
+        "next_difficulty_recommendation must be one of beginner, intermediate, advanced."
+    )
+    challenge_summary = json.dumps(
+        {
+            "track": challenge["track"],
+            "difficulty": challenge["difficulty"],
+            "title": challenge["title"],
+            "scenario": challenge["scenario"],
+            "requirements": challenge["requirements"],
+            "constraints": challenge["constraints"],
+            "successCriteria": challenge["successCriteria"],
+            "expectedFocus": challenge["expectedFocus"],
+        },
+        ensure_ascii=False,
+    )
+    return {
+        "model": AI_MODEL,
+        "input": [
+            {
+                "role": "system",
+                "content": [{"type": "input_text", "text": instructions}],
+            },
+            {
+                "role": "user",
+                "content": [{"type": "input_text", "text": f"challenge={challenge_summary}\nuser_prompt={prompt_text}"}],
+            },
+        ],
+        "max_output_tokens": 1200,
+    }
 
 
 def normalize_node(node: Any) -> Dict[str, Any]:
@@ -406,6 +987,8 @@ def require_authenticated_user(request: Request) -> sqlite3.Row:
     if user is None:
         raise HTTPException(status_code=401, detail="authentication required")
     return user
+
+
 def migrate_legacy_store() -> None:
     if not MINDMAP_LEGACY_FILE or not os.path.exists(MINDMAP_LEGACY_FILE):
         return
@@ -443,7 +1026,7 @@ def migrate_legacy_store() -> None:
             conn.close()
 
 
-def ensure_public_url(target_url: str) -> None:
+def resolve_public_target(target_url: str) -> Tuple[Any, str, int, str, List[str]]:
     parsed = urlparse(target_url)
     if parsed.scheme not in {"http", "https"}:
         raise ValueError("Only http/https URLs are allowed")
@@ -454,15 +1037,44 @@ def ensure_public_url(target_url: str) -> None:
         raise ValueError("Local domains are not allowed")
 
     try:
-        infos = socket.getaddrinfo(host, None)
+        infos = socket.getaddrinfo(host, parsed.port or (443 if parsed.scheme == "https" else 80), type=socket.SOCK_STREAM)
     except Exception as exc:
         raise ValueError("DNS lookup failed") from exc
 
+    resolved_ips: List[str] = []
     for item in infos:
         ip_str = item[4][0]
         ip = ipaddress.ip_address(ip_str)
         if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_multicast or ip.is_reserved:
             raise ValueError("Private network targets are not allowed")
+        resolved_ips.append(ip_str)
+
+    if not resolved_ips:
+        raise ValueError("DNS lookup failed")
+
+    path = parsed.path or "/"
+    if parsed.query:
+        path = f"{path}?{parsed.query}"
+    return parsed, host, parsed.port or (443 if parsed.scheme == "https" else 80), path, resolved_ips
+
+
+class PinnedHTTPConnection(http.client.HTTPConnection):
+    def __init__(self, connect_host: str, host_header: str, *args: Any, **kwargs: Any) -> None:
+        self._connect_host = connect_host
+        super().__init__(host_header, *args, **kwargs)
+
+    def connect(self) -> None:
+        self.sock = socket.create_connection((self._connect_host, self.port), self.timeout, self.source_address)
+
+
+class PinnedHTTPSConnection(http.client.HTTPSConnection):
+    def __init__(self, connect_host: str, host_header: str, *args: Any, **kwargs: Any) -> None:
+        self._connect_host = connect_host
+        super().__init__(host_header, *args, **kwargs)
+
+    def connect(self) -> None:
+        sock = socket.create_connection((self._connect_host, self.port), self.timeout, self.source_address)
+        self.sock = self._context.wrap_socket(sock, server_hostname=self.host)
 
 
 def html_to_text(raw_html: str) -> str:
@@ -478,23 +1090,40 @@ def html_to_text(raw_html: str) -> str:
 
 
 def fetch_document(target_url: str, max_length: int) -> Dict[str, Any]:
-    ensure_public_url(target_url)
-    req = UrlRequest(
-        target_url,
-        headers={
-            "User-Agent": "LingMaMindMapBot/1.0",
-            "Accept": "text/html,application/xhtml+xml,text/plain;q=0.9,*/*;q=0.8",
-        },
-    )
-    with urlopen(req, timeout=DOC_TIMEOUT_SECONDS) as resp:
-        final_url = resp.geturl()
-        ensure_public_url(final_url)
+    parsed, host, port, path, resolved_ips = resolve_public_target(target_url)
+    connect_host = resolved_ips[0]
+    headers = {
+        "Host": host,
+        "User-Agent": "LingMaMindMapBot/1.0",
+        "Accept": "text/html,application/xhtml+xml,text/plain;q=0.9,*/*;q=0.8",
+        "Accept-Encoding": "identity",
+    }
+    connection: http.client.HTTPConnection
+    if parsed.scheme == "https":
+        connection = PinnedHTTPSConnection(
+            connect_host,
+            host,
+            port=port,
+            timeout=DOC_TIMEOUT_SECONDS,
+            context=ssl.create_default_context(),
+        )
+    else:
+        connection = PinnedHTTPConnection(connect_host, host, port=port, timeout=DOC_TIMEOUT_SECONDS)
+
+    try:
+        connection.request("GET", path, headers=headers)
+        resp = connection.getresponse()
+        if 300 <= resp.status < 400:
+            raise ValueError("Redirects are not allowed")
+        if resp.status >= 400:
+            raise ValueError(f"Remote server returned {resp.status}")
+
         raw_bytes = resp.read(DOC_MAX_FETCH_BYTES + 1)
         if len(raw_bytes) > DOC_MAX_FETCH_BYTES:
             raise ValueError("Content too large")
-        content_type = (resp.headers.get("Content-Type") or "").lower()
+        content_type = (resp.getheader("Content-Type") or "").lower()
         raw_text = raw_bytes.decode("utf-8", errors="ignore")
-        title = urlparse(final_url).hostname or "Document"
+        title = host or "Document"
         if "text/html" in content_type or "<html" in raw_text.lower():
             match = re.search(r"<title[^>]*>([^<]*)</title>", raw_text, flags=re.IGNORECASE)
             if match:
@@ -502,14 +1131,52 @@ def fetch_document(target_url: str, max_length: int) -> Dict[str, Any]:
             text = html_to_text(raw_text)
         else:
             text = raw_text
+    finally:
+        connection.close()
 
     normalized = re.sub(r"\s+", " ", text).strip()
     return {
-        "url": final_url,
+        "url": parsed._replace(fragment="").geturl(),
         "title": title,
         "text": normalized[:max_length],
         "length": len(normalized),
     }
+
+
+def build_internal_judge_headers(content_type: str = "application/json") -> Dict[str, str]:
+    headers = {"Accept": "application/json", "Content-Type": content_type}
+    if JUDGE_INTERNAL_TOKEN:
+        headers["X-Judge-Token"] = JUDGE_INTERNAL_TOKEN
+    return headers
+
+
+def perform_internal_judge_request(method: str, path: str, body: bytes | None = None, content_type: str = "application/json") -> requests.Response:
+    return requests.request(
+        method,
+        f"{JUDGE_BASE_URL}{path}",
+        data=body,
+        headers=build_internal_judge_headers(content_type),
+        timeout=(5.0, JUDGE_REQUEST_TIMEOUT_SECONDS),
+    )
+
+
+async def proxy_internal_judge_request(request: Request, path: str, require_auth: bool) -> Response:
+    if require_auth:
+        require_authenticated_user(request)
+
+    if not JUDGE_INTERNAL_TOKEN:
+        raise HTTPException(status_code=503, detail="judge proxy is not configured")
+
+    body = await request.body() if request.method in {"POST", "PUT", "PATCH"} else None
+    content_type = request.headers.get("content-type") or "application/json"
+    try:
+        upstream = await run_in_threadpool(perform_internal_judge_request, request.method, path, body, content_type)
+    except requests.RequestException as exc:
+        logger.warning("Judge proxy request failed: %s", exc)
+        raise HTTPException(status_code=502, detail="judge service is unavailable") from exc
+
+    response_headers = {"Content-Type": upstream.headers.get("Content-Type", "application/json")}
+    return Response(content=upstream.content, status_code=upstream.status_code, headers=response_headers)
 
 
 def detect_protocol_from_url(api_url: str) -> str:
@@ -1026,6 +1693,7 @@ async def list_models():
 
 @app.post("/v1/responses")
 async def responses_proxy(request: Request):
+    require_authenticated_user(request)
     if not AI_API_KEY:
         raise HTTPException(status_code=500, detail="AI_API_KEY is not configured")
 
@@ -1050,23 +1718,25 @@ async def responses_proxy(request: Request):
         }
         return StreamingResponse(event_stream(), media_type="text/event-stream", headers=headers)
 
-    data = read_upstream_responses_json(payload)
+    data = await run_in_threadpool(read_upstream_responses_json, payload)
     return JSONResponse(content=data)
 
 
 @app.post("/api/ai")
 async def chat_completion(request: Request):
+    require_authenticated_user(request)
     if not AI_API_KEY:
         raise HTTPException(status_code=500, detail="AI_API_KEY is not configured")
 
     body = await request.json()
     payload = build_legacy_request_payload(body, stream=False)
-    data = read_upstream_responses_json(payload)
+    data = await run_in_threadpool(read_upstream_responses_json, payload)
     return JSONResponse(content=build_legacy_chat_response(data))
 
 
 @app.post("/api/ai/stream")
 async def chat_completion_stream(request: Request):
+    require_authenticated_user(request)
     if not AI_API_KEY:
         raise HTTPException(status_code=500, detail="AI_API_KEY is not configured")
 
@@ -1141,6 +1811,7 @@ async def chat_completion_stream(request: Request):
 
 @app.post("/api/doc")
 async def doc_fetch(request: Request):
+    require_authenticated_user(request)
     body = await request.json()
     target_url = str(body.get("url", "")).strip()
     if not target_url:
@@ -1148,11 +1819,198 @@ async def doc_fetch(request: Request):
     max_length = int(body.get("maxLength") or 16000)
     max_length = max(1000, min(max_length, DOC_MAX_LENGTH))
     try:
-        return JSONResponse(content=fetch_document(target_url, max_length))
+        document = await run_in_threadpool(fetch_document, target_url, max_length)
+        return JSONResponse(content=document)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc)) from exc
+        logger.warning("Document fetch failed for %s: %s", target_url, exc)
+        raise HTTPException(status_code=502, detail="document fetch failed") from exc
+
+
+@app.post("/api/judge")
+async def judge_proxy(request: Request):
+    return await proxy_internal_judge_request(request, "/api/judge", require_auth=True)
+
+
+@app.post("/api/run")
+async def judge_run_proxy(request: Request):
+    return await proxy_internal_judge_request(request, "/api/run", require_auth=True)
+
+
+@app.get("/api/health")
+async def judge_health_proxy(request: Request):
+    return await proxy_internal_judge_request(request, "/api/health", require_auth=False)
+
+
+@app.post("/api/vibe-coding/generate")
+async def vibe_coding_generate(request: Request):
+    user = require_authenticated_user(request)
+    if not AI_API_KEY:
+        raise HTTPException(status_code=500, detail="AI_API_KEY is not configured")
+
+    body = await request.json()
+    fallback_track = "frontend"
+    fallback_difficulty = default_vibe_difficulty_for_skill(user["skill_level"])
+
+    with db_lock:
+        conn = get_db_connection(AUTH_DB_PATH)
+        try:
+            stored_profile = get_stored_vibe_profile(conn, user["id"])
+            profile = serialize_vibe_profile_row(stored_profile, fallback_track, fallback_difficulty)
+        finally:
+            conn.close()
+
+    try:
+        track = sanitize_vibe_track(body.get("track"), fallback=profile["recommendedTrack"] or fallback_track)
+        difficulty = sanitize_vibe_difficulty(body.get("difficulty"), fallback=profile["recommendedDifficulty"] or fallback_difficulty)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    payload = build_vibe_generation_prompt(track, difficulty, profile, user)
+    data = await run_in_threadpool(read_upstream_responses_json, payload)
+    normalized = normalize_generated_challenge_payload(parse_upstream_json_object(data), track, difficulty, user["id"])
+
+    with db_lock:
+        conn = get_db_connection(AUTH_DB_PATH)
+        try:
+            insert_vibe_challenge(conn, normalized)
+            conn.commit()
+        finally:
+            conn.close()
+
+    return JSONResponse(content=normalized)
+
+
+@app.post("/api/vibe-coding/evaluate")
+async def vibe_coding_evaluate(request: Request):
+    user = require_authenticated_user(request)
+    if not AI_API_KEY:
+        raise HTTPException(status_code=500, detail="AI_API_KEY is not configured")
+
+    body = await request.json()
+    challenge_id = str(body.get("challenge_id") or "").strip()
+    if not challenge_id:
+        raise HTTPException(status_code=400, detail="challenge_id is required")
+    try:
+        prompt_text = sanitize_vibe_prompt(body.get("user_prompt"))
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    with db_lock:
+        conn = get_db_connection(AUTH_DB_PATH)
+        try:
+            challenge_row = get_vibe_challenge(conn, challenge_id, user["id"])
+        finally:
+            conn.close()
+
+    if challenge_row is None:
+        raise HTTPException(status_code=404, detail="challenge not found")
+
+    challenge = serialize_vibe_challenge_row(challenge_row)
+    payload = build_vibe_evaluation_prompt(challenge, prompt_text)
+    data = await run_in_threadpool(read_upstream_responses_json, payload)
+    evaluation = normalize_evaluation_payload(parse_upstream_json_object(data), challenge_id)
+    attempt_id = f"attempt_{secrets.token_urlsafe(12)}"
+
+    fallback_difficulty = default_vibe_difficulty_for_skill(user["skill_level"])
+    with db_lock:
+        conn = get_db_connection(AUTH_DB_PATH)
+        try:
+            insert_vibe_attempt(conn, attempt_id, user["id"], prompt_text, evaluation)
+            recent_rows = get_recent_vibe_attempt_rows(conn, user["id"], limit=VIBE_PROFILE_WINDOW)
+            profile_snapshot = calculate_vibe_profile_snapshot(recent_rows, challenge["track"], fallback_difficulty)
+            upsert_vibe_profile(conn, user["id"], profile_snapshot)
+            conn.commit()
+        finally:
+            conn.close()
+
+    response_payload = {
+        "id": attempt_id,
+        "challengeId": challenge_id,
+        "promptText": prompt_text,
+        "total_score": evaluation["total_score"],
+        "dimension_scores": evaluation["dimension_scores"],
+        "strengths": evaluation["strengths"],
+        "weaknesses": evaluation["weaknesses"],
+        "rewrite_example": evaluation["rewrite_example"],
+        "next_difficulty_recommendation": evaluation["next_difficulty_recommendation"],
+        "createdAt": evaluation["createdAt"],
+    }
+    return JSONResponse(content=response_payload)
+
+
+@app.get("/api/vibe-coding/history")
+async def vibe_coding_history(request: Request):
+    user = require_authenticated_user(request)
+    with db_lock:
+        conn = get_db_connection(AUTH_DB_PATH)
+        try:
+            rows = list_vibe_history_rows(conn, user["id"])
+        finally:
+            conn.close()
+
+    items = []
+    for row in rows:
+        items.append(
+            {
+                "id": row["id"],
+                "track": row["track"],
+                "difficulty": row["difficulty"],
+                "createdAt": row["created_at"],
+                "challenge": {
+                    "id": row["challenge_id"],
+                    "track": row["track"],
+                    "difficulty": row["difficulty"],
+                    "title": row["title"],
+                    "scenario": row["scenario"],
+                    "requirements": json.loads(row["requirements_json"]),
+                    "constraints": json.loads(row["constraints_json"]),
+                    "successCriteria": json.loads(row["success_criteria_json"]),
+                    "expectedFocus": json.loads(row["expected_focus_json"]),
+                    "createdAt": row["challenge_created_at"],
+                },
+                "evaluation": {
+                    "total_score": row["total_score"],
+                    "dimension_scores": {
+                        "goal_clarity": row["goal_clarity_score"],
+                        "boundary_constraints": row["boundary_constraints_score"],
+                        "verification_design": row["verification_design_score"],
+                        "output_format": row["output_format_score"],
+                    },
+                    "strengths": json.loads(row["strengths_json"]),
+                    "weaknesses": json.loads(row["weaknesses_json"]),
+                    "rewrite_example": row["rewrite_example"],
+                    "next_difficulty_recommendation": row["next_difficulty_recommendation"],
+                },
+                "promptText": row["prompt_text"],
+            }
+        )
+
+    return JSONResponse(content={"items": items})
+
+
+@app.get("/api/vibe-coding/profile")
+async def vibe_coding_profile(request: Request):
+    user = require_authenticated_user(request)
+    fallback_track = "frontend"
+    fallback_difficulty = default_vibe_difficulty_for_skill(user["skill_level"])
+
+    with db_lock:
+        conn = get_db_connection(AUTH_DB_PATH)
+        try:
+            row = get_stored_vibe_profile(conn, user["id"])
+            if row is None:
+                recent_rows = get_recent_vibe_attempt_rows(conn, user["id"], limit=VIBE_PROFILE_WINDOW)
+                if recent_rows:
+                    snapshot = calculate_vibe_profile_snapshot(recent_rows, fallback_track, fallback_difficulty)
+                    upsert_vibe_profile(conn, user["id"], snapshot)
+                    conn.commit()
+                    row = get_stored_vibe_profile(conn, user["id"])
+        finally:
+            conn.close()
+
+    return JSONResponse(content=serialize_vibe_profile_row(row, fallback_track, fallback_difficulty))
 
 
 @app.get("/api/auth/session")

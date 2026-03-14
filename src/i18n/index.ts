@@ -1,5 +1,6 @@
 import { commonPatternsEn, commonTranslationsEn } from './commonTranslations';
 import { contentPatternsEn, contentTranslationsEn } from './contentTranslations';
+import { exerciseTitleTranslationsEn } from './exerciseTitleTranslations';
 import { generatedTranslationsEn } from './generatedTranslations';
 import { practicePatternsEn, practiceTranslationsEn } from './practiceTranslations';
 
@@ -9,6 +10,7 @@ const exactTranslations = {
   'en-US': {
     ...commonTranslationsEn,
     ...contentTranslationsEn,
+    ...exerciseTitleTranslationsEn,
     ...practiceTranslationsEn,
     ...generatedTranslationsEn,
   },

@@ -14,11 +14,14 @@ RUN sed -i 's|deb.debian.org|mirrors.aliyun.com|g' /etc/apt/sources.list \
 
 WORKDIR /app
 ENV NODE_ENV=production
+RUN useradd --create-home --shell /usr/sbin/nologin judge
 
-COPY judge-server/package.json ./
-RUN npm install --production
+COPY judge-server/package*.json ./
+RUN npm ci --omit=dev && npm cache clean --force
 
-COPY judge-server/server.js ./
+COPY --chown=judge:judge judge-server/server.js ./
+
+USER judge
 
 EXPOSE 3002
 CMD ["node", "server.js"]
