@@ -1,29 +1,30 @@
-# Changelog
+# 更新日志
 
-All notable changes to this project are documented in this file.
+本文件记录项目的重要变更。
 
 ## 2026-03-14
 
-### Added
+### 新增
 
-- Added Prompt Arena inside `Vibe Coding Lab`
-- Added AI-generated prompt-writing challenges across five tracks
-- Added prompt-only scoring with dimension breakdown, strengths, weaknesses, and rewrite example
-- Added account-level Prompt Arena history and adaptive difficulty/profile endpoints
-- Added backend pytest coverage for Prompt Arena API flows
+- 在 `Vibe Coding Lab` 中新增 `Prompt Arena` 训练场
+- 新增 AI 自动生成 prompt 练习题
+- 新增五条训练赛道：前端、后端、调试、重构、审查
+- 新增 prompt 质量评分、维度分、优点、问题点与改写示范
+- 新增账号级 Prompt Arena 历史记录与自适应难度接口
+- 新增 Prompt Arena 后端 pytest 测试覆盖
 
-### Changed
+### 调整
 
-- Reworked `VibeCodingLab` into a real training interface instead of a static methodology panel
-- Added typed frontend service and model layer for vibe coding flows
-- Updated README to reflect current product structure and verification commands
+- 将 `VibeCodingLab` 从静态方法论面板升级为可交互训练界面
+- 新增独立的前端类型与服务层，收口 Prompt Arena 请求逻辑
+- 重写 `README.md`，同步当前产品结构、验证命令与部署方式
 
-### Fixed
+### 修复
 
-- Fixed multiple dark/light theme inconsistencies across practice-related pages
-- Fixed AI generator dropdown stacking and missing exercise title English coverage
+- 修复练习相关页面的多处深浅色主题适配问题
+- 修复 AI 出题下拉层级问题与题目标题英文缺失问题
 
-### Security
+### 安全
 
-- Closed unauthenticated AI proxy and judge exposure paths behind authenticated proxy flows
-- Added internal judge token enforcement and hardened judge deployment settings
+- 收口未鉴权的 AI 代理与判题入口
+- 增加 judge 内部 token 校验与更严格的部署隔离配置
