@@ -7,7 +7,9 @@ const { v4: uuidv4 } = require('uuid');
 
 const app = express();
 const PORT = 3002;  // 判题服务使用3002端口
+const HOST = process.env.JUDGE_HOST || (process.env.NODE_ENV === 'production' ? '127.0.0.1' : '0.0.0.0');
 const TEMP_DIR = '/tmp/judge';
+const JUDGE_INTERNAL_TOKEN = (process.env.JUDGE_INTERNAL_TOKEN || 'local-judge-token').trim();
 const DEFAULT_ALLOWED_ORIGINS = [
   'http://localhost:5173',
   'http://localhost:3000',
@@ -62,6 +64,20 @@ function isOriginAllowed(origin) {
   return DEFAULT_ALLOWED_ORIGINS.includes(origin) || ENV_ALLOWED_ORIGINS.includes(origin) || LOOPBACK_ORIGIN_RE.test(origin);
 }
 
+function hasValidJudgeProxyToken(req) {
+  const headerValue = req.headers['x-judge-token'];
+  const token = Array.isArray(headerValue) ? headerValue[0] : headerValue;
+  return Boolean(JUDGE_INTERNAL_TOKEN) && token === JUDGE_INTERNAL_TOKEN;
+}
+
+function requireJudgeProxyToken(req, res) {
+  if (hasValidJudgeProxyToken(req)) {
+    return true;
+  }
+  res.status(403).json({ error: 'Forbidden judge access' });
+  return false;
+}
+
 app.use((req, res, next) => {
   const origin = req.headers.origin;
   if (!isOriginAllowed(origin)) {
@@ -108,7 +124,7 @@ const LANG_CONFIG = {
   },
   python: {
     ext: '.py',
-    run: (file) => `python3 -u "${file}"`,
+    run: (file) => `${process.platform === 'win32' ? 'python' : 'python3'} -u "${file}"`,
     needCompile: false
   }
 };
@@ -444,6 +460,9 @@ async function compileCode(language, code, workDir) {
 
 // 判题接口 - ACM/OJ标准
 app.post('/api/judge', async (req, res) => {
+  if (!requireJudgeProxyToken(req, res)) {
+    return;
+  }
   const { code, language, testCases } = req.body;
   let jobAcquired = false;
   
@@ -535,7 +554,7 @@ app.post('/api/judge', async (req, res) => {
         cmd = 'dotnet';
         args = [executablePath];
       } else if (language === 'python') {
-        cmd = 'python3';
+        cmd = process.platform === 'win32' ? 'python' : 'python3';
         args = ['-u', executablePath];
       } else {
         cmd = executablePath;
@@ -622,6 +641,9 @@ app.post('/api/judge', async (req, res) => {
 
 // 快速运行接口
 app.post('/api/run', async (req, res) => {
+  if (!requireJudgeProxyToken(req, res)) {
+    return;
+  }
   const { code, language, input = '' } = req.body;
   let jobAcquired = false;
   
@@ -665,7 +687,7 @@ app.post('/api/run', async (req, res) => {
       cmd = 'dotnet';
       args = [executablePath];
     } else if (language === 'python') {
-      cmd = 'python3';
+      cmd = process.platform === 'win32' ? 'python' : 'python3';
       args = ['-u', executablePath];
     } else {
       cmd = executablePath;
@@ -714,7 +736,7 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-app.listen(PORT, () => {
+app.listen(PORT, HOST, () => {
   console.log(`
 🚀 灵码判题服务 v2.0 (ACM/OJ标准)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

@@ -169,6 +169,7 @@ const sanitizeMindMapNodes = (
 async function callAI(messages: { role: 'system' | 'user'; content: string }[]) {
   const response = await fetch(AI_PROXY_URL, {
     method: 'POST',
+    credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ messages }),
   });

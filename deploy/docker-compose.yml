@@ -16,6 +16,8 @@ services:
       dockerfile: deploy/docker/api-proxy.Dockerfile
     env_file:
       - ./.env
+    environment:
+      JUDGE_BASE_URL: http://judge-server:3002
     volumes:
       - api_proxy_data:/app/data
     restart: unless-stopped
@@ -24,6 +26,18 @@ services:
     build:
       context: ..
       dockerfile: deploy/docker/judge-server.Dockerfile
+    env_file:
+      - ./.env
+    environment:
+      JUDGE_HOST: 0.0.0.0
+    read_only: true
+    tmpfs:
+      - /tmp:exec,mode=1777,size=256m
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 256
     restart: unless-stopped
 
 volumes:

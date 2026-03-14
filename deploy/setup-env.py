@@ -21,7 +21,9 @@ ecosystem = f"""module.exports = {{
     env: {{
       AI_API_KEY: {json.dumps(ai_config["AI_API_KEY"])},
       AI_API_URL: {json.dumps(ai_config["AI_API_URL"])},
-      AI_MODEL: {json.dumps(ai_config["AI_MODEL"])}
+      AI_MODEL: {json.dumps(ai_config["AI_MODEL"])},
+      JUDGE_BASE_URL: {json.dumps(ai_config["JUDGE_BASE_URL"])},
+      JUDGE_INTERNAL_TOKEN: {json.dumps(ai_config["JUDGE_INTERNAL_TOKEN"])}
     }}
   }}]
 }};

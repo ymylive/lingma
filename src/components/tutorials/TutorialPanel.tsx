@@ -31,7 +31,7 @@ export default function TutorialPanel({ title, sections }: TutorialPanelProps) {
           <button
             key={i}
             onClick={() => setActiveTab(i)}
-            className={`px-4 py-3 text-sm font-medium transition-all flex items-center gap-2 ${
+            className={`flex cursor-pointer items-center gap-2 px-4 py-3 text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/60 focus-visible:ring-inset ${
               activeTab === i
                 ? 'text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-600 bg-white dark:bg-slate-800'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'

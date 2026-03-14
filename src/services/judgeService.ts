@@ -1,8 +1,10 @@
 import { localizeRuntimeText, pickRuntimeText } from '../utils/runtimeLocale';
 
+const DEFAULT_PROXY_ORIGIN =
+  typeof window !== 'undefined' && window.location ? window.location.origin : 'https://lingma.cornna.xyz';
 const API_BASE = import.meta.env.PROD
-  ? 'https://lingma.cornna.xyz/api'
-  : 'http://localhost:3001/api';
+  ? (import.meta.env.VITE_API_BASE_URL || `${DEFAULT_PROXY_ORIGIN}/api`)
+  : (import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api');
 
 export type SupportedJudgeLanguage = 'c' | 'cpp' | 'java' | 'csharp' | 'python';
 
@@ -253,6 +255,7 @@ export async function runTestCases(
 ): Promise<JudgeResponse> {
   const response = await fetch(`${API_BASE}/judge`, {
     method: 'POST',
+    credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ code, language, testCases }),
   });
@@ -276,6 +279,7 @@ export async function quickRun(
 ): Promise<RunResponse> {
   const response = await fetch(`${API_BASE}/run`, {
     method: 'POST',
+    credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ code, language, input }),
   });

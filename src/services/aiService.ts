@@ -194,6 +194,7 @@ async function callAI(prompt: string, onProgress?: (text: string) => void): Prom
   try {
     const response = await fetch(apiUrl, {
       method: 'POST',
+      credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ messages }),
       signal: controller.signal,

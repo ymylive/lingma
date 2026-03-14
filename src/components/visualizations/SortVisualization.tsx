@@ -737,25 +737,25 @@ export default function SortVisualization() {
       <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4">
         <div className="flex flex-wrap items-center gap-3">
           <select value={algo} onChange={e => { setAlgo(e.target.value as Algorithm); generate(); }} disabled={sorting}
-            className="px-3 py-1.5 border border-slate-200 dark:border-slate-600 rounded-lg text-sm font-medium bg-white dark:bg-slate-700 text-slate-900 dark:text-white">
+            className="cursor-pointer appearance-none rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-900 outline-none transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 disabled:cursor-not-allowed dark:border-slate-600 dark:bg-slate-700 dark:text-white dark:[color-scheme:dark] dark:focus:ring-indigo-400/20">
             {Object.entries(ALGORITHMS).map(([k, v]) => <option key={k} value={k}>{v.name}</option>)}
           </select>
           <div className="flex bg-slate-100 dark:bg-slate-700 rounded-lg p-0.5">
             {(['cpp', 'java', 'python'] as Lang[]).map(l => (
               <button key={l} onClick={() => setLang(l)}
-                className={'px-2 py-1 rounded text-xs font-medium transition-all ' + (lang === l ? 'bg-white dark:bg-slate-600 shadow-sm text-indigo-600 dark:text-indigo-400' : 'text-slate-500 dark:text-slate-400')}>
+                className={'cursor-pointer rounded px-2 py-1 text-xs font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/60 ' + (lang === l ? 'bg-white dark:bg-slate-600 shadow-sm text-indigo-600 dark:text-indigo-400' : 'text-slate-500 dark:text-slate-400')}>
                 {LANG_NAMES[l]}
               </button>
             ))}
           </div>
           <div className="flex items-center gap-2">
             <span className="text-xs text-slate-400">🐢</span>
-            <input type="range" min="20" max="400" step="20" value={420 - speed} onChange={e => setSpeed(420 - Number(e.target.value))} className="w-24" />
+            <input type="range" min="20" max="400" step="20" value={420 - speed} onChange={e => setSpeed(420 - Number(e.target.value))} className="w-24 cursor-pointer accent-indigo-600 dark:accent-indigo-400 dark:[color-scheme:dark]" />
             <span className="text-xs text-slate-400">🐇</span>
           </div>
-          <button onClick={generate} disabled={sorting} className="px-3 py-1.5 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-lg text-sm font-medium disabled:opacity-50 hover:bg-slate-200 dark:hover:bg-slate-600">🎲 随机</button>
+          <button onClick={generate} disabled={sorting} className="cursor-pointer rounded-lg bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-600 transition-all hover:bg-slate-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/60 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600">🎲 随机</button>
           {!sorting ? (
-            <button onClick={start} className="px-4 py-1.5 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700">▶ 开始演示</button>
+            <button onClick={start} className="cursor-pointer rounded-lg bg-indigo-600 px-4 py-1.5 text-sm font-medium text-white transition-all hover:bg-indigo-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/60">▶ 开始演示</button>
           ) : (
             <>
               <button onClick={togglePause} className={'px-3 py-1.5 rounded-lg text-sm font-medium ' + (paused ? 'bg-emerald-500 text-white' : 'bg-amber-500 text-white')}>

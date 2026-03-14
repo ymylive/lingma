@@ -1,187 +1,87 @@
-# 🎓 灵码算法学习平台
+# LingMa
 
-<div align="center">
+LingMa is an AI-assisted algorithm and software engineering learning platform.
 
-![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)
-![License](https://img.shields.io/badge/license-MIT-green.svg)
-![React](https://img.shields.io/badge/React-18.x-61dafb.svg)
-![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178c6.svg)
-![Vite](https://img.shields.io/badge/Vite-7.x-646cff.svg)
+Live site: `https://lingma.cornna.xyz`
 
-**一站式数据结构与算法学习平台**
+## Highlights
 
-[🌐 在线演示](https://lingma.cornna.xyz) · [📖 功能介绍](#-功能特性) · [🚀 快速开始](#-快速开始)
+- Progressive practice library for data structures and algorithms
+- Online judge flow with authenticated proxy protection
+- AI exercise generation for coding and fill-in-the-blank practice
+- `Vibe Coding Lab` for professional AI collaboration training
+- New `Prompt Arena` workflow:
+  - AI-generated prompt-writing challenges
+  - Five tracks: frontend, backend, debugging, refactoring, review
+  - AI scores prompt quality only
+  - Score breakdown, strengths, weaknesses, rewrite example
+  - Account-level history and adaptive difficulty
 
-</div>
+## Stack
 
----
+- React 19
+- TypeScript
+- Vite
+- Tailwind CSS
+- FastAPI
+- SQLite
+- Docker Compose
 
-## ✨ 项目简介
+## Local Development
 
-**灵码算法学习平台**是一个面向计算机专业学生和编程爱好者的交互式学习网站，提供系统化的数据结构与算法教程、丰富的编程练习题库、以及 AI 智能辅助学习功能。
-
-### 🎯 核心目标
-
-- 📚 **系统学习**：从基础到进阶的完整知识体系
-- 💻 **实战练习**：70+ 道经典算法题，支持多语言
-- 🤖 **AI 辅助**：智能出题、代码分析、个性化提示
-- 📊 **进度追踪**：记录学习进度，标记已完成题目
-
----
-
-## 🌟 功能特性
-
-### 📖 教程系统
-
-| 模块 | 内容 |
-|------|------|
-| **数据结构** | 数组、链表、栈、队列、树、图、哈希表 |
-| **基础算法** | 排序、查找、字符串处理、位运算 |
-| **算法思想** | 双指针、滑动窗口、贪心、动态规划、回溯 |
-| **进阶专题** | 经典面试题、复杂度分析 |
-
-### 💡 练习系统
-
-- **题库分类**：19 个分类，覆盖主流算法领域
-- **多语言支持**：C / C++ / Java / Python
-- **题型丰富**：编程题 + 填空题
-- **难度分级**：简单 ⭐ / 中等 ⭐⭐ / 困难 ⭐⭐⭐
-- **完成追踪**：已完成题目自动标记为绿色
-
-### 🤖 AI 智能功能
-
-- **智能出题**：根据知识点自动生成练习题
-- **代码分析**：分析代码风格和潜在问题
-- **提示系统**：分步骤提供解题思路
-
-### 🎨 用户体验
-
-- **深色/浅色主题**：护眼模式自由切换
-- **响应式设计**：支持 PC 和移动端
-- **流畅动画**：现代化 UI 交互体验
-
----
-
-## 🛠️ 技术栈
-
-| 类别 | 技术 |
-|------|------|
-| **前端框架** | React 18 + TypeScript |
-| **构建工具** | Vite 7 |
-| **样式方案** | TailwindCSS 4 |
-| **路由管理** | React Router 7 |
-| **状态管理** | React Context |
-| **AI 集成** | DeepSeek API |
-| **代码高亮** | Prism.js |
-
----
-
-## 🚀 快速开始
-
-### 环境要求
-
-- Node.js >= 18.0
-- npm >= 9.0
-
-### 安装步骤
+### Frontend
 
 ```bash
-# 1. 克隆项目
-git clone https://github.com/your-username/lingma-algorithm.git
-cd lingma-algorithm
-
-# 2. 安装依赖
 npm install
-
-# 3. 启动开发服务器
 npm run dev
+```
 
-# 4. 构建生产版本
+### Production Build
+
+```bash
 npm run build
 ```
 
-### 访问地址
+### API Proxy
 
-- 开发环境：`http://localhost:5173`
-- 生产环境：`https://lingma.cornna.xyz`
-
----
-
-## 📁 项目结构
-
-```
-src/
-├── components/          # 可复用组件
-│   ├── layout/          # 布局组件 (Navbar, Footer)
-│   └── tutorials/       # 教程相关组件
-├── contexts/            # React Context
-│   ├── ThemeContext     # 主题管理
-│   └── UserContext      # 用户状态管理
-├── data/                # 静态数据
-│   ├── exercises.ts     # 练习题库 (70+ 题)
-│   └── tutorials.ts     # 教程内容
-├── pages/               # 页面组件
-│   ├── Home.tsx         # 首页
-│   ├── Learn.tsx        # 学习页面
-│   ├── Practice.tsx     # 练习页面
-│   └── About.tsx        # 关于页面
-├── services/            # 服务层
-│   └── aiService.ts     # AI API 封装
-└── styles/              # 样式文件
+```bash
+cd api-proxy
+pip install -r requirements.txt
+uvicorn main:app --host 127.0.0.1 --port 3001
 ```
 
----
+## Key Paths
 
-## 📊 题库统计
+- `src/pages/Practice.tsx`: practice entry and tab routing
+- `src/components/tutorials/VibeCodingLab.tsx`: vibe coding learning and Prompt Arena UI
+- `src/services/vibeCodingService.ts`: Prompt Arena API client
+- `src/types/vibeCoding.ts`: Prompt Arena types
+- `api-proxy/main.py`: auth, AI proxy, judge proxy, and Prompt Arena backend
+- `deploy/docker-compose.yml`: production Docker stack
 
-| 分类 | 题目数量 |
-|------|----------|
-| 数据结构 (链表/栈/队列/树/图/哈希表) | 25+ |
-| 基础算法 (排序/查找/字符串/位运算) | 20+ |
-| 算法思想 (双指针/滑动窗口/贪心/DP/回溯) | 25+ |
-| **总计** | **70+** |
+## Verification
 
-### 经典题目示例
+Useful commands for this repo:
 
-- 🔗 **链表**：反转链表、合并有序链表、环形链表检测
-- 🌳 **二叉树**：前中后序遍历、层序遍历、最大深度
-- 🧮 **动态规划**：最长公共子序列、编辑距离、背包问题
-- ↩️ **回溯**：全排列、子集、N皇后、单词搜索
-- 👆 **双指针**：两数之和、盛水容器、移动零
+```bash
+python -m pytest api-proxy/tests/test_vibe_coding_api.py -q
+python -m py_compile api-proxy/main.py
+npx eslint src/components/tutorials/VibeCodingLab.tsx src/services/vibeCodingService.ts src/types/vibeCoding.ts
+npm run build
+```
 
----
+## Deployment
 
-## 🤝 贡献指南
+Production currently runs from the Docker stack in `deploy/docker-compose.yml` on the VPS behind `lingma.cornna.xyz`.
 
-欢迎提交 Issue 和 Pull Request！
+Typical release flow:
 
-1. Fork 本仓库
-2. 创建特性分支 (`git checkout -b feature/AmazingFeature`)
-3. 提交更改 (`git commit -m 'Add some AmazingFeature'`)
-4. 推送到分支 (`git push origin feature/AmazingFeature`)
-5. 提交 Pull Request
+1. Build and verify locally
+2. Sync source to `/opt/tumafang`
+3. Preserve `deploy/.env`
+4. Run `docker-compose up -d --build`
+5. Check `/api/health` and the public site
 
----
+## License
 
-## 📄 开源协议
-
-本项目基于 [MIT License](LICENSE) 开源。
-
----
-
-## 🙏 致谢
-
-- [React](https://react.dev/) - 用户界面库
-- [Vite](https://vite.dev/) - 下一代前端构建工具
-- [TailwindCSS](https://tailwindcss.com/) - 实用优先的 CSS 框架
-- [DeepSeek](https://www.deepseek.com/) - AI 能力支持
-
----
-
-<div align="center">
-
-**如果这个项目对你有帮助，请给个 ⭐ Star 支持一下！**
-
-Made with ❤️ by LingMa Team
-
-</div>
+MIT

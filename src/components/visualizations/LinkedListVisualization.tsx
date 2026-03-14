@@ -622,15 +622,15 @@ export default function LinkedListVisualization() {
           )}
           <div className="flex items-center gap-2">
             <span className="text-xs text-slate-400">🐢</span>
-            <input type="range" min="200" max="2000" step="100" value={2200 - speed} onChange={e => setSpeed(2200 - Number(e.target.value))} className="w-24" />
+            <input type="range" min="200" max="2000" step="100" value={2200 - speed} onChange={e => setSpeed(2200 - Number(e.target.value))} className="w-24 cursor-pointer accent-indigo-600 dark:accent-indigo-400 dark:[color-scheme:dark]" />
             <span className="text-xs text-slate-400">🐇</span>
           </div>
           {!playing ? (
-            <button onClick={startAnimation} className="px-4 py-1.5 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700">
+            <button onClick={startAnimation} className="cursor-pointer rounded-lg bg-indigo-600 px-4 py-1.5 text-sm font-medium text-white transition-all hover:bg-indigo-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/60">
               {OP_NAMES[operation]}
             </button>
           ) : (
-            <button onClick={() => setPlaying(false)} className="px-4 py-1.5 bg-amber-500 text-white rounded-lg text-sm font-medium">暂停</button>
+            <button onClick={() => setPlaying(false)} className="cursor-pointer rounded-lg bg-amber-500 px-4 py-1.5 text-sm font-medium text-white transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/60">暂停</button>
           )}
           {steps.length > 0 && (
             <div className="flex items-center gap-2 border-l border-slate-200 dark:border-slate-600 pl-3">

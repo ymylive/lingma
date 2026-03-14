@@ -20,6 +20,10 @@ WshShell.Run "cmd /c if not defined LINGMA_AI_API_KEY exit /b 1 && cd /d " & pro
 
 WScript.Sleep 2000
 
+WshShell.Run "cmd /c cd /d " & projectPath & "\judge-server && node server.js", 0, False
+
+WScript.Sleep 1000
+
 WshShell.Run "cmd /c cd /d " & projectPath & " && npm run dev", 0, False
 
 Set WshShell = Nothing
