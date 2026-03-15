@@ -1,8 +1,15 @@
 import { commonPatternsEn, commonTranslationsEn } from './commonTranslations';
 import { contentPatternsEn, contentTranslationsEn } from './contentTranslations';
+import { dataPatternsEn, dataTranslationsEn } from './dataTranslations';
 import { exerciseTitleTranslationsEn } from './exerciseTitleTranslations';
 import { generatedTranslationsEn } from './generatedTranslations';
+import { lessonPatternsEn, lessonTranslationsEn } from './lessonTranslations';
+import { pagePatternsEn, pageTranslationsEn } from './pageTranslations';
 import { practicePatternsEn, practiceTranslationsEn } from './practiceTranslations';
+import { servicePatternsEn, serviceTranslationsEn } from './serviceTranslations';
+import { tutorialComponentPatternsEn, tutorialComponentTranslationsEn } from './tutorialComponentTranslations';
+import { vibeCodingPatternsEn, vibeCodingTranslationsEn } from './vibeCodingTranslations';
+import { visualizationPatternsEn, visualizationTranslationsEn } from './visualizationTranslations';
 
 export type AppLocale = 'zh-CN' | 'en-US';
 
@@ -12,6 +19,13 @@ const exactTranslations = {
     ...contentTranslationsEn,
     ...exerciseTitleTranslationsEn,
     ...practiceTranslationsEn,
+    ...vibeCodingTranslationsEn,
+    ...serviceTranslationsEn,
+    ...pageTranslationsEn,
+    ...lessonTranslationsEn,
+    ...tutorialComponentTranslationsEn,
+    ...visualizationTranslationsEn,
+    ...dataTranslationsEn,
     ...generatedTranslationsEn,
   },
 } as const satisfies Partial<Record<AppLocale, Record<string, string>>>;
@@ -21,6 +35,13 @@ const patternTranslations = {
     ...commonPatternsEn,
     ...contentPatternsEn,
     ...practicePatternsEn,
+    ...vibeCodingPatternsEn,
+    ...servicePatternsEn,
+    ...pagePatternsEn,
+    ...lessonPatternsEn,
+    ...tutorialComponentPatternsEn,
+    ...visualizationPatternsEn,
+    ...dataPatternsEn,
   ],
 } as const;
 

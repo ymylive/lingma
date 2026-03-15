@@ -91,7 +91,7 @@ export default function Dashboard() {
           <div className="flex items-center gap-4">
             <Link
               to="/book"
-              className="min-h-[44px] rounded-lg bg-indigo-600 px-4 py-2 font-medium text-white transition-colors hover:bg-indigo-700"
+              className="min-h-[44px] rounded-xl bg-klein-500 px-4 py-2 font-medium text-white transition-colors hover:bg-klein-600"
             >
               {copy.continueLearning}
             </Link>
@@ -129,7 +129,7 @@ export default function Dashboard() {
             <div className="rounded-xl border border-slate-200 bg-white p-6 dark:border-slate-700 dark:bg-slate-800">
               <div className="mb-4 flex items-center justify-between">
                 <h2 className="text-lg font-bold text-slate-900 dark:text-white">{copy.recentLearning}</h2>
-                <Link to="/book" className="text-sm text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300">
+                <Link to="/book" className="text-sm text-klein-500 hover:text-klein-600 dark:text-klein-400 dark:hover:text-klein-300">
                   {copy.viewAll}
                 </Link>
               </div>
@@ -143,7 +143,7 @@ export default function Dashboard() {
                       className="flex items-center justify-between rounded-lg bg-slate-50 p-3 transition-colors hover:bg-slate-100 dark:bg-slate-700/30 dark:hover:bg-slate-700/50"
                     >
                       <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-100 text-sm font-medium text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-300">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-klein-100 text-sm font-medium text-klein-500 dark:bg-klein-900/30 dark:text-klein-300">
                           {record.category.slice(0, 2)}
                         </div>
                         <div>
@@ -176,9 +176,9 @@ export default function Dashboard() {
                         key={item.id}
                         type="button"
                         onClick={() => setSkillLevel(item.id)}
-                        className={`min-h-[44px] cursor-pointer rounded-xl border px-4 py-3 text-left text-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/60 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900 ${
+                        className={`min-h-[44px] cursor-pointer rounded-xl border px-4 py-3 text-left text-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-klein-500/60 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900 ${
                           skillLevel === item.id
-                            ? 'border-indigo-500 bg-indigo-50 text-indigo-700 dark:border-indigo-400 dark:bg-indigo-900/20 dark:text-indigo-200'
+                            ? 'border-klein-500 bg-klein-50 text-klein-700 dark:border-klein-400 dark:bg-klein-900/20 dark:text-klein-200'
                             : 'border-slate-200 bg-slate-50 text-slate-700 dark:border-slate-700 dark:bg-slate-900/40 dark:text-slate-200'
                         }`}
                       >
@@ -216,7 +216,7 @@ export default function Dashboard() {
                   type="button"
                   onClick={handleSave}
                   disabled={saving}
-                  className="min-h-[44px] cursor-pointer rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-indigo-700 disabled:opacity-60"
+                  className="min-h-[44px] cursor-pointer rounded-xl bg-klein-500 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-klein-600 disabled:opacity-60"
                 >
                   {copy.save}
                 </button>
@@ -226,17 +226,17 @@ export default function Dashboard() {
           </div>
 
           <div className="space-y-6">
-            <div className="rounded-xl bg-gradient-to-br from-indigo-600 to-purple-600 p-6 text-white shadow-lg shadow-indigo-500/20">
+            <div className="rounded-xl bg-gradient-to-br from-klein-500 to-klein-600 p-6 text-white shadow-lg shadow-klein-500/20">
               <div className="mb-4 flex items-center gap-4">
                 <div className="flex h-14 w-14 items-center justify-center rounded-full bg-white/20 text-2xl">
                   👤
                 </div>
                 <div>
                   <div className="text-lg font-bold">{user.username}</div>
-                  <div className="text-sm text-indigo-200">{user.email}</div>
+                  <div className="text-sm text-klein-200">{user.email}</div>
                 </div>
               </div>
-              <div className="text-sm text-indigo-100">
+              <div className="text-sm text-klein-100">
                 {copy.joinedOn} {formatDate(user.createdAt, { year: 'numeric', month: 'short', day: 'numeric' })}
               </div>
             </div>

@@ -6,6 +6,37 @@ import type {
   VibeTrack,
 } from '../types/vibeCoding';
 
+interface CacheEntry<T> {
+  data: T;
+  timestamp: number;
+}
+
+const cache = new Map<string, CacheEntry<unknown>>();
+
+const PROFILE_TTL = 30_000;
+const HISTORY_TTL = 15_000;
+
+function getCached<T>(key: string, ttlMs: number): T | null {
+  const entry = cache.get(key);
+  if (entry && Date.now() - entry.timestamp < ttlMs) {
+    return entry.data as T;
+  }
+  return null;
+}
+
+function setCache<T>(key: string, data: T): void {
+  cache.set(key, { data, timestamp: Date.now() });
+}
+
+function invalidateVibeCache(): void {
+  cache.delete('vibe-profile');
+  cache.delete('vibe-history');
+}
+
+export function clearVibeCache(): void {
+  invalidateVibeCache();
+}
+
 async function readJson<T>(response: Response): Promise<T> {
   const text = await response.text();
   const payload = text ? JSON.parse(text) : {};
@@ -19,18 +50,29 @@ async function readJson<T>(response: Response): Promise<T> {
   return payload as T;
 }
 
-export async function fetchVibeProfile(): Promise<VibeProfile> {
+export async function fetchVibeProfile(forceRefresh?: boolean): Promise<VibeProfile> {
+  if (!forceRefresh) {
+    const cached = getCached<VibeProfile>('vibe-profile', PROFILE_TTL);
+    if (cached) return cached;
+  }
   const response = await fetch('/api/vibe-coding/profile', {
     credentials: 'include',
   });
-  return readJson<VibeProfile>(response);
+  const data = await readJson<VibeProfile>(response);
+  setCache('vibe-profile', data);
+  return data;
 }
 
-export async function fetchVibeHistory(): Promise<VibeHistoryItem[]> {
+export async function fetchVibeHistory(forceRefresh?: boolean): Promise<VibeHistoryItem[]> {
+  if (!forceRefresh) {
+    const cached = getCached<VibeHistoryItem[]>('vibe-history', HISTORY_TTL);
+    if (cached) return cached;
+  }
   const response = await fetch('/api/vibe-coding/history', {
     credentials: 'include',
   });
   const payload = await readJson<{ items: VibeHistoryItem[] }>(response);
+  setCache('vibe-history', payload.items);
   return payload.items;
 }
 
@@ -43,7 +85,9 @@ export async function generateVibeChallenge(track: VibeTrack): Promise<VibeChall
     credentials: 'include',
     body: JSON.stringify({ track }),
   });
-  return readJson<VibeChallenge>(response);
+  const data = await readJson<VibeChallenge>(response);
+  invalidateVibeCache();
+  return data;
 }
 
 export async function evaluateVibePrompt(challengeId: string, userPrompt: string): Promise<VibeEvaluation> {
@@ -58,5 +102,7 @@ export async function evaluateVibePrompt(challengeId: string, userPrompt: string
       user_prompt: userPrompt,
     }),
   });
-  return readJson<VibeEvaluation>(response);
+  const data = await readJson<VibeEvaluation>(response);
+  invalidateVibeCache();
+  return data;
 }

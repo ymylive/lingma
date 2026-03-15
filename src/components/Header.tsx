@@ -12,6 +12,7 @@ export default function Header() {
   const { isEnglish, locale, setLocale, t } = useI18n();
   const [showDropdown, setShowDropdown] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const navItems = useMemo(() => [
     { path: '/algorithms', label: isEnglish ? 'Algorithms' : '算法演示', icon: '🎬' },
@@ -47,6 +48,21 @@ export default function Header() {
         </Link>
 
         <div className="flex items-center gap-2 sm:gap-4">
+          {/* Mobile hamburger */}
+          <button
+            type="button"
+            onClick={() => setMobileMenuOpen((v) => !v)}
+            className="relative cursor-pointer rounded-full p-2 text-slate-600 transition-all hover:bg-slate-100 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-klein-500/60 dark:text-slate-400 dark:hover:bg-slate-800 md:hidden"
+            aria-label="Toggle menu"
+          >
+            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              {mobileMenuOpen ? (
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              ) : (
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              )}
+            </svg>
+          </button>
           <div className="hidden items-center rounded-full border border-slate-200/50 bg-slate-100/50 p-1 backdrop-blur-sm dark:border-white/5 dark:bg-slate-800/50 md:flex">
             {navItems.map((item) => {
               const isActive = location.pathname.startsWith(item.path);
@@ -163,12 +179,12 @@ export default function Header() {
                             onClick={() => setShowDropdown(false)}
                             className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-klein-500/60 dark:text-slate-300 dark:hover:bg-slate-700/50"
                           >
-                            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-50 text-lg dark:bg-indigo-900/30">📊</span>
+                            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-klein-50 text-lg dark:bg-klein-900/30">📊</span>
                             {isEnglish ? 'Dashboard' : '学习中心'}
                           </Link>
                           <div className="grid grid-cols-2 gap-2 px-2">
                             <div className="rounded-xl bg-slate-50 p-3 text-center dark:bg-slate-700/30">
-                              <div className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">{progress.completedLessons.length}</div>
+                              <div className="text-2xl font-bold text-klein-500 dark:text-klein-400">{progress.completedLessons.length}</div>
                               <div className="text-[10px] text-slate-500 dark:text-slate-400">{isEnglish ? 'Lessons' : '已修课程'}</div>
                             </div>
                             <div className="rounded-xl bg-slate-50 p-3 text-center dark:bg-slate-700/30">
@@ -197,7 +213,7 @@ export default function Header() {
             ) : (
               <Link
                 to="/auth"
-                className="rounded-full bg-indigo-600 px-5 py-2 text-sm font-medium text-white shadow-lg shadow-indigo-500/20 transition-all hover:-translate-y-0.5 hover:bg-indigo-700 hover:shadow-indigo-500/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/60"
+                className="rounded-full bg-klein-500 px-5 py-2 text-sm font-medium text-white shadow-lg shadow-klein-500/20 transition-all hover:-translate-y-0.5 hover:bg-klein-600 hover:shadow-klein-500/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-klein-500/60"
               >
                 {isEnglish ? 'Sign In' : '登录'}
               </Link>
@@ -205,6 +221,39 @@ export default function Header() {
           </div>
         </div>
       </nav>
+
+      {/* Mobile navigation panel */}
+      <AnimatePresence>
+        {mobileMenuOpen && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.2 }}
+            className="overflow-hidden border-t border-slate-200/50 bg-white/90 backdrop-blur-xl dark:border-white/5 dark:bg-[#0B1120]/90 md:hidden"
+          >
+            <div className="space-y-1 px-4 py-3">
+              {navItems.map((item) => {
+                const isActive = location.pathname.startsWith(item.path);
+                return (
+                  <Link
+                    key={item.path}
+                    to={item.path}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className={`block rounded-xl px-4 py-3 text-sm font-medium transition-colors ${
+                      isActive
+                        ? 'bg-klein-50 text-klein-600 dark:bg-klein-900/30 dark:text-white'
+                        : 'text-slate-600 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800'
+                    }`}
+                  >
+                    {item.icon} {item.label}
+                  </Link>
+                );
+              })}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </header>
   );
 }

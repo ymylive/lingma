@@ -79,14 +79,14 @@ export default function Book() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white dark:from-slate-900 dark:to-slate-800 transition-colors duration-300 pt-20 pb-12">
-      <div className="max-w-5xl mx-auto px-6">
+      <div className="max-w-6xl mx-auto px-6">
         {/* 页面标题 */}
         <div className="text-center mb-10">
           <h1 className="text-4xl font-bold text-slate-900 dark:text-white mb-3">📖 {isEnglish ? 'Data Structure Tutorials' : '数据结构教程'}</h1>
           <p className="text-slate-600 dark:text-slate-300 text-lg">{t('系统学习数据结构与算法，从入门到精通')}</p>
           <div className="flex justify-center gap-6 mt-6">
             <div className="text-center">
-              <div className="text-3xl font-bold text-indigo-600 dark:text-indigo-400">{curriculum.length}</div>
+              <div className="text-3xl font-bold text-klein-500 dark:text-klein-400">{curriculum.length}</div>
               <div className="text-sm text-slate-500 dark:text-slate-400">{chapterCountLabel}</div>
             </div>
             <div className="text-center">
@@ -107,12 +107,12 @@ export default function Book() {
         </div>
 
         {/* 学习路径提示 */}
-        <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl p-6 mb-8 text-white shadow-lg shadow-indigo-500/20">
+        <div className="bg-gradient-to-r from-klein-500 to-klein-600 rounded-2xl p-6 mb-8 text-white shadow-lg shadow-klein-500/20">
           <div className="flex items-start gap-4">
             <span className="text-4xl">🎯</span>
             <div>
               <h3 className="font-bold text-lg mb-1">{t('推荐学习路径')}</h3>
-              <p className="text-indigo-100 text-sm leading-relaxed">
+              <p className="text-klein-100 text-sm leading-relaxed">
                 建议按顺序学习：先掌握<strong>绑论</strong>中的复杂度分析，然后学习<strong>线性表</strong>打好基础，
                 再进阶<strong>树</strong>和<strong>图</strong>，最后通过<strong>查找</strong>和<strong>排序</strong>综合应用所学知识。
               </p>
