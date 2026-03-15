@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, BookOpen, List, Lightbulb, TriangleAlert, X } from 'lucide-react';
+import { ArrowLeft, ArrowRight, BookOpen, List, Lightbulb, TriangleAlert, X } from 'lucide-react';
 import { methodologyUnits } from '../data/methodologyUnits';
 import { useI18n } from '../contexts/I18nContext';
 
@@ -195,8 +195,8 @@ export default function Methodology() {
               </h1>
               <p className="mt-1 text-base text-slate-500 dark:text-slate-400">
                 {isEnglish
-                  ? '6 units covering the professional workflow for AI-assisted development'
-                  : '6 个学习单元，系统掌握 AI 辅助开发的专业工作流'}
+                  ? '10 units covering the professional workflow for AI-assisted development'
+                  : '10 个学习单元，系统掌握 AI 辅助开发的专业工作流'}
               </p>
             </div>
           </div>
@@ -300,6 +300,15 @@ export default function Methodology() {
                   <p className="mt-2 text-sm leading-7 text-emerald-900 dark:text-emerald-100">
                     {t(unit.practice)}
                   </p>
+                  {unit.relatedTrack && (
+                    <Link
+                      to={`/practice?tab=vibe&track=${unit.relatedTrack}`}
+                      className="mt-4 inline-flex min-h-[44px] cursor-pointer items-center gap-2 rounded-2xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition-colors duration-200 hover:bg-emerald-500"
+                    >
+                      {t('前往 Prompt Arena 练习')}
+                      <ArrowRight className="h-4 w-4" />
+                    </Link>
+                  )}
                 </motion.div>
 
                 {/* Pitfalls callout */}

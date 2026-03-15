@@ -1,4 +1,5 @@
 import { useDeferredValue, useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { AIExerciseGenerator, CodingExercise, FillInBlank } from '../components/tutorials/TutorialPanel';
 import VibeCodingLab from '../components/tutorials/VibeCodingLab';
 import { allExercises, type Exercise } from '../data/exercises';
@@ -16,6 +17,10 @@ import {
   sortExercisesForPractice,
 } from '../utils/practiceProgression';
 import { buildDailyRecommendation, getSkillLevelMeta } from '../utils/userPersonalization';
+import type { VibeTrack } from '../types/vibeCoding';
+
+const VALID_TABS = new Set(['preset', 'ai', 'vibe']);
+const VALID_TRACKS = new Set<VibeTrack>(['frontend', 'backend', 'debugging', 'refactoring', 'review']);
 
 const LANGUAGE_SUPPORT = [
   {
@@ -100,7 +105,12 @@ function fuzzyMatch(text: string, query: string) {
 export default function Practice() {
   const { isExerciseCompleted, progress, user } = useUser();
   const { formatDate, isEnglish, t } = useI18n();
-  const [tab, setTab] = useState<'preset' | 'ai' | 'vibe'>('preset');
+  const [searchParams] = useSearchParams();
+  const paramTab = searchParams.get('tab');
+  const paramTrack = searchParams.get('track');
+  const initialTab = paramTab && VALID_TABS.has(paramTab) ? (paramTab as 'preset' | 'ai' | 'vibe') : 'preset';
+  const initialTrack = paramTrack && VALID_TRACKS.has(paramTrack as VibeTrack) ? (paramTrack as VibeTrack) : undefined;
+  const [tab, setTab] = useState<'preset' | 'ai' | 'vibe'>(initialTab);
   const [category, setCategory] = useState('all');
   const [difficulty, setDifficulty] = useState<'all' | 'easy' | 'medium' | 'hard'>('all');
   const [typeFilter, setTypeFilter] = useState<'all' | 'coding' | 'fillblank'>('all');
@@ -225,12 +235,12 @@ export default function Practice() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white pt-20 pb-12 dark:from-slate-900 dark:to-slate-800">
+    <div className="min-h-screen pt-24 pb-12">
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
         <div className="mb-8 grid gap-4 lg:grid-cols-[1.4fr_0.9fr]">
-          <div className="rounded-3xl border border-slate-200 bg-[radial-gradient(circle_at_top_left,_rgba(37,99,235,0.16),_transparent_45%),linear-gradient(135deg,_rgba(255,255,255,0.96),_rgba(241,245,249,0.86))] p-6 shadow-sm dark:border-slate-700 dark:bg-[radial-gradient(circle_at_top_left,_rgba(59,130,246,0.2),_transparent_42%),linear-gradient(135deg,_rgba(15,23,42,0.98),_rgba(30,41,59,0.94))]">
+          <div className="rounded-2xl border border-slate-200 bg-[radial-gradient(circle_at_top_left,_rgba(37,99,235,0.16),_transparent_45%),linear-gradient(135deg,_rgba(255,255,255,0.96),_rgba(241,245,249,0.86))] p-6 shadow-sm dark:border-slate-700 dark:bg-[radial-gradient(circle_at_top_left,_rgba(59,130,246,0.2),_transparent_42%),linear-gradient(135deg,_rgba(15,23,42,0.98),_rgba(30,41,59,0.94))]">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="rounded-full bg-indigo-100 px-3 py-1 text-xs font-semibold text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300">{isEnglish ? 'LeetCode-style Practice' : 'LeetCode 风格刷题'}</span>
+              <span className="rounded-full bg-klein-100 px-3 py-1 text-xs font-semibold text-klein-700 dark:bg-klein-900/40 dark:text-klein-300">{isEnglish ? 'LeetCode-style Practice' : 'LeetCode 风格刷题'}</span>
               <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600 dark:bg-slate-700 dark:text-slate-200">{t('层级递进')}</span>
             </div>
             <h1 className="mt-4 text-3xl font-bold text-slate-900 dark:text-white">{t('刷题路径 + 专业判题 + 多语言学习支持')}</h1>
@@ -240,10 +250,10 @@ export default function Practice() {
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800"><div className="text-xs text-slate-500 dark:text-slate-400">{isEnglish ? 'Unique Problems' : '去重后题量'}</div><div className="mt-2 text-3xl font-bold text-slate-900 dark:text-white">{exercises.length}</div></div>
-            <div className="rounded-3xl border border-emerald-200 bg-emerald-50 p-4 shadow-sm dark:border-emerald-800 dark:bg-emerald-900/20"><div className="text-xs text-emerald-700 dark:text-emerald-300">{isEnglish ? 'Completed' : '已完成'}</div><div className="mt-2 text-3xl font-bold text-emerald-700 dark:text-emerald-300">{progress.completedExercises.length}</div></div>
-            <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800"><div className="text-xs text-slate-500 dark:text-slate-400">{isEnglish ? 'Review Queue' : '待复盘'}</div><div className="mt-2 text-3xl font-bold text-slate-900 dark:text-white">{reviewQueue.length}</div></div>
-            <div className="rounded-3xl border border-indigo-200 bg-indigo-50 p-4 shadow-sm dark:border-indigo-800 dark:bg-indigo-900/20"><div className="text-xs text-indigo-700 dark:text-indigo-300">{isEnglish ? 'Recent Avg Score' : '近期平均得分'}</div><div className="mt-2 text-3xl font-bold text-indigo-700 dark:text-indigo-300">{recentScore}</div></div>
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800"><div className="text-xs text-slate-500 dark:text-slate-400">{isEnglish ? 'Unique Problems' : '去重后题量'}</div><div className="mt-2 text-3xl font-bold text-slate-900 dark:text-white">{exercises.length}</div></div>
+            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 shadow-sm dark:border-emerald-800 dark:bg-emerald-900/20"><div className="text-xs text-emerald-700 dark:text-emerald-300">{isEnglish ? 'Completed' : '已完成'}</div><div className="mt-2 text-3xl font-bold text-emerald-700 dark:text-emerald-300">{progress.completedExercises.length}</div></div>
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800"><div className="text-xs text-slate-500 dark:text-slate-400">{isEnglish ? 'Review Queue' : '待复盘'}</div><div className="mt-2 text-3xl font-bold text-slate-900 dark:text-white">{reviewQueue.length}</div></div>
+            <div className="rounded-2xl border border-indigo-200 bg-indigo-50 p-4 shadow-sm dark:border-indigo-800 dark:bg-indigo-900/20"><div className="text-xs text-indigo-700 dark:text-indigo-300">{isEnglish ? 'Recent Avg Score' : '近期平均得分'}</div><div className="mt-2 text-3xl font-bold text-indigo-700 dark:text-indigo-300">{recentScore}</div></div>
           </div>
         </div>
 
@@ -260,12 +270,13 @@ export default function Practice() {
               setSelectedExercise(null);
               setTab('preset');
             }}
+            initialTrack={initialTrack}
           />
         ) : (
           <>
             {!selectedExercise && (
               <>
-                <div className="mb-6 rounded-3xl border border-indigo-200 bg-[radial-gradient(circle_at_top_left,_rgba(79,70,229,0.16),_transparent_45%),linear-gradient(135deg,_rgba(238,242,255,0.95),_rgba(255,255,255,0.92))] p-5 shadow-sm dark:border-indigo-800 dark:bg-[radial-gradient(circle_at_top_left,_rgba(99,102,241,0.22),_transparent_42%),linear-gradient(135deg,_rgba(15,23,42,0.98),_rgba(30,41,59,0.94))]">
+                <div className="mb-6 rounded-2xl border border-indigo-200 bg-[radial-gradient(circle_at_top_left,_rgba(79,70,229,0.16),_transparent_45%),linear-gradient(135deg,_rgba(238,242,255,0.95),_rgba(255,255,255,0.92))] p-5 shadow-sm dark:border-indigo-800 dark:bg-[radial-gradient(circle_at_top_left,_rgba(99,102,241,0.22),_transparent_42%),linear-gradient(135deg,_rgba(15,23,42,0.98),_rgba(30,41,59,0.94))]">
                   <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                     <div className="space-y-3">
                       <div className="flex flex-wrap items-center gap-2">
@@ -293,7 +304,7 @@ export default function Practice() {
                       </div>
                     </div>
 
-                    <div className="w-full max-w-md rounded-3xl border border-white/70 bg-white/85 p-5 dark:border-slate-700 dark:bg-slate-800/85">
+                    <div className="w-full max-w-md rounded-2xl border border-white/70 bg-white/85 p-5 dark:border-slate-700 dark:bg-slate-800/85">
                       {dailyRecommendation.exercise ? (
                         <>
                           <div className="flex flex-wrap gap-2">
@@ -305,7 +316,7 @@ export default function Practice() {
                           <div className="mt-3 text-lg font-semibold text-slate-900 dark:text-white">{t(dailyRecommendation.exercise.title)}</div>
                           <p className="mt-2 line-clamp-3 text-sm text-slate-600 dark:text-slate-300">{t(dailyRecommendation.exercise.description)}</p>
                           <div className="mt-4 flex flex-col gap-3 sm:flex-row">
-                            <button onClick={() => openExercise(dailyRecommendation.exercise!)} className="min-h-[44px] cursor-pointer rounded-2xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-klein-600">{t(dailyRecommendation.ctaLabel)}</button>
+                            <button onClick={() => openExercise(dailyRecommendation.exercise!)} className="min-h-[44px] cursor-pointer rounded-2xl bg-klein-500 px-4 py-2 text-sm font-semibold text-white hover:bg-klein-600">{t(dailyRecommendation.ctaLabel)}</button>
                             <button onClick={() => { setCategory(dailyRecommendation.exercise!.category); setShowCompleted('incomplete'); }} className="min-h-[44px] cursor-pointer rounded-2xl bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700 dark:bg-slate-700 dark:text-slate-100">{t('切到对应题库')}</button>
                           </div>
                         </>
@@ -316,7 +327,7 @@ export default function Practice() {
                   </div>
                 </div>
 
-                <div className="mb-6 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+                <div className="mb-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800">
                   <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                     <div>
                       <h2 className="text-lg font-semibold text-slate-900 dark:text-white">多语言学习支持</h2>
@@ -332,7 +343,7 @@ export default function Practice() {
                         <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">{item.summary}</p>
                         <div className="mt-4 space-y-2">
                           <a href={item.docsUrl} target="_blank" rel="noreferrer" className="block rounded-xl bg-white px-3 py-2 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-100 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700">{item.docsLabel}</a>
-                          <a href={item.bankUrl} target="_blank" rel="noreferrer" className="block rounded-xl bg-indigo-600 px-3 py-2 text-xs font-medium text-white transition-colors hover:bg-klein-600">{item.bankLabel}</a>
+                          <a href={item.bankUrl} target="_blank" rel="noreferrer" className="block rounded-xl bg-klein-500 px-3 py-2 text-xs font-medium text-white transition-colors hover:bg-klein-600">{item.bankLabel}</a>
                         </div>
                       </div>
                     ))}
@@ -340,13 +351,13 @@ export default function Practice() {
                 </div>
 
                 <div className="mb-6 grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
-                  <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+                  <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800">
                     <div className="flex flex-wrap items-center justify-between gap-3">
                       <div>
                         <div className="text-sm font-semibold text-slate-900 dark:text-white">{t('推荐下一题')}</div>
                         <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">{t(getCategoryMeta(activePathCategory).name)}</div>
                       </div>
-                      {recommendedExercise && <button onClick={() => openExercise(recommendedExercise)} className="min-h-[44px] rounded-2xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white">{isEnglish ? 'Continue Practice' : '继续刷题'}</button>}
+                      {recommendedExercise && <button onClick={() => openExercise(recommendedExercise)} className="min-h-[44px] rounded-2xl bg-klein-500 px-4 py-2 text-sm font-semibold text-white hover:bg-klein-600">{isEnglish ? 'Continue Practice' : '继续刷题'}</button>}
                     </div>
                     {recommendedExercise ? (
                       <div className="mt-4 rounded-2xl border border-indigo-200 bg-indigo-50 p-4 dark:border-indigo-800 dark:bg-indigo-900/20">
@@ -372,7 +383,7 @@ export default function Practice() {
                     ) : <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-700 dark:border-emerald-800 dark:bg-emerald-900/20 dark:text-emerald-300">{isEnglish ? 'Everything in the current filter is complete. Switch categories or challenge the AI generator next.' : '当前筛选范围已经全部完成，可以切换分类或挑战 AI 出题。'}</div>}
                   </div>
 
-                  <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+                  <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800">
                     <div className="text-sm font-semibold text-slate-900 dark:text-white">{t('刷题效率面板')}</div>
                     <div className="mt-4 space-y-3">
                       <div className="rounded-2xl bg-slate-50 p-4 dark:bg-slate-900"><div className="text-xs text-slate-500 dark:text-slate-400">{t('当前路径')}</div><div className="mt-1 text-base font-semibold text-slate-900 dark:text-white">{t(getCategoryMeta(activePath.category).name)}</div><div className="mt-1 text-sm text-slate-600 dark:text-slate-300">{formatCompletionCount(activePath.completed, activePath.total)}</div></div>
@@ -382,7 +393,7 @@ export default function Practice() {
                   </div>
                 </div>
 
-                <div className="mb-6 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+                <div className="mb-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800">
                   <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                     <div>
                       <h2 className="text-lg font-semibold text-slate-900 dark:text-white">{t('层级刷题路径')}</h2>
@@ -408,7 +419,7 @@ export default function Practice() {
               </>
             )}
 
-            <div className="mb-6 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+            <div className="mb-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800">
               <div className="grid gap-3 lg:grid-cols-[1fr_auto]">
                 <input value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} placeholder={t('搜索题目、描述、分类')} className="min-h-[48px] rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm outline-none transition-all focus:border-klein-500 focus:ring-2 focus:ring-klein-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white dark:focus:ring-klein-400/20" />
                 {activeFilters > 0 && <button onClick={clearFilters} className="min-h-[48px] rounded-2xl bg-rose-100 px-4 text-sm font-semibold text-rose-700 dark:bg-rose-900/30 dark:text-rose-300">{t('清空筛选')} {activeFilters}</button>}
@@ -447,7 +458,7 @@ export default function Practice() {
                   <div>
                     <div className="mb-2 text-sm font-semibold text-slate-900 dark:text-white">{t('效率快捷项')}</div>
                     <div className="flex flex-wrap gap-2">
-                      <button onClick={() => recommendedExercise && openExercise(recommendedExercise)} disabled={!recommendedExercise} className="min-h-[40px] rounded-2xl bg-indigo-600 px-3 py-2 text-sm font-medium text-white disabled:opacity-50">{t('推荐下一题')}</button>
+                      <button onClick={() => recommendedExercise && openExercise(recommendedExercise)} disabled={!recommendedExercise} className="min-h-[40px] rounded-2xl bg-klein-500 px-3 py-2 text-sm font-medium text-white disabled:opacity-50 hover:bg-klein-600">{t('推荐下一题')}</button>
                       <button onClick={() => setShowCompleted('incomplete')} className="min-h-[40px] rounded-2xl bg-slate-100 px-3 py-2 text-sm font-medium text-slate-700 dark:bg-slate-700 dark:text-slate-200">{t('继续未完成')}</button>
                       <button onClick={() => setFocusOnly((value) => !value)} className={`min-h-[40px] rounded-2xl px-3 py-2 text-sm font-medium ${focusOnly ? 'bg-amber-500 text-white' : 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-200'}`}>{t('考试重点')}</button>
                     </div>
@@ -499,7 +510,7 @@ export default function Practice() {
                     <button
                       key={exercise.id}
                       onClick={() => openExercise(exercise)}
-                      className={`cursor-pointer rounded-3xl border p-5 text-left transition-all hover:-translate-y-0.5 hover:shadow-md ${completed ? 'border-emerald-200 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-900/20' : 'border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800'}`}
+                      className={`cursor-pointer rounded-2xl border p-5 text-left transition-all hover:-translate-y-0.5 hover:shadow-md ${completed ? 'border-emerald-200 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-900/20' : 'border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800'}`}
                     >
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <div className="flex flex-wrap gap-2">
@@ -522,7 +533,7 @@ export default function Practice() {
                 })}
               </div>
             ) : (
-              <div className="rounded-3xl border border-slate-200 bg-white px-6 py-12 text-center text-slate-500 shadow-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">{isEnglish ? 'No problems match the current filters. Clear filters or switch categories.' : '当前筛选范围没有题目，建议清空筛选或切换专题。'}</div>
+              <div className="rounded-2xl border border-slate-200 bg-white px-6 py-12 text-center text-slate-500 shadow-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">{isEnglish ? 'No problems match the current filters. Clear filters or switch categories.' : '当前筛选范围没有题目，建议清空筛选或切换专题。'}</div>
             )}
           </>
         )}

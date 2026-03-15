@@ -1,9 +1,27 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { motion, type Variants } from 'framer-motion';
 import { useI18n } from '../contexts/I18nContext';
 import { useUser } from '../contexts/UserContext';
 import { SKILL_LEVEL_META, type UserSkillLevel } from '../utils/userPersonalization';
 import { TARGET_LANGUAGE_OPTIONS, type TargetLanguage } from '../utils/targetLanguages';
+
+const containerVariants: Variants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: { staggerChildren: 0.08, delayChildren: 0.1 }
+  }
+};
+
+const itemVariants: Variants = {
+  hidden: { y: 20, opacity: 0 },
+  visible: {
+    y: 0,
+    opacity: 1,
+    transition: { type: "spring", stiffness: 100 }
+  }
+};
 
 export default function Dashboard() {
   const { user, progress, isLoggedIn, logout, updatePreferences } = useUser();
@@ -79,9 +97,14 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 pb-12 pt-20 transition-colors duration-300 dark:bg-slate-900">
+    <div className="min-h-screen pb-12 pt-24 transition-colors duration-300">
       <div className="mx-auto max-w-6xl px-6">
-        <div className="mb-8 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="mb-8 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between"
+        >
           <div>
             <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
               {greeting}, {user.username}
@@ -106,11 +129,16 @@ export default function Dashboard() {
               {copy.signOut}
             </button>
           </div>
-        </div>
+        </motion.div>
 
-        <div className="mb-8 grid grid-cols-2 gap-4 md:grid-cols-4">
+        <motion.div
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+          className="mb-8 grid grid-cols-2 gap-4 md:grid-cols-4"
+        >
           {stats.map((item) => (
-            <div key={item.label} className="rounded-xl border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-800">
+            <motion.div key={item.label} variants={itemVariants} className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-800">
               <div className="flex items-center gap-3">
                 <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-slate-100 text-2xl dark:bg-slate-700/60">
                   {item.icon}
@@ -120,13 +148,19 @@ export default function Dashboard() {
                   <div className="text-sm text-slate-500 dark:text-slate-400">{item.label}</div>
                 </div>
               </div>
-            </div>
+            </motion.div>
           ))}
-        </div>
+        </motion.div>
 
         <div className="grid gap-6 md:grid-cols-3">
-          <div className="space-y-6 md:col-span-2">
-            <div className="rounded-xl border border-slate-200 bg-white p-6 dark:border-slate-700 dark:bg-slate-800">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5 }}
+            className="space-y-6 md:col-span-2"
+          >
+            <div className="rounded-2xl border border-slate-200 bg-white p-6 dark:border-slate-700 dark:bg-slate-800">
               <div className="mb-4 flex items-center justify-between">
                 <h2 className="text-lg font-bold text-slate-900 dark:text-white">{copy.recentLearning}</h2>
                 <Link to="/book" className="text-sm text-klein-500 hover:text-klein-600 dark:text-klein-400 dark:hover:text-klein-300">
@@ -165,7 +199,7 @@ export default function Dashboard() {
               )}
             </div>
 
-            <div className="rounded-xl border border-slate-200 bg-white p-6 dark:border-slate-700 dark:bg-slate-800">
+            <div className="rounded-2xl border border-slate-200 bg-white p-6 dark:border-slate-700 dark:bg-slate-800">
               <h2 className="mb-4 text-lg font-bold text-slate-900 dark:text-white">{copy.preferences}</h2>
               <div className="grid gap-6 lg:grid-cols-2">
                 <div>
@@ -223,10 +257,16 @@ export default function Dashboard() {
                 {saveMessage && <div className="text-sm text-emerald-600 dark:text-emerald-400">{saveMessage}</div>}
               </div>
             </div>
-          </div>
+          </motion.div>
 
-          <div className="space-y-6">
-            <div className="rounded-xl bg-gradient-to-br from-klein-500 to-klein-600 p-6 text-white shadow-lg shadow-klein-500/20">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5, delay: 0.15 }}
+            className="space-y-6"
+          >
+            <div className="rounded-2xl bg-gradient-to-br from-klein-500 to-klein-600 p-6 text-white shadow-lg shadow-klein-500/20">
               <div className="mb-4 flex items-center gap-4">
                 <div className="flex h-14 w-14 items-center justify-center rounded-full bg-white/20 text-2xl">
                   👤
@@ -241,7 +281,7 @@ export default function Dashboard() {
               </div>
             </div>
 
-            <div className="rounded-xl border border-slate-200 bg-white p-6 dark:border-slate-700 dark:bg-slate-800">
+            <div className="rounded-2xl border border-slate-200 bg-white p-6 dark:border-slate-700 dark:bg-slate-800">
               <h3 className="mb-4 font-bold text-slate-900 dark:text-white">{copy.quickLinks}</h3>
               <div className="space-y-2">
                 <Link to="/algorithms" className="flex items-center gap-3 rounded-lg p-3 transition-colors hover:bg-slate-50 dark:hover:bg-slate-700/50">
@@ -259,7 +299,7 @@ export default function Dashboard() {
               </div>
             </div>
 
-            <div className="rounded-xl border border-slate-200 bg-white p-6 dark:border-slate-700 dark:bg-slate-800">
+            <div className="rounded-2xl border border-slate-200 bg-white p-6 dark:border-slate-700 dark:bg-slate-800">
               <h3 className="mb-4 font-bold text-slate-900 dark:text-white">{copy.practiceHistory}</h3>
               {recentExercises.length > 0 ? (
                 <div className="space-y-2">
@@ -286,7 +326,7 @@ export default function Dashboard() {
                 <p className="py-4 text-center text-sm text-slate-500 dark:text-slate-400">{copy.noExercises}</p>
               )}
             </div>
-          </div>
+          </motion.div>
         </div>
       </div>
     </div>

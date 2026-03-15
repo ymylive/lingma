@@ -39,6 +39,7 @@ import type {
 interface Props {
   onOpenAiGenerator: () => void;
   onOpenPracticeLibrary: () => void;
+  initialTrack?: VibeTrack;
 }
 
 const TRACK_ORDER: VibeTrack[] = ['frontend', 'backend', 'debugging', 'refactoring', 'review'];
@@ -74,7 +75,7 @@ function useCountUp(target: number, duration = 600) {
   return value;
 }
 
-export default function VibeCodingLab({ onOpenAiGenerator, onOpenPracticeLibrary }: Props) {
+export default function VibeCodingLab({ onOpenAiGenerator, onOpenPracticeLibrary, initialTrack }: Props) {
   const { t } = useI18n();
 
   const difficultyLabel = (level: string) => t(DIFFICULTY_LABEL[level] ?? level);
@@ -114,6 +115,10 @@ export default function VibeCodingLab({ onOpenAiGenerator, onOpenPracticeLibrary
     t('需要实时事实时，先上 MCP，不靠记忆瞎猜。'),
     t('评分低分最常见原因不是词不够高级，而是没有边界和验证。'),
     t('蜂群适合并行任务，不适合同文件混战。'),
+    t('上下文窗口是战略资源，用 Plan 文档管理，别把整个仓库丢给 AI。'),
+    t('三层门禁：Vibe Check → Objective Check → Release Ready，最低标准是 diff + 运行 + 一个边界用例。'),
+    t('修 3 轮没修好就回滚，用新证据重新构造 prompt。'),
+    t('快模型起草，强模型审查，测试验证一切。'),
   ];
 
   const [profile, setProfile] = useState<VibeProfile>({
@@ -146,7 +151,7 @@ export default function VibeCodingLab({ onOpenAiGenerator, onOpenPracticeLibrary
       const [profileData, historyData] = await Promise.all([fetchVibeProfile(), fetchVibeHistory()]);
       setProfile(profileData);
       setHistory(historyData);
-      setSelectedTrack(profileData.recommendedTrack);
+      setSelectedTrack(initialTrack ?? profileData.recommendedTrack);
     } catch (loadError) {
       const message = loadError instanceof Error ? loadError.message : t('加载训练场失败');
       setError(message);
@@ -735,6 +740,15 @@ function MethodologyGuide({ t }: { t: (s: string) => string }) {
                     <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-900/50 dark:bg-emerald-950/20">
                       <div className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700 dark:text-emerald-300">{t('实战练习')}</div>
                       <p className="mt-2 text-sm leading-7 text-emerald-900 dark:text-emerald-100">{t(unit.practice)}</p>
+                      {unit.relatedTrack && (
+                        <Link
+                          to={`/practice?tab=vibe&track=${unit.relatedTrack}`}
+                          className="mt-3 inline-flex min-h-[44px] cursor-pointer items-center gap-2 rounded-2xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition-colors duration-200 hover:bg-emerald-500"
+                        >
+                          {t('前往 Prompt Arena 练习')}
+                          <ArrowRight className="h-4 w-4" />
+                        </Link>
+                      )}
                     </div>
 
                     <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-900/50 dark:bg-amber-950/20">
