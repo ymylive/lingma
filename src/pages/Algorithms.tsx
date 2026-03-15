@@ -106,7 +106,7 @@ export default function Algorithms() {
   }, [isEnglish, t]);
 
   return (
-    <div className="min-h-screen pt-28 pb-12 transition-colors duration-500">
+    <div className="min-h-screen pt-24 pb-12 transition-colors duration-500">
       <div className="max-w-6xl mx-auto px-6">
         <motion.div
           initial={{ opacity: 0, x: -20 }}
