@@ -112,7 +112,7 @@ export default function Home() {
       {/* Hero */}
       <section className="relative pt-32 pb-20 px-6">
         <motion.div 
-          className="max-w-4xl mx-auto text-center relative z-10"
+          className="max-w-6xl mx-auto text-center relative z-10"
           initial="hidden"
           animate="visible"
           variants={containerVariants}
@@ -156,7 +156,7 @@ export default function Home() {
       {/* Stats */}
       <section className="py-8 px-6 relative z-10">
         <motion.div 
-          className="max-w-4xl mx-auto"
+          className="max-w-6xl mx-auto"
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
@@ -164,7 +164,7 @@ export default function Home() {
         >
           <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-md rounded-3xl border border-white/20 dark:border-slate-700/50 p-8 grid grid-cols-2 md:grid-cols-4 gap-8 shadow-xl dark:shadow-slate-900/50">
             <div className="text-center group">
-              <div className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-br from-indigo-600 to-blue-600 dark:from-indigo-400 dark:to-blue-400 mb-2 group-hover:scale-110 transition-transform">6</div>
+              <div className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-br from-klein-500 to-klein-600 dark:from-klein-400 dark:to-blue-400 mb-2 group-hover:scale-110 transition-transform">6</div>
               <div className="text-sm font-medium text-slate-500 dark:text-slate-400">章节内容</div>
             </div>
             <div className="text-center group">
@@ -210,11 +210,11 @@ export default function Home() {
                   return (
                 <Link
                   to={path.link}
-                  className="block h-full rounded-3xl border border-slate-100 bg-white p-8 transition-all duration-300 relative overflow-hidden group hover:-translate-y-2 hover:border-indigo-300 hover:shadow-2xl hover:shadow-indigo-500/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/60 dark:border-slate-700/50 dark:bg-slate-800 dark:hover:border-indigo-500/50"
+                  className="block h-full rounded-3xl border border-slate-100 bg-white p-8 transition-all duration-300 relative overflow-hidden group hover:-translate-y-2 hover:border-klein-300 hover:shadow-2xl hover:shadow-klein-500/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-klein-500/60 dark:border-slate-700/50 dark:bg-slate-800 dark:hover:border-klein-500/50"
                 >
                   <div className={`absolute top-0 right-0 w-32 h-32 rounded-full blur-3xl -mr-16 -mt-16 transition-all ${tone.glow}`} />
                   
-                  <h3 className="font-bold text-xl text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 mb-3 relative z-10">
+                  <h3 className="font-bold text-xl text-slate-900 dark:text-white group-hover:text-klein-600 dark:group-hover:text-klein-400 mb-3 relative z-10">
                     {path.title}
                   </h3>
                   <p className="text-sm text-slate-500 dark:text-slate-400 mb-8 leading-relaxed relative z-10">{path.desc}</p>
@@ -262,14 +262,14 @@ export default function Home() {
               >
                 <Link
                   to={`/algorithms/${algo.id}`}
-                  className="group flex items-center gap-4 rounded-2xl border border-slate-100 bg-white p-6 transition-all duration-300 hover:-translate-y-1 hover:border-indigo-300 hover:shadow-xl hover:shadow-indigo-500/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/60 dark:border-slate-700 dark:bg-slate-800 dark:hover:border-indigo-500"
+                  className="group flex items-center gap-4 rounded-2xl border border-slate-100 bg-white p-6 transition-all duration-300 hover:-translate-y-1 hover:border-klein-300 hover:shadow-xl hover:shadow-klein-500/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-klein-500/60 dark:border-slate-700 dark:bg-slate-800 dark:hover:border-klein-500"
                 >
                   <span className="text-3xl bg-slate-50 dark:bg-slate-700 w-12 h-12 flex items-center justify-center rounded-xl group-hover:scale-110 transition-transform">{algo.icon}</span>
                   <div>
-                    <span className="text-xs text-indigo-500 dark:text-indigo-400 font-semibold tracking-wide uppercase">
+                    <span className="text-xs text-klein-500 dark:text-klein-400 font-semibold tracking-wide uppercase">
                       {algo.category}
                     </span>
-                    <h3 className="font-bold text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                    <h3 className="font-bold text-slate-900 dark:text-white group-hover:text-klein-600 dark:group-hover:text-klein-400 transition-colors">
                       {algo.name}
                     </h3>
                   </div>
@@ -324,23 +324,23 @@ export default function Home() {
       {/* CTA */}
       <section className="py-20 px-6">
         <motion.div 
-          className="max-w-4xl mx-auto"
+          className="max-w-6xl mx-auto"
           initial={{ opacity: 0, scale: 0.95 }}
           whileInView={{ opacity: 1, scale: 1 }}
           viewport={{ once: true }}
         >
-          <div className="relative overflow-hidden rounded-[2.5rem] bg-gradient-to-r from-indigo-600 to-purple-700 p-12 text-center text-white shadow-2xl shadow-indigo-500/30 dark:from-slate-900 dark:to-indigo-950 dark:shadow-slate-950/60">
-            <div className="absolute top-0 right-0 w-64 h-64 rounded-full bg-white/10 blur-3xl -mr-16 -mt-16 pointer-events-none dark:bg-indigo-300/10" />
-            <div className="absolute bottom-0 left-0 w-64 h-64 rounded-full bg-purple-500/20 blur-3xl -ml-16 -mb-16 pointer-events-none dark:bg-indigo-500/20" />
-            
+          <div className="relative overflow-hidden rounded-[2.5rem] bg-gradient-to-r from-klein-500 to-klein-600 p-12 text-center text-white shadow-2xl shadow-klein-500/30 dark:from-slate-900 dark:to-klein-900 dark:shadow-slate-950/60">
+            <div className="absolute top-0 right-0 w-64 h-64 rounded-full bg-white/10 blur-3xl -mr-16 -mt-16 pointer-events-none dark:bg-klein-300/10" />
+            <div className="absolute bottom-0 left-0 w-64 h-64 rounded-full bg-klein-600/20 blur-3xl -ml-16 -mb-16 pointer-events-none dark:bg-klein-500/20" />
+
             <h2 className="text-4xl font-bold mb-6 relative z-10">准备好开启算法之旅了吗？</h2>
-            <p className="text-indigo-100 mb-10 text-lg max-w-xl mx-auto relative z-10">
+            <p className="text-klein-100 mb-10 text-lg max-w-xl mx-auto relative z-10">
               不需要繁琐的配置，打开浏览器即可开始学习。
               <br />从基础到进阶，我们陪你一起成长。
             </p>
             <Link
               to="/book"
-              className="relative z-10 inline-flex items-center gap-2 rounded-2xl bg-white px-10 py-5 font-bold text-indigo-700 shadow-lg shadow-black/10 transition-colors hover:-translate-y-0.5 hover:bg-indigo-50 hover:shadow-black/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 dark:bg-slate-100 dark:text-indigo-800"
+              className="relative z-10 inline-flex items-center gap-2 rounded-2xl bg-white px-10 py-5 font-bold text-klein-600 shadow-lg shadow-black/10 transition-colors hover:-translate-y-0.5 hover:bg-klein-50 hover:shadow-black/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 dark:bg-slate-100 dark:text-klein-700"
             >
               <span>🚀</span> 立即免费开始
             </Link>

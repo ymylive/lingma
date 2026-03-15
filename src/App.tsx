@@ -3,6 +3,7 @@ import { UserProvider } from './contexts/UserContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { I18nProvider } from './contexts/I18nContext';
 import Header from './components/Header';
+import Footer from './components/Footer';
 import LocalizationBridge from './components/LocalizationBridge';
 import ProtectedRoute from './components/ProtectedRoute';
 import Home from './pages/Home';
@@ -102,6 +103,7 @@ function App() {
               <main className="flex-grow">
                  <AnimatedRoutes />
               </main>
+              <Footer />
             </div>
             
             <PixelCat />

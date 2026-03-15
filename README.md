@@ -2,30 +2,27 @@
 
 灵码是一个面向算法学习与 AI 协作开发训练的在线平台。
 
-在线地址：`https://lingma.cornna.xyz`
+在线地址：[https://lingma.cornna.xyz](https://lingma.cornna.xyz)
 
 ## 项目亮点
 
+- 统一的 Klein Blue (#002FA7) + Pine Yellow (#FFE135) 品牌设计体系
 - 分层算法题库与练习路径
 - 受保护的在线判题与 AI 代理链路
 - AI 智能出题与填空题练习
 - `Vibe Coding Lab` 方法论学习界面
-- 全新的 `Prompt Arena` 训练场：
-  - AI 自动生成 prompt 练习题
-  - 五条训练赛道：前端、后端、调试、重构、审查
-  - 只评估 prompt 质量，不评估代码结果
-  - 返回总分、维度分、优点、问题点、改写示范
-  - 支持账号级历史记录与自适应难度
+- `Prompt Arena` 训练场：AI 生成 prompt 练习题，五条赛道，评分与改写示范
+- 完整的中英文国际化支持
+- 响应式布局，移动端汉堡菜单
 
 ## 技术栈
 
-- React 19
-- TypeScript
-- Vite
-- Tailwind CSS
-- FastAPI
-- SQLite
-- Docker Compose
+- React 19 + TypeScript + Vite
+- Tailwind CSS + Framer Motion
+- FastAPI (Python) + SQLite
+- Node.js 判题服务
+- Docker Compose 三服务部署
+- Nginx + HTTPS (Let's Encrypt)
 
 ## 本地开发
 
@@ -39,7 +36,8 @@ npm run dev
 ### 生产构建
 
 ```bash
-npm run build
+npx tsc -b          # 类型检查
+npx vite build      # 构建产物
 ```
 
 ### API Proxy
@@ -52,33 +50,24 @@ uvicorn main:app --host 127.0.0.1 --port 3001
 
 ## 关键目录
 
-- `src/pages/Practice.tsx`：练习页入口与 tab 切换
-- `src/components/tutorials/VibeCodingLab.tsx`：Vibe Coding 学习与 Prompt Arena 界面
-- `src/services/vibeCodingService.ts`：Prompt Arena 前端 API 服务层
-- `src/types/vibeCoding.ts`：Prompt Arena 类型定义
-- `api-proxy/main.py`：鉴权、AI 代理、判题代理、Prompt Arena 后端
-- `deploy/docker-compose.yml`：生产环境 Docker 编排
+- `src/pages/` — 页面组件（Home、Algorithms、Book、Practice、Dashboard、MindMap）
+- `src/components/Header.tsx` — 全局导航（含移动端汉堡菜单）
+- `src/components/Footer.tsx` — 全局页脚（品牌信息、快捷链接、技术栈）
+- `src/components/tutorials/VibeCodingLab.tsx` — Vibe Coding 学习与 Prompt Arena
+- `api-proxy/main.py` — 鉴权、AI 代理、判题代理、Prompt Arena 后端
+- `deploy/docker-compose.yml` — 生产环境 Docker 编排
+- `deploy/docker-deploy.py` — 一键部署脚本（paramiko，Windows 兼容）
+- `tailwind.config.js` — 品牌色阶定义（klein-50~900、pine-50~900）
 
-## 验证命令
+## 部署
 
 ```bash
-python -m pytest api-proxy/tests/test_vibe_coding_api.py -q
-python -m py_compile api-proxy/main.py
-npx eslint src/components/tutorials/VibeCodingLab.tsx src/services/vibeCodingService.ts src/types/vibeCoding.ts
-npm run build
+LINGMA_VPS_PASSWORD=<密码> python deploy/docker-deploy.py
 ```
 
-## 部署说明
+脚本自动完成打包、上传、解压、构建镜像、启动容器、清理旧镜像和健康检查。
 
-当前生产环境通过 `deploy/docker-compose.yml` 部署在 VPS 上，由 `lingma.cornna.xyz` 对外提供访问。
-
-标准发布流程：
-
-1. 本地完成构建与最小验证
-2. 同步源码到 `/opt/tumafang`
-3. 保留服务器上的 `deploy/.env`
-4. 执行 `docker-compose up -d --build`
-5. 验证首页与 `/api/health`
+生产环境通过 `lingma.cornna.xyz` 对外提供 HTTPS 访问，Nginx 反向代理到 Docker 容器的 18081 端口。
 
 ## 许可证
 

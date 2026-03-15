@@ -2,6 +2,31 @@
 
 本文件记录项目的重要变更。
 
+## 2026-03-15
+
+### 新增
+
+- 新增全局 Footer 组件（品牌信息、快捷导航、技术栈、版权行）
+- Header 新增移动端汉堡菜单，点击展开/收起导航面板
+- Tailwind 扩展完整品牌色阶：klein-50~900、pine-50~900
+
+### 调整
+
+- 统一品牌色：全站 CTA 按钮、渐变、激活态从 indigo/purple 替换为 Klein Blue
+- 统一容器宽度：Hero/Stats/Algorithms/Book 内容区统一为 max-w-6xl
+- 统一按钮圆角：Dashboard 继续学习按钮从 rounded-lg 升级为 rounded-xl
+- Home CTA banner 渐变从 indigo→purple 改为 klein-500→klein-600
+- Book 学习路径提示 banner 渐变统一为 klein
+- Dashboard 用户卡片渐变、偏好选中态统一为 klein
+- Practice 所有 tab/筛选按钮激活态、搜索框 focus 环统一为 klein
+- 部署脚本 docker-deploy.py 修正为 docker-compose（连字符版本）
+- 重写 README.md，更新项目结构、部署方式和关键目录说明
+
+### 删除
+
+- 移除 index.css 中重复的 @tailwind 指令和 @layer base 块
+- 移除 index.css 中约 80 行 !important 暗色模式覆盖 hack
+
 ## 2026-03-14
 
 ### 新增

@@ -248,9 +248,9 @@ export default function Practice() {
         </div>
 
         <div className="mb-6 grid grid-cols-1 gap-2 sm:grid-cols-3">
-          <button onClick={() => setTab('preset')} className={`min-h-[48px] rounded-2xl px-6 py-3 text-sm font-semibold transition-all ${tab === 'preset' ? 'bg-indigo-600 text-white shadow-sm' : 'border border-slate-200 bg-white text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200'}`}>{t('题库练习')}</button>
-          <button onClick={() => setTab('ai')} className={`min-h-[48px] rounded-2xl px-6 py-3 text-sm font-semibold transition-all ${tab === 'ai' ? 'bg-indigo-600 text-white shadow-sm' : 'border border-slate-200 bg-white text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200'}`}>{t('AI 智能出题')}</button>
-          <button onClick={() => setTab('vibe')} className={`min-h-[48px] rounded-2xl px-6 py-3 text-sm font-semibold transition-all ${tab === 'vibe' ? 'bg-indigo-600 text-white shadow-sm' : 'border border-slate-200 bg-white text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200'}`}>{isEnglish ? 'Vibe Coding Lab' : 'Vibe Coding 学习'}</button>
+          <button onClick={() => setTab('preset')} className={`min-h-[48px] rounded-2xl px-6 py-3 text-sm font-semibold transition-all ${tab === 'preset' ? 'bg-klein-500 text-white shadow-sm' : 'border border-slate-200 bg-white text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200'}`}>{t('题库练习')}</button>
+          <button onClick={() => setTab('ai')} className={`min-h-[48px] rounded-2xl px-6 py-3 text-sm font-semibold transition-all ${tab === 'ai' ? 'bg-klein-500 text-white shadow-sm' : 'border border-slate-200 bg-white text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200'}`}>{t('AI 智能出题')}</button>
+          <button onClick={() => setTab('vibe')} className={`min-h-[48px] rounded-2xl px-6 py-3 text-sm font-semibold transition-all ${tab === 'vibe' ? 'bg-klein-500 text-white shadow-sm' : 'border border-slate-200 bg-white text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200'}`}>{isEnglish ? 'Vibe Coding Lab' : 'Vibe Coding 学习'}</button>
         </div>
 
         {tab === 'ai' ? <AIExerciseGenerator /> : tab === 'vibe' ? (
@@ -305,7 +305,7 @@ export default function Practice() {
                           <div className="mt-3 text-lg font-semibold text-slate-900 dark:text-white">{t(dailyRecommendation.exercise.title)}</div>
                           <p className="mt-2 line-clamp-3 text-sm text-slate-600 dark:text-slate-300">{t(dailyRecommendation.exercise.description)}</p>
                           <div className="mt-4 flex flex-col gap-3 sm:flex-row">
-                            <button onClick={() => openExercise(dailyRecommendation.exercise!)} className="min-h-[44px] cursor-pointer rounded-2xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700">{t(dailyRecommendation.ctaLabel)}</button>
+                            <button onClick={() => openExercise(dailyRecommendation.exercise!)} className="min-h-[44px] cursor-pointer rounded-2xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-klein-600">{t(dailyRecommendation.ctaLabel)}</button>
                             <button onClick={() => { setCategory(dailyRecommendation.exercise!.category); setShowCompleted('incomplete'); }} className="min-h-[44px] cursor-pointer rounded-2xl bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700 dark:bg-slate-700 dark:text-slate-100">{t('切到对应题库')}</button>
                           </div>
                         </>
@@ -328,11 +328,11 @@ export default function Practice() {
                     {LANGUAGE_SUPPORT.map((item) => (
                       <div key={item.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-900">
                         <div className="text-sm font-semibold text-slate-900 dark:text-white">{t(item.name)}</div>
-                        <div className="mt-1 text-xs text-indigo-600 dark:text-indigo-300">{item.status}</div>
+                        <div className="mt-1 text-xs text-klein-500 dark:text-klein-300">{item.status}</div>
                         <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">{item.summary}</p>
                         <div className="mt-4 space-y-2">
                           <a href={item.docsUrl} target="_blank" rel="noreferrer" className="block rounded-xl bg-white px-3 py-2 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-100 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700">{item.docsLabel}</a>
-                          <a href={item.bankUrl} target="_blank" rel="noreferrer" className="block rounded-xl bg-indigo-600 px-3 py-2 text-xs font-medium text-white transition-colors hover:bg-indigo-700">{item.bankLabel}</a>
+                          <a href={item.bankUrl} target="_blank" rel="noreferrer" className="block rounded-xl bg-indigo-600 px-3 py-2 text-xs font-medium text-white transition-colors hover:bg-klein-600">{item.bankLabel}</a>
                         </div>
                       </div>
                     ))}
@@ -393,7 +393,7 @@ export default function Practice() {
                   </div>
                   <div className="grid gap-3 lg:grid-cols-4">
                     {activePath.stages.filter((stage) => stage.total > 0).map((stage) => (
-                      <div key={stage.id} className={`rounded-2xl border p-4 ${stage.accent} ${activePath.currentStageId === stage.id ? 'ring-2 ring-indigo-400/60' : ''}`}>
+                      <div key={stage.id} className={`rounded-2xl border p-4 ${stage.accent} ${activePath.currentStageId === stage.id ? 'ring-2 ring-klein-400/60' : ''}`}>
                         <div className="flex items-center justify-between gap-3">
                           <div className="text-sm font-semibold">{t(stage.label)}</div>
                           <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${stage.pill}`}>{stage.completed}/{stage.total}</span>
@@ -410,7 +410,7 @@ export default function Practice() {
 
             <div className="mb-6 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800">
               <div className="grid gap-3 lg:grid-cols-[1fr_auto]">
-                <input value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} placeholder={t('搜索题目、描述、分类')} className="min-h-[48px] rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm outline-none transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white dark:focus:ring-indigo-400/20" />
+                <input value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} placeholder={t('搜索题目、描述、分类')} className="min-h-[48px] rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm outline-none transition-all focus:border-klein-500 focus:ring-2 focus:ring-klein-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white dark:focus:ring-klein-400/20" />
                 {activeFilters > 0 && <button onClick={clearFilters} className="min-h-[48px] rounded-2xl bg-rose-100 px-4 text-sm font-semibold text-rose-700 dark:bg-rose-900/30 dark:text-rose-300">{t('清空筛选')} {activeFilters}</button>}
               </div>
 
@@ -423,7 +423,7 @@ export default function Practice() {
                         <span className="shrink-0 text-xs font-medium text-slate-500 dark:text-slate-400 lg:w-20 lg:pt-2">{t(group.group)}</span>
                         <div className="flex flex-wrap gap-2">
                           {group.items.map((item) => (
-                            <button key={item.id} onClick={() => setCategory(item.id)} className={`min-h-[40px] rounded-2xl px-3 py-2 text-sm font-medium transition-colors ${category === item.id ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-200'}`}>{t(item.name)}</button>
+                            <button key={item.id} onClick={() => setCategory(item.id)} className={`min-h-[40px] rounded-2xl px-3 py-2 text-sm font-medium transition-colors ${category === item.id ? 'bg-klein-500 text-white' : 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-200'}`}>{t(item.name)}</button>
                           ))}
                         </div>
                       </div>
@@ -434,15 +434,15 @@ export default function Practice() {
                 <div className="flex flex-col gap-4 border-t border-slate-100 pt-4 dark:border-slate-700 lg:flex-row lg:flex-wrap">
                   <div>
                     <div className="mb-2 text-sm font-semibold text-slate-900 dark:text-white">{t('难度')}</div>
-                    <div className="flex flex-wrap gap-2">{difficultyFilterOptions.map((item) => <button key={item.id} onClick={() => setDifficulty(item.id)} className={`min-h-[40px] rounded-2xl px-3 py-2 text-sm font-medium ${difficulty === item.id ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-200'}`}>{item.label}</button>)}</div>
+                    <div className="flex flex-wrap gap-2">{difficultyFilterOptions.map((item) => <button key={item.id} onClick={() => setDifficulty(item.id)} className={`min-h-[40px] rounded-2xl px-3 py-2 text-sm font-medium ${difficulty === item.id ? 'bg-klein-500 text-white' : 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-200'}`}>{item.label}</button>)}</div>
                   </div>
                   <div>
                     <div className="mb-2 text-sm font-semibold text-slate-900 dark:text-white">{t('题型')}</div>
-                    <div className="flex flex-wrap gap-2">{typeFilterOptions.map((item) => <button key={item.id} onClick={() => setTypeFilter(item.id)} className={`min-h-[40px] rounded-2xl px-3 py-2 text-sm font-medium ${typeFilter === item.id ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-200'}`}>{item.label}</button>)}</div>
+                    <div className="flex flex-wrap gap-2">{typeFilterOptions.map((item) => <button key={item.id} onClick={() => setTypeFilter(item.id)} className={`min-h-[40px] rounded-2xl px-3 py-2 text-sm font-medium ${typeFilter === item.id ? 'bg-klein-500 text-white' : 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-200'}`}>{item.label}</button>)}</div>
                   </div>
                   <div>
                     <div className="mb-2 text-sm font-semibold text-slate-900 dark:text-white">{t('完成状态')}</div>
-                    <div className="flex flex-wrap gap-2">{completionOptions.map((item) => <button key={item.id} onClick={() => setShowCompleted(item.id)} className={`min-h-[40px] rounded-2xl px-3 py-2 text-sm font-medium ${showCompleted === item.id ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-200'}`}>{item.label}</button>)}</div>
+                    <div className="flex flex-wrap gap-2">{completionOptions.map((item) => <button key={item.id} onClick={() => setShowCompleted(item.id)} className={`min-h-[40px] rounded-2xl px-3 py-2 text-sm font-medium ${showCompleted === item.id ? 'bg-klein-500 text-white' : 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-200'}`}>{item.label}</button>)}</div>
                   </div>
                   <div>
                     <div className="mb-2 text-sm font-semibold text-slate-900 dark:text-white">{t('效率快捷项')}</div>
