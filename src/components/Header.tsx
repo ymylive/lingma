@@ -17,6 +17,7 @@ export default function Header() {
   const navItems = useMemo(() => [
     { path: '/algorithms', label: isEnglish ? 'Algorithms' : '算法演示', icon: '🎬' },
     { path: '/book', label: isEnglish ? 'Tutorials' : '教程', icon: '📚' },
+    { path: '/methodology', label: isEnglish ? 'Methodology' : '方法论', icon: '📖' },
     { path: '/practice', label: isEnglish ? 'AI Practice' : 'AI练习', icon: '🤖' },
     { path: '/mindmap', label: 'MindMap', icon: '🧠' },
   ], [isEnglish]);

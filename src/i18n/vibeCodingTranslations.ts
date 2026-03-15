@@ -97,8 +97,25 @@ export const vibeCodingTranslationsEn: Record<string, string> = {
   '前端代码编辑器': 'Frontend Code Editor',
   '运行': 'Run',
   '点击卡片展开完整学习单元': 'Click a card to expand the full learning unit',
+  '阅读完整文档': 'Read Full Docs',
+  '目录': 'Table of Contents',
+  '进阶提示': 'Pro Tip',
   '知识点': 'Knowledge Points',
   '实战练习': 'Practice Exercise',
+  '把 Define 写在 prompt 的最前面，AI 会优先锁定方向，后续输出偏移率降低 60% 以上。':
+    'Put Define at the very top of your prompt — the AI locks direction first, reducing output drift by over 60%.',
+  '养成"先搜后读"的习惯。上下文窗口是稀缺资源，每多读一行无关代码，有效信息密度就下降一分。':
+    'Build the habit of "search before read." Context window is scarce — every irrelevant line dilutes signal density.',
+  '每完成一小步就 git commit，这样出问题时可以精确回滚到上一个正确状态。':
+    'Commit after every small step so you can precisely roll back to the last known-good state.',
+  '用 Summary/Changes/Validation/Next 四段式交付，审查者 30 秒内就能了解全貌。':
+    'Deliver in Summary/Changes/Validation/Next format — reviewers grasp the full picture in 30 seconds.',
+  '如果你发现自己在一个任务中启用了 3 个以上 skill，停下来重新评估——大概率是任务本身需要拆分。':
+    'If you find yourself enabling 3+ skills for one task, stop and reassess — the task itself likely needs splitting.',
+  '动手写新代码前，先 rg 搜一下项目里是否已有类似实现。重复代码是技术债的最大来源之一。':
+    'Before writing new code, rg-search the project for similar implementations. Duplicate code is a top source of tech debt.',
+  '在 Validation 段落中直接粘贴命令输出，比"已验证"三个字有说服力 10 倍。':
+    'Paste actual command output in the Validation section — it is 10x more convincing than just saying "verified."',
   '常见误区': 'Common Pitfalls',
 };
 

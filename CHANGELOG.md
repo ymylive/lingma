@@ -2,6 +2,20 @@
 
 本文件记录项目的重要变更。
 
+## 2026-03-15 (v2)
+
+### 新增
+
+- 新增独立的 `/methodology` 方法论文档阅读页面
+  - 桌面端：sticky 侧边栏 TOC + IntersectionObserver 滚动高亮
+  - 移动端：FAB 按钮唤出 slide-up TOC overlay
+  - 6 个章节完整渲染，含知识点卡片、实战练习、常见误区
+- 数据模型扩展：`KnowledgePoint` 新增可选 `tips` 字段（进阶提示）
+- 为 7 个核心知识点补充 tips 内容
+- Header 导航栏新增"方法论"入口
+- VibeCodingLab 方法论模块新增"阅读完整文档"快捷链接
+- i18n 补充方法论页面相关英文翻译
+
 ## 2026-03-15
 
 ### 新增
