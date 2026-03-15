@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowRight,
@@ -562,7 +563,16 @@ export default function VibeCodingLab({ onOpenAiGenerator, onOpenPracticeLibrary
         <div className="space-y-6">
           <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:p-6">
             <div className="text-sm font-semibold text-slate-900 dark:text-white">{t('方法论模块')}</div>
-            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{t('点击卡片展开完整学习单元')}</p>
+            <div className="mt-1 flex items-center justify-between">
+              <p className="text-xs text-slate-500 dark:text-slate-400">{t('点击卡片展开完整学习单元')}</p>
+              <Link
+                to="/methodology"
+                className="inline-flex items-center gap-1 rounded-full bg-klein-50 px-3 py-1 text-xs font-medium text-klein-600 transition-colors hover:bg-klein-100 dark:bg-klein-900/30 dark:text-klein-400 dark:hover:bg-klein-900/50"
+              >
+                {t('阅读完整文档')}
+                <ArrowRight className="h-3 w-3" />
+              </Link>
+            </div>
             <MethodologyGuide t={t} />
           </div>
 
