@@ -62,7 +62,7 @@ function App() {
           <Router>
             <LocalizationBridge />
             {/* Global Aurora Background - Soft, Flowing, High-End */}
-            <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none bg-slate-50 dark:bg-[#000510] transition-colors duration-500">
+            <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none bg-slate-50 dark:bg-slate-950 transition-colors duration-500">
                {/* Static Base Gradients (Klein Blue & Pine Yellow) */}
                <div className="absolute inset-0 opacity-40 dark:opacity-30"
                     style={{

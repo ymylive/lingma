@@ -1,8 +1,26 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { motion, type Variants } from 'framer-motion';
 import { useUser } from '../contexts/UserContext';
 import { useI18n } from '../contexts/I18nContext';
 import { curriculum, type Chapter } from '../data/curriculum';
+
+const containerVariants: Variants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: { staggerChildren: 0.08, delayChildren: 0.1 }
+  }
+};
+
+const itemVariants: Variants = {
+  hidden: { y: 20, opacity: 0 },
+  visible: {
+    y: 0,
+    opacity: 1,
+    transition: { type: "spring", stiffness: 100 }
+  }
+};
 
 function syncPageMetadata(title: string, description: string) {
   if (typeof document === 'undefined') return;
@@ -78,10 +96,15 @@ export default function Book() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white dark:from-slate-900 dark:to-slate-800 transition-colors duration-300 pt-20 pb-12">
+    <div className="min-h-screen transition-colors duration-300 pt-24 pb-12">
       <div className="max-w-6xl mx-auto px-6">
         {/* 页面标题 */}
-        <div className="text-center mb-10">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="text-center mb-10"
+        >
           <h1 className="text-4xl font-bold text-slate-900 dark:text-white mb-3">📖 {isEnglish ? 'Data Structure Tutorials' : '数据结构教程'}</h1>
           <p className="text-slate-600 dark:text-slate-300 text-lg">{t('系统学习数据结构与算法，从入门到精通')}</p>
           <div className="flex justify-center gap-6 mt-6">
@@ -104,10 +127,16 @@ export default function Book() {
               <div className="text-sm text-slate-500 dark:text-slate-400">{hourCountLabel}</div>
             </div>
           </div>
-        </div>
+        </motion.div>
 
         {/* 学习路径提示 */}
-        <div className="bg-gradient-to-r from-klein-500 to-klein-600 rounded-2xl p-6 mb-8 text-white shadow-lg shadow-klein-500/20">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5 }}
+          className="bg-gradient-to-r from-klein-500 to-klein-600 rounded-2xl p-6 mb-8 text-white shadow-lg shadow-klein-500/20"
+        >
           <div className="flex items-start gap-4">
             <span className="text-4xl">🎯</span>
             <div>
@@ -118,17 +147,24 @@ export default function Book() {
               </p>
             </div>
           </div>
-        </div>
+        </motion.div>
 
         {/* 章节列表 */}
-        <div className="space-y-4">
+        <motion.div
+          variants={containerVariants}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true }}
+          className="space-y-4"
+        >
           {curriculum.map((chapter, index) => {
             const colors = colorMap[chapter.color];
             const isExpanded = expandedChapter === chapter.id;
-            
+
             return (
-              <div
+              <motion.div
                 key={chapter.id}
+                variants={itemVariants}
                 className={`bg-white dark:bg-slate-800 rounded-2xl border-2 transition-all duration-300 overflow-hidden ${
                   isExpanded ? `${colors.border} ${colors.darkBorder}` : 'border-slate-200 dark:border-slate-700'
                 }`}
@@ -233,10 +269,10 @@ export default function Book() {
                     </div>
                   </div>
                 )}
-              </div>
+              </motion.div>
             );
           })}
-        </div>
+        </motion.div>
 
         {/* 底部提示 */}
         <div className="mt-10 text-center">

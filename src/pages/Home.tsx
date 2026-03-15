@@ -110,7 +110,7 @@ export default function Home() {
   return (
     <div className={containerClass}>
       {/* Hero */}
-      <section className="relative pt-32 pb-20 px-6">
+      <section className="relative pt-28 pb-20 px-6">
         <motion.div 
           className="max-w-6xl mx-auto text-center relative z-10"
           initial="hidden"

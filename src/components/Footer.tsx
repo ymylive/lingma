@@ -5,7 +5,7 @@ export default function Footer() {
   const { isEnglish } = useI18n();
 
   return (
-    <footer className="relative z-10 border-t border-slate-200/50 bg-white/60 backdrop-blur-md dark:border-slate-800 dark:bg-[#0B1120]/60">
+    <footer className="relative z-10 border-t border-slate-200/50 bg-white/60 backdrop-blur-md dark:border-slate-800 dark:bg-slate-950/60">
       <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
         <div className="grid gap-8 sm:grid-cols-3">
           {/* Brand */}

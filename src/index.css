@@ -23,7 +23,7 @@
   }
 
   .dark body {
-    @apply bg-[#02040a] text-slate-50; /* Deepest Void Blue */
+    @apply bg-slate-950 text-slate-50;
   }
 }
 
@@ -51,7 +51,7 @@
 @layer utilities {
   /* 液态玻璃 (Liquid Glass) - Glossy & Wet */
   .glass {
-    @apply bg-white/40 dark:bg-[#000510]/60 backdrop-blur-xl border border-white/60 dark:border-white/10;
+    @apply bg-white/40 dark:bg-slate-950/60 backdrop-blur-xl border border-white/60 dark:border-white/10;
     box-shadow: 
       0 8px 32px 0 rgba(0, 47, 167, 0.1),
       inset 0 0 0 1px rgba(255, 255, 255, 0.2),
@@ -93,7 +93,7 @@
 
 /* 可视化画布样式 */
 .visualization-canvas {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #002FA7 0%, #001d6f 100%);
   border-radius: 12px;
 }
 
@@ -131,12 +131,12 @@
 
 /* 代码高亮行 */
 .code-highlight-line {
-  background: linear-gradient(90deg, rgba(102, 126, 234, 0.2) 0%, transparent 100%);
-  border-left: 3px solid #667eea;
+  background: linear-gradient(90deg, rgba(0, 47, 167, 0.15) 0%, transparent 100%);
+  border-left: 3px solid #002FA7;
 }
 
 .dark .code-highlight-line {
-  background: linear-gradient(90deg, rgba(102, 126, 234, 0.4) 0%, transparent 100%);
+  background: linear-gradient(90deg, rgba(0, 47, 167, 0.35) 0%, transparent 100%);
 }
 
 /* 深色模式下课程内容的颜色覆盖 */
