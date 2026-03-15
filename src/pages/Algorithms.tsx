@@ -107,8 +107,8 @@ export default function Algorithms() {
 
   return (
     <div className="min-h-screen pt-28 pb-12 transition-colors duration-500">
-      <div className="max-w-5xl mx-auto px-6">
-        <motion.div 
+      <div className="max-w-6xl mx-auto px-6">
+        <motion.div
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
           className="mb-12"
