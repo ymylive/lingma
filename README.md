@@ -12,6 +12,7 @@
 - AI 智能出题与填空题练习
 - `Vibe Coding Lab` 方法论学习界面
 - `Prompt Arena` 训练场：AI 生成 prompt 练习题，五条赛道，评分与改写示范
+- 独立的 `/methodology` 方法论文档阅读页面（侧边栏 TOC + 滚动高亮 + 移动端 FAB）
 - 完整的中英文国际化支持
 - 响应式布局，移动端汉堡菜单
 
@@ -50,7 +51,7 @@ uvicorn main:app --host 127.0.0.1 --port 3001
 
 ## 关键目录
 
-- `src/pages/` — 页面组件（Home、Algorithms、Book、Practice、Dashboard、MindMap）
+- `src/pages/` — 页面组件（Home、Algorithms、Book、Practice、Dashboard、MindMap、Methodology）
 - `src/components/Header.tsx` — 全局导航（含移动端汉堡菜单）
 - `src/components/Footer.tsx` — 全局页脚（品牌信息、快捷链接、技术栈）
 - `src/components/tutorials/VibeCodingLab.tsx` — Vibe Coding 学习与 Prompt Arena

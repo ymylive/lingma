@@ -12,6 +12,7 @@ export interface KnowledgePoint {
   title: string;
   detail: string;
   example?: string;
+  tips?: string;
 }
 
 export interface MethodologyUnit {
@@ -40,18 +41,21 @@ export const methodologyUnits: MethodologyUnit[] = [
           '开始编码前，先用 2-4 行文字复述任务的目标、范围、约束和完成标准。这一步迫使你在动手前想清楚"做什么"和"不做什么"，避免方向偏移。',
         example:
           '目标：为 VibeCodingLab 添加代码预览功能。\n范围：仅前端 track，iframe sandbox 渲染。\n约束：不改后端 API。\n完成标准：用户可实时预览 HTML/CSS/JS 输出。',
+        tips: '把 Define 写在 prompt 的最前面，AI 会优先锁定方向，后续输出偏移率降低 60% 以上。',
       },
       {
         title: 'Gather：先定位再读取',
         detail:
           '不要盲目读文件。先用 rg --files 或 grep 定位相关代码，只读必要文件。这样既节省上下文窗口，又能快速建立对代码结构的理解。',
         example: 'rg "moduleCards" src/ → 定位到 VibeCodingLab.tsx:112\n只读该文件的 112-140 行，而非整个文件。',
+        tips: '养成"先搜后读"的习惯。上下文窗口是稀缺资源，每多读一行无关代码，有效信息密度就下降一分。',
       },
       {
         title: 'Implement：小步实现，最小 diff',
         detail:
           '每次只改一小步，保持 diff 可审查、可回滚。不要一次性重构整个文件。如果改动超过 200 行或 5 个文件，先拆分再实施。',
         example: '第一步：新建数据文件 methodologyUnits.ts\n第二步：新建 MethodologyGuide 组件\n第三步：替换 VibeCodingLab 中的渲染\n每步独立可验证。',
+        tips: '每完成一小步就 git commit，这样出问题时可以精确回滚到上一个正确状态。',
       },
       {
         title: 'Verify：先跑最小相关测试',
@@ -63,6 +67,8 @@ export const methodologyUnits: MethodologyUnit[] = [
         title: 'Deliver：质量门禁交付',
         detail:
           '交付前检查：边界条件是否覆盖？异常路径是否处理？改动是否幂等？是否向后兼容？所有断言都要有证据支撑，禁止"先改后补证据"。',
+        example: 'Summary: 新增方法论文档页面\nChanges: 3 files added, 2 modified\nValidation: tsc 0 errors, vite build success\nNext: 添加单元测试覆盖',
+        tips: '用 Summary/Changes/Validation/Next 四段式交付，审查者 30 秒内就能了解全貌。',
       },
     ],
     practice:
@@ -92,6 +98,7 @@ export const methodologyUnits: MethodologyUnit[] = [
         title: '最小组合原则',
         detail:
           '默认组合上限：1 个流程型 + 1 个领域型或 agent + 1 个验证型。若无明确收益，不要叠加更多。每多一个 skill 都会增加上下文消耗和协调成本。',
+        tips: '如果你发现自己在一个任务中启用了 3 个以上 skill，停下来重新评估——大概率是任务本身需要拆分。',
       },
       {
         title: '何时用 Skill vs 直接编码',
@@ -103,6 +110,7 @@ export const methodologyUnits: MethodologyUnit[] = [
         title: '复用优先，不重复造轮子',
         detail:
           '优先复用项目中已有的 scripts/、模板和 assets。检查是否有现成的工具函数、组件或配置可以直接使用，避免重新实现已有功能。',
+        tips: '动手写新代码前，先 rg 搜一下项目里是否已有类似实现。重复代码是技术债的最大来源之一。',
       },
     ],
     practice:
@@ -143,6 +151,7 @@ export const methodologyUnits: MethodologyUnit[] = [
         title: '保留证据链',
         detail:
           '关键的 MCP 调用结果要保留作为验证依据。命令输出、API 响应、页面截图都是证据。这样在交付时可以证明"我验证过了"，而不是"我觉得没问题"。',
+        tips: '在 Validation 段落中直接粘贴命令输出，比"已验证"三个字有说服力 10 倍。',
       },
     ],
     practice:

@@ -15,6 +15,7 @@ import Practice from './pages/Practice';
 import MindMap from './pages/MindMap';
 import Auth from './pages/Auth';
 import Dashboard from './pages/Dashboard';
+import Methodology from './pages/Methodology';
 import PixelCat from './components/PixelCat';
 import { AnimatePresence, motion } from 'framer-motion';
 
@@ -33,6 +34,7 @@ function AnimatedRoutes() {
         <Route path="/mindmap" element={<PageWrapper><ProtectedRoute><MindMap /></ProtectedRoute></PageWrapper>} />
         <Route path="/auth" element={<PageWrapper><Auth /></PageWrapper>} />
         <Route path="/dashboard" element={<PageWrapper><ProtectedRoute><Dashboard /></ProtectedRoute></PageWrapper>} />
+        <Route path="/methodology" element={<PageWrapper><ProtectedRoute><Methodology /></ProtectedRoute></PageWrapper>} />
       </Routes>
     </AnimatePresence>
   );
