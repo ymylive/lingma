@@ -121,7 +121,7 @@ export function CompareTable({ headers, rows }: {
     <div className="space-y-2">
       <MobileScrollHint />
       <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-700">
-        <table className="min-w-[540px] w-full text-[13px] sm:text-sm">
+        <table className="min-w-[420px] w-full text-[13px] sm:min-w-[540px] sm:text-sm">
           <thead>
             <tr className="bg-slate-100 dark:bg-slate-700">
               {headers.map((h, i) => (

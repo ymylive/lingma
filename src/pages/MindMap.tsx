@@ -218,7 +218,7 @@ interface ExportLayoutNode {
   children: ExportLayoutNode[];
 }
 
-const isWideCharacter = (char: string) => /[^\u0000-\u00ff]/.test(char);
+const isWideCharacter = (char: string) => (char.codePointAt(0) ?? 0) > 0xff;
 
 const measureTextUnits = (value: string) =>
   Array.from(value).reduce((sum, char) => sum + (isWideCharacter(char) ? 1.85 : 1), 0);
@@ -799,7 +799,7 @@ export default function MindMap() {
     setIsLoading(true);
     try {
       let sourceText = '';
-      let sourceType: SourceTab = sourceTab;
+      const sourceType: SourceTab = sourceTab;
       let sourceValue = '';
       let sourceTitle = '';
 
@@ -1343,7 +1343,7 @@ export default function MindMap() {
               <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
                 <Wand2 className="w-4 h-4 text-amber-500" /> 生成来源
               </h2>
-              <div className="mb-4 grid grid-cols-3 gap-2">
+              <div className="mb-4 grid grid-cols-1 gap-2 sm:grid-cols-3">
                 {[
                   { id: 'topic', label: '主题' },
                   { id: 'url', label: 'URL' },
@@ -1365,7 +1365,7 @@ export default function MindMap() {
 
               <div className="mb-4">
                 <div className="text-xs text-slate-500 dark:text-slate-400 mb-2">生成模式</div>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                   <button
                     type="button"
                     onClick={() => setGenerationMode('full')}
