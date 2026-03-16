@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useTheme } from '../contexts/ThemeContext';
 import { useI18n } from '../contexts/I18nContext';
 import { motion, type Variants } from 'framer-motion';
+import useLowMotionMode from '../hooks/useLowMotionMode';
 
 function syncPageMetadata(title: string, description: string) {
   if (typeof document === 'undefined') return;
@@ -71,29 +72,68 @@ const featureToneClass: Record<string, string> = {
   rose: 'bg-rose-100 dark:bg-rose-900/30',
 };
 
-const containerVariants: Variants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.1,
-      delayChildren: 0.2
-    }
-  }
-};
-
-const itemVariants: Variants = {
-  hidden: { y: 20, opacity: 0 },
-  visible: {
-    y: 0,
-    opacity: 1,
-    transition: { type: "spring", stiffness: 100 }
-  }
-};
-
 export default function Home() {
   const { theme } = useTheme();
   const { t, isEnglish } = useI18n();
+  const lowMotionMode = useLowMotionMode();
+
+  const containerVariants: Variants = lowMotionMode
+    ? {
+        hidden: { opacity: 1 },
+        visible: { opacity: 1 }
+      }
+    : {
+        hidden: { opacity: 0 },
+        visible: {
+          opacity: 1,
+          transition: {
+            staggerChildren: 0.08,
+            delayChildren: 0.12
+          }
+        }
+      };
+
+  const itemVariants: Variants = lowMotionMode
+    ? {
+        hidden: { opacity: 1, y: 0 },
+        visible: { opacity: 1, y: 0 }
+      }
+    : {
+        hidden: { y: 20, opacity: 0 },
+        visible: {
+          y: 0,
+          opacity: 1,
+          transition: { type: "spring", stiffness: 100 }
+        }
+      };
+
+  const revealUp = lowMotionMode
+    ? {
+        initial: false as const,
+        whileInView: { opacity: 1 },
+        viewport: { once: true, amount: 0.15 },
+        transition: { duration: 0 }
+      }
+    : {
+        initial: { opacity: 0, y: 20 },
+        whileInView: { opacity: 1, y: 0 },
+        viewport: { once: true, amount: 0.15 },
+        transition: { duration: 0.45, ease: 'easeOut' as const }
+      };
+
+  const revealScale = lowMotionMode
+    ? {
+        initial: false as const,
+        whileInView: { opacity: 1 },
+        viewport: { once: true, amount: 0.15 },
+        transition: { duration: 0 }
+      }
+    : {
+        initial: { opacity: 0, scale: 0.95 },
+        whileInView: { opacity: 1, scale: 1 },
+        viewport: { once: true, amount: 0.15 },
+        transition: { duration: 0.45, ease: 'easeOut' as const }
+      };
 
   useEffect(() => {
     syncPageMetadata(
@@ -157,10 +197,7 @@ export default function Home() {
       <section className="relative z-10 px-4 py-6 sm:px-6 sm:py-8">
         <motion.div 
           className="max-w-6xl mx-auto"
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
+          {...revealUp}
         >
           <div className="grid grid-cols-2 gap-5 rounded-3xl border border-white/20 bg-white/60 p-5 shadow-xl backdrop-blur-md dark:border-slate-700/50 dark:bg-slate-800/60 dark:shadow-slate-900/50 sm:gap-8 sm:p-8 md:grid-cols-4">
             <div className="text-center group">
@@ -188,9 +225,7 @@ export default function Home() {
         <div className="max-w-6xl mx-auto">
           <motion.div 
             className="mb-12 text-center sm:mb-16"
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
+            {...revealUp}
           >
             <h2 className="mb-4 text-2xl font-bold text-slate-900 dark:text-white sm:text-3xl">🎯 学习路径</h2>
             <p className="text-slate-600 dark:text-slate-400">为不同阶段的学习者量身定制</p>
@@ -243,9 +278,7 @@ export default function Home() {
         <div className="max-w-6xl mx-auto">
           <motion.div 
             className="mb-12 text-center sm:mb-16"
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
+            {...revealUp}
           >
             <h2 className="mb-4 text-2xl font-bold text-slate-900 dark:text-white sm:text-3xl">⚡ 快速体验</h2>
             <p className="text-slate-600 dark:text-slate-400">精选算法可视化演示，即点即用</p>
@@ -255,10 +288,10 @@ export default function Home() {
             {algorithms.map((algo, idx) => (
               <motion.div
                 key={algo.id}
-                initial={{ opacity: 0, scale: 0.9 }}
+                initial={lowMotionMode ? false : { opacity: 0, scale: 0.96 }}
                 whileInView={{ opacity: 1, scale: 1 }}
-                viewport={{ once: true }}
-                transition={{ delay: idx * 0.05 }}
+                viewport={{ once: true, amount: 0.15 }}
+                transition={lowMotionMode ? { duration: 0 } : { duration: 0.35, ease: 'easeOut', delay: idx * 0.04 }}
               >
                 <Link
                   to={`/algorithms/${algo.id}`}
@@ -285,9 +318,7 @@ export default function Home() {
         <div className="max-w-6xl mx-auto">
           <motion.div 
             className="mb-12 text-center sm:mb-20"
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
+            {...revealUp}
           >
             <h2 className="mb-4 text-2xl font-bold text-slate-900 dark:text-white sm:text-3xl">✨ 为什么选择我们</h2>
             <p className="text-slate-600 dark:text-slate-400">精心打磨的每一个细节</p>
@@ -303,10 +334,10 @@ export default function Home() {
               <motion.div 
                 key={feature.title}
                 className="rounded-3xl border border-slate-100 bg-white/50 p-6 text-center transition-colors backdrop-blur-sm hover:bg-white dark:border-slate-700/50 dark:bg-slate-800/50 dark:hover:bg-slate-800 sm:p-8"
-                initial={{ opacity: 0, y: 20 }}
+                initial={lowMotionMode ? false : { opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: idx * 0.1 }}
+                viewport={{ once: true, amount: 0.15 }}
+                transition={lowMotionMode ? { duration: 0 } : { duration: 0.4, ease: 'easeOut', delay: idx * 0.06 }}
               >
                 <div className={`mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl rotate-3 transition-transform hover:rotate-6 ${featureToneClass[feature.color] || featureToneClass.indigo}`}>
                   <span className="text-3xl">{feature.icon}</span>
@@ -325,9 +356,7 @@ export default function Home() {
       <section className="px-4 py-16 sm:px-6 sm:py-20">
         <motion.div 
           className="max-w-6xl mx-auto"
-          initial={{ opacity: 0, scale: 0.95 }}
-          whileInView={{ opacity: 1, scale: 1 }}
-          viewport={{ once: true }}
+          {...revealScale}
         >
           <div className="relative overflow-hidden rounded-[2rem] bg-gradient-to-r from-klein-500 to-klein-600 p-8 text-center text-white shadow-2xl shadow-klein-500/30 dark:from-slate-900 dark:to-klein-900 dark:shadow-slate-950/60 sm:rounded-[2.5rem] sm:p-12">
             <div className="absolute top-0 right-0 w-64 h-64 rounded-full bg-white/10 blur-3xl -mr-16 -mt-16 pointer-events-none dark:bg-klein-300/10" />

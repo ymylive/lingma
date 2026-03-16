@@ -17,6 +17,8 @@ import {
   FillInBlank
 } from '../components/tutorials/TutorialPanel';
 
+/* eslint-disable no-irregular-whitespace */
+
 interface LessonContent {
   title: string;
   category: string;
@@ -2728,7 +2730,8 @@ export default function Lesson() {
   const { '*': path } = useParams();
   const lesson = path ? lessons[path] : null;
   const { recordLessonVisit, isLessonCompleted, isLoggedIn } = useUser();
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const currentPathKey = path ?? '';
+  const [openSidebarPath, setOpenSidebarPath] = useState<string | null>(null);
   const navigate = useNavigate();
 
   // 记录学习进度
@@ -2741,12 +2744,11 @@ export default function Lesson() {
   // 滚动到顶部
   useEffect(() => {
     window.scrollTo(0, 0);
-    setIsSidebarOpen(false);
   }, [path]);
 
   if (!lesson) {
     return (
-      <div className="min-h-screen pt-24 px-6">
+      <div className="min-h-screen px-4 pt-24 sm:px-6">
         <div className="max-w-4xl mx-auto text-center">
           <h1 className="text-2xl font-bold text-slate-900 mb-4">课程不存在</h1>
           <Link to="/book" className="text-indigo-600 hover:underline">返回教程目录</Link>
@@ -2757,6 +2759,9 @@ export default function Lesson() {
 
   const completed = path ? isLessonCompleted(path) : false;
   const currentLink = `/book/${path}`;
+  const isSidebarOpen = openSidebarPath === currentPathKey;
+  const openSidebar = () => setOpenSidebarPath(currentPathKey);
+  const closeSidebar = () => setOpenSidebarPath(null);
   const { prev, next } = getAdjacentTopics(currentLink);
   
   // 查找相关练习
@@ -2765,8 +2770,8 @@ export default function Lesson() {
   ).slice(0, 3);
 
   return (
-    <div key={path} className="min-h-screen bg-slate-50 dark:bg-slate-900 pt-16 transition-colors duration-300">
-      <div className="flex max-w-7xl mx-auto">
+    <div key={path} className="min-h-screen bg-slate-50 dark:bg-slate-900 pt-20 transition-colors duration-300 sm:pt-24">
+      <div className="mx-auto flex max-w-7xl min-w-0">
         {/* 侧边栏导航 (桌面端) */}
         <aside className="hidden lg:block w-72 h-[calc(100vh-4rem)] sticky top-16 overflow-y-auto border-r border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-6 z-10">
           <div className="mb-6">
@@ -2784,12 +2789,8 @@ export default function Lesson() {
                     const isActive = topic.link === currentLink;
                     return (
                       <li key={topic.link}>
-                        <a
-                          href={topic.link}
-                          onClick={(e) => {
-                            e.preventDefault();
-                            window.location.href = topic.link;
-                          }}
+                        <Link
+                          to={topic.link}
                           className={`block px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${
                             isActive
                               ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-medium'
@@ -2797,7 +2798,7 @@ export default function Lesson() {
                           }`}
                         >
                           {topic.name}
-                        </a>
+                        </Link>
                       </li>
                     );
                   })}
@@ -2810,9 +2811,9 @@ export default function Lesson() {
         {/* 移动端目录按钮 */}
         <button
           type="button"
-          onClick={() => setIsSidebarOpen(true)}
+          onClick={openSidebar}
           aria-label="Open course navigation"
-          className="lg:hidden fixed bottom-6 right-6 z-40 flex h-12 w-12 cursor-pointer items-center justify-center rounded-full bg-indigo-600 text-white shadow-lg transition-colors duration-200 hover:bg-indigo-700"
+          className="fixed bottom-5 right-5 z-40 flex h-12 w-12 cursor-pointer items-center justify-center rounded-full bg-indigo-600 text-white shadow-lg transition-colors duration-200 hover:bg-indigo-700 lg:hidden"
         >
           <span className="text-xl">☰</span>
         </button>
@@ -2822,14 +2823,14 @@ export default function Lesson() {
           <div className="fixed inset-0 z-50 lg:hidden">
             <div 
               className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-              onClick={() => setIsSidebarOpen(false)}
+              onClick={closeSidebar}
             />
-            <div className="absolute right-0 top-0 bottom-0 w-3/4 max-w-xs bg-white dark:bg-slate-800 shadow-2xl overflow-y-auto p-6">
+            <div className="absolute right-0 top-0 bottom-0 w-[min(86vw,20rem)] overflow-y-auto bg-white p-6 shadow-2xl dark:bg-slate-800">
               <div className="flex justify-between items-center mb-6">
                 <h3 className="font-bold text-lg text-slate-900 dark:text-white">课程目录</h3>
                 <button 
                   type="button"
-                  onClick={() => setIsSidebarOpen(false)}
+                  onClick={closeSidebar}
                   aria-label="Close course navigation"
                   className="flex h-11 w-11 cursor-pointer items-center justify-center rounded-lg text-slate-500 transition-colors duration-200 hover:bg-slate-100 dark:hover:bg-slate-700"
                 >
@@ -2849,7 +2850,7 @@ export default function Lesson() {
                           <li key={topic.link}>
                             <Link
                               to={topic.link}
-                              onClick={() => setIsSidebarOpen(false)}
+                              onClick={closeSidebar}
                               className={`block min-h-11 cursor-pointer rounded-lg px-3 py-3 text-sm leading-5 transition-colors duration-200 ${
                                 isActive
                                   ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-medium'
@@ -2870,7 +2871,7 @@ export default function Lesson() {
         )}
 
         {/* 主内容区域 */}
-        <main className="flex-1 min-w-0 px-4 sm:px-8 py-8 lg:py-12">
+        <main className="flex-1 min-w-0 px-4 py-8 sm:px-6 lg:px-8 lg:py-12">
           <div className="max-w-3xl mx-auto">
             {/* 面包屑 */}
             <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400 mb-6 overflow-x-auto whitespace-nowrap pb-2">

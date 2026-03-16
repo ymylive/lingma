@@ -17,37 +17,38 @@ import Auth from './pages/Auth';
 import Dashboard from './pages/Dashboard';
 import Methodology from './pages/Methodology';
 import PixelCat from './components/PixelCat';
-import { AnimatePresence, motion } from 'framer-motion';
+import { motion } from 'framer-motion';
+import useLowMotionMode from './hooks/useLowMotionMode';
 
 function AnimatedRoutes() {
   const location = useLocation();
   
   return (
-    <AnimatePresence mode="wait">
-      <Routes location={location} key={location.pathname}>
-        <Route path="/" element={<PageWrapper><Home /></PageWrapper>} />
-        <Route path="/algorithms" element={<PageWrapper><ProtectedRoute><Algorithms /></ProtectedRoute></PageWrapper>} />
-        <Route path="/algorithms/:id" element={<PageWrapper><ProtectedRoute><AlgorithmDetail /></ProtectedRoute></PageWrapper>} />
-        <Route path="/book" element={<PageWrapper><ProtectedRoute><Book /></ProtectedRoute></PageWrapper>} />
-        <Route path="/book/*" element={<PageWrapper><ProtectedRoute><Lesson /></ProtectedRoute></PageWrapper>} />
-        <Route path="/practice" element={<PageWrapper><ProtectedRoute><Practice /></ProtectedRoute></PageWrapper>} />
-        <Route path="/mindmap" element={<PageWrapper><ProtectedRoute><MindMap /></ProtectedRoute></PageWrapper>} />
-        <Route path="/auth" element={<PageWrapper><Auth /></PageWrapper>} />
-        <Route path="/dashboard" element={<PageWrapper><ProtectedRoute><Dashboard /></ProtectedRoute></PageWrapper>} />
-        <Route path="/methodology" element={<PageWrapper><ProtectedRoute><Methodology /></ProtectedRoute></PageWrapper>} />
-      </Routes>
-    </AnimatePresence>
+    <Routes>
+      <Route path="/" element={<PageWrapper routeKey={location.pathname}><Home /></PageWrapper>} />
+      <Route path="/algorithms" element={<PageWrapper routeKey={location.pathname}><ProtectedRoute><Algorithms /></ProtectedRoute></PageWrapper>} />
+      <Route path="/algorithms/:id" element={<PageWrapper routeKey={location.pathname}><ProtectedRoute><AlgorithmDetail /></ProtectedRoute></PageWrapper>} />
+      <Route path="/book" element={<PageWrapper routeKey={location.pathname}><ProtectedRoute><Book /></ProtectedRoute></PageWrapper>} />
+      <Route path="/book/*" element={<PageWrapper routeKey={location.pathname}><ProtectedRoute><Lesson /></ProtectedRoute></PageWrapper>} />
+      <Route path="/practice" element={<PageWrapper routeKey={location.pathname}><ProtectedRoute><Practice /></ProtectedRoute></PageWrapper>} />
+      <Route path="/mindmap" element={<PageWrapper routeKey={location.pathname}><ProtectedRoute><MindMap /></ProtectedRoute></PageWrapper>} />
+      <Route path="/auth" element={<PageWrapper routeKey={location.pathname}><Auth /></PageWrapper>} />
+      <Route path="/dashboard" element={<PageWrapper routeKey={location.pathname}><ProtectedRoute><Dashboard /></ProtectedRoute></PageWrapper>} />
+      <Route path="/methodology" element={<PageWrapper routeKey={location.pathname}><ProtectedRoute><Methodology /></ProtectedRoute></PageWrapper>} />
+    </Routes>
   );
 }
 
-function PageWrapper({ children }: { children: React.ReactNode }) {
+function PageWrapper({ children, routeKey }: { children: React.ReactNode; routeKey: string }) {
+  const lowMotionMode = useLowMotionMode();
+
   return (
     <motion.div
-      initial={{ opacity: 0, scale: 0.99 }}
-      animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 1.01 }}
-      transition={{ duration: 0.3, ease: "easeOut" }}
-      className="relative z-10 will-change-transform"
+      key={routeKey}
+      initial={lowMotionMode ? false : { opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={lowMotionMode ? { duration: 0 } : { duration: 0.18, ease: 'easeOut' }}
+      className="relative z-10 min-w-0"
     >
       {children}
     </motion.div>
@@ -55,6 +56,8 @@ function PageWrapper({ children }: { children: React.ReactNode }) {
 }
 
 function App() {
+  const lowMotionMode = useLowMotionMode();
+
   return (
     <ThemeProvider>
       <I18nProvider>
@@ -74,30 +77,44 @@ function App() {
                       filter: 'contrast(120%) blur(20px)', // Soften edges
                     }}
                />
-               
-               {/* Animated Floating Orb (Pine Yellow) */}
-               <motion.div 
-                 animate={{ 
-                   transform: ['translate(0,0) scale(1)', 'translate(5%, -5%) scale(1.1)', 'translate(-2%, 5%) scale(0.95)', 'translate(0,0) scale(1)']
-                 }}
-                 transition={{ duration: 20, repeat: Infinity, ease: "easeInOut" }}
-                 className="absolute inset-0 opacity-30 dark:opacity-20 will-change-transform"
-                 style={{
-                   background: `radial-gradient(circle at 70% 30%, rgba(255, 225, 53, 0.25) 0%, transparent 40%)`
-                 }}
-               />
 
-               {/* Animated Floating Orb (Klein Blue) */}
-               <motion.div 
-                 animate={{ 
-                   transform: ['translate(0,0) scale(1)', 'translate(-5%, 5%) scale(1.1)', 'translate(5%, -2%) scale(0.95)', 'translate(0,0) scale(1)']
-                 }}
-                 transition={{ duration: 25, repeat: Infinity, ease: "easeInOut", delay: 2 }}
-                 className="absolute inset-0 opacity-30 dark:opacity-20 will-change-transform"
-                 style={{
-                   background: `radial-gradient(circle at 20% 80%, rgba(0, 47, 167, 0.25) 0%, transparent 40%)`
-                 }}
-               />
+               {lowMotionMode ? (
+                 <div
+                   className="absolute inset-0 opacity-25 dark:opacity-20"
+                   style={{
+                     background: `
+                       radial-gradient(circle at 72% 28%, rgba(255, 225, 53, 0.18) 0%, transparent 38%),
+                       radial-gradient(circle at 22% 78%, rgba(0, 47, 167, 0.2) 0%, transparent 42%)
+                     `,
+                   }}
+                 />
+               ) : (
+                 <>
+                   {/* Animated Floating Orb (Pine Yellow) */}
+                   <motion.div 
+                     animate={{ 
+                       transform: ['translate(0,0) scale(1)', 'translate(5%, -5%) scale(1.1)', 'translate(-2%, 5%) scale(0.95)', 'translate(0,0) scale(1)']
+                     }}
+                     transition={{ duration: 20, repeat: Infinity, ease: "easeInOut" }}
+                     className="absolute inset-0 opacity-30 dark:opacity-20 will-change-transform"
+                     style={{
+                       background: `radial-gradient(circle at 70% 30%, rgba(255, 225, 53, 0.25) 0%, transparent 40%)`
+                     }}
+                   />
+
+                   {/* Animated Floating Orb (Klein Blue) */}
+                   <motion.div 
+                     animate={{ 
+                       transform: ['translate(0,0) scale(1)', 'translate(-5%, 5%) scale(1.1)', 'translate(5%, -2%) scale(0.95)', 'translate(0,0) scale(1)']
+                     }}
+                     transition={{ duration: 25, repeat: Infinity, ease: "easeInOut", delay: 2 }}
+                     className="absolute inset-0 opacity-30 dark:opacity-20 will-change-transform"
+                     style={{
+                       background: `radial-gradient(circle at 20% 80%, rgba(0, 47, 167, 0.25) 0%, transparent 40%)`
+                     }}
+                   />
+                 </>
+               )}
             </div>
 
             <div className="relative z-10 flex flex-col min-h-screen">
@@ -108,7 +125,7 @@ function App() {
               <Footer />
             </div>
             
-            <PixelCat />
+            <PixelCat lowMotion={lowMotionMode} />
           </Router>
         </UserProvider>
       </I18nProvider>
