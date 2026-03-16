@@ -76,31 +76,67 @@ function extractJson(text: string) {
 }
 
 function buildSystemPrompt() {
+  if (isEnglishRuntimeLocale()) {
+    return [
+      'You are a professional knowledge architect and mind-map editor.',
+      'Turn the source material into a clear, well-structured, editable mind map.',
+      'Output must be strict JSON only, with no markdown or extra explanation.',
+      `Output language: ${getMindMapOutputLanguageLabel()}. ${getMindMapOutputInstruction()}`,
+    ].join(' ');
+  }
+
   return [
     '你是一位专业的知识架构师与思维导图编辑专家。',
     '任务是把材料整理成结构清晰、层级合理、可编辑的思维导图。',
     '输出必须是严格 JSON，不要包含任何解释性文字或 Markdown。',
-    `输出语言：${getMindMapOutputLanguageLabel()}。${getMindMapOutputInstruction()}`
+    `输出语言：${getMindMapOutputLanguageLabel()}。${getMindMapOutputInstruction()}`,
   ].join('');
 }
 
 function buildUserPrompt(input: MindMapPromptInput) {
   const sourceLabel = input.sourceType === 'topic'
-    ? '主题'
+    ? pickRuntimeText('主题', 'Topic')
     : input.sourceType === 'url'
-      ? '网页资料'
-      : '上传文件';
+      ? pickRuntimeText('网页资料', 'Web Source')
+      : pickRuntimeText('上传文件', 'Uploaded File');
 
   const personalization = input.personalContext
-    ? `\n\n【学习者画像】\n${input.personalContext}\n请在导图中体现“已掌握/待学习”的脉络（可通过节点标题或 note 提示）。`
+    ? isEnglishRuntimeLocale()
+      ? `\n\n[Learner Profile]\n${input.personalContext}\nReflect what is already mastered vs. what still needs work through node titles or notes.`
+      : `\n\n【学习者画像】\n${input.personalContext}\n请在导图中体现“已掌握/待学习”的脉络（可通过节点标题或 note 提示）。`
     : '';
   const generationMode = input.generationMode || 'full';
   const modePrompt =
     generationMode === 'explore'
-      ? '生成模式：探索模式。请只给结构和关键标题，不要写具体知识点内容；每个节点 note 必须留空字符串。'
-      : '生成模式：完整模式。可提供简洁实用的 note 说明。';
+      ? pickRuntimeText(
+        '生成模式：探索模式。请只给结构和关键标题，不要写具体知识点内容；每个节点 note 必须留空字符串。',
+        'Generation mode: explore. Return only structure and key titles; do not write detailed knowledge points, and keep every node note as an empty string.',
+      )
+      : pickRuntimeText(
+        '生成模式：完整模式。可提供简洁实用的 note 说明。',
+        'Generation mode: full. Short practical notes are allowed.',
+      );
 
   if (input.existingMap) {
+    if (isEnglishRuntimeLocale()) {
+      return [
+        'Update the existing mind map using the new material.',
+        'Preserve existing node id, title, and note whenever reasonable; add required nodes, merge duplicates, and remove irrelevant content.',
+        'Keep the structure clear with depth 2-4 and about 20-60 nodes depending on the material.',
+        'Each node must include id, title, children, and note. Keep children as an empty array when there are no child nodes.',
+        '',
+        `[Existing Mind Map JSON]\n${JSON.stringify(input.existingMap)}`,
+        '',
+        `[${sourceLabel}]\n${input.sourceText.slice(0, 20000)}`,
+        personalization,
+        modePrompt,
+        `Output language requirement: ${getMindMapOutputInstruction()}`,
+        '',
+        'Return only the full updated JSON:',
+        '{ "title": "...", "nodes": [ { "id": "...", "title": "...", "note": "", "children": [] } ] }',
+      ].join('\n');
+    }
+
     return [
       '请基于新材料更新已有思维导图。',
       '要求尽量保留原有节点的 id、title、note；新增必要节点，合并重复，删除无关内容。',
@@ -116,6 +152,24 @@ function buildUserPrompt(input: MindMapPromptInput) {
       '',
       '请仅输出更新后的完整 JSON：',
       '{ "title": "...", "nodes": [ { "id": "...", "title": "...", "note": "", "children": [] } ] }'
+    ].join('\n');
+  }
+
+  if (isEnglishRuntimeLocale()) {
+    return [
+      'Generate a mind map from the source material.',
+      'Requirements: structure depth 2-4, around 20-60 nodes depending on the material, and concise but information-dense titles.',
+      'Each node must include id, title, children, and note. Keep children as an empty array when there are no child nodes.',
+      'Use short unique alphanumeric ids.',
+      '',
+      `[Mind Map Title] ${input.title || input.sourceTitle || getMindMapDefaultTitle()}`,
+      `[${sourceLabel}]\n${input.sourceText.slice(0, 20000)}`,
+      personalization,
+      modePrompt,
+      `Output language requirement: ${getMindMapOutputInstruction()}`,
+      '',
+      'Return JSON only:',
+      '{ "title": "...", "nodes": [ { "id": "...", "title": "...", "note": "", "children": [] } ] }',
     ].join('\n');
   }
 
