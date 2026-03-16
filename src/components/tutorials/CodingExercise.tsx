@@ -48,6 +48,13 @@ const DIFFICULTY_CONFIG: Record<ExerciseDifficulty, { text: string; color: strin
   hard: { text: '困难', color: 'bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300' },
 };
 
+const AI_DIMENSIONS = [
+  { key: 'correctness', max: 40, zh: '正确性', en: 'Correctness' },
+  { key: 'boundaryRobustness', max: 20, zh: '边界健壮性', en: 'Boundary Robustness' },
+  { key: 'complexityAndPerformance', max: 20, zh: '复杂度与性能', en: 'Complexity & Performance' },
+  { key: 'codeQualityAndReadability', max: 20, zh: '代码质量与可读性', en: 'Code Quality & Readability' },
+] as const;
+
 function draftKey(exerciseId: string | undefined, title: string, lang: Lang) {
   return `coding-draft:${exerciseId || title}:${lang}`;
 }
@@ -102,6 +109,7 @@ export default function CodingExercise({
 }: CodingExerciseProps) {
   const { recordExerciseComplete, user } = useUser();
   const { isEnglish, t } = useI18n();
+  const judgeText = (zh: string, en: string) => (isEnglish ? en : zh);
   const [lang, setLang] = useState<Lang>('cpp');
   const [code, setCode] = useState('');
   const [showHints, setShowHints] = useState(false);
@@ -129,6 +137,8 @@ export default function CodingExercise({
   }, [code, exerciseId, lang, title]);
 
   const summary = judge?.summary;
+  const aiReview = judge?.aiReview;
+  const showAiReview = aiReview?.status === 'generated' || aiReview?.status === 'unavailable';
   const groupedResults = useMemo(() => {
     const groups = new Map<string, JudgeResponse['results']>();
     for (const result of judge?.results || []) {
@@ -139,6 +149,14 @@ export default function CodingExercise({
     }
     return Array.from(groups.entries());
   }, [judge]);
+  const aiDimensionCards = useMemo(() => {
+    if (aiReview?.status !== 'generated') return [];
+    return AI_DIMENSIONS.map((item) => ({
+      ...item,
+      label: isEnglish ? item.en : item.zh,
+      score: aiReview.dimensionScores[item.key],
+    }));
+  }, [aiReview, isEnglish]);
 
   const onQuickRun = async () => {
     if (!code.trim()) return alert(t('请先编写代码'));
@@ -160,7 +178,14 @@ export default function CodingExercise({
     setJudge(null);
     setRunOutput(null);
     try {
-      const result = await runTestCases(code, lang, testCases);
+      const result = await runTestCases(code, lang, testCases, {
+        exerciseId,
+        title,
+        description,
+        difficulty,
+        category,
+        explanation,
+      });
       setJudge(result);
       if (exerciseId) {
         recordExerciseComplete(exerciseId, title, category || '', result.allPassed, {
@@ -346,6 +371,96 @@ export default function CodingExercise({
                 <ul className="space-y-1 text-[15px] text-amber-700 dark:text-amber-200 sm:text-sm">{commonMistakes.map((item, index) => <li key={`${item}-${index}`}>- {item}</li>)}</ul>
               </div>
             )}
+
+            {showAiReview && (
+              <div className="mt-5 rounded-2xl border border-sky-200 bg-sky-50/70 p-4 dark:border-sky-800 dark:bg-sky-950/20">
+                <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                  <div className="space-y-3">
+                    <div className="flex flex-wrap gap-2">
+                      <span className="rounded-full bg-sky-600 px-3 py-1 text-xs font-semibold text-white">{judgeText('AI 判题分析', 'AI Review')}</span>
+                      {aiReview?.model && (
+                        <span className="rounded-full bg-white px-3 py-1 text-xs font-medium text-slate-700 dark:bg-slate-900 dark:text-slate-200">
+                          {aiReview.model}
+                        </span>
+                      )}
+                    </div>
+
+                    {aiReview?.status === 'generated' ? (
+                      <>
+                        <div>
+                          <div className="text-xs uppercase tracking-[0.2em] text-sky-700 dark:text-sky-300">{judgeText('综合评分', 'Overall Score')}</div>
+                          <div className="mt-1 text-3xl font-bold text-slate-900 dark:text-white">
+                            {aiReview.totalScore}
+                            <span className="ml-1 text-base font-medium text-slate-500 dark:text-slate-400">/ 100</span>
+                          </div>
+                        </div>
+                        <div className="rounded-2xl bg-white/80 p-4 text-[15px] leading-6 text-slate-700 shadow-sm dark:bg-slate-900/60 dark:text-slate-200 sm:text-sm">
+                          <div className="mb-2 text-sm font-semibold text-slate-900 dark:text-white">{judgeText('总体诊断', 'Overall Diagnosis')}</div>
+                          <p className="whitespace-pre-line break-words">{aiReview.overallDiagnosis}</p>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="rounded-2xl bg-white/80 p-4 text-[15px] leading-6 text-slate-700 shadow-sm dark:bg-slate-900/60 dark:text-slate-200 sm:text-sm">
+                        {judgeText(
+                          'AI 分析暂时不可用，上方确定性判题结果仍然有效。',
+                          'AI review is temporarily unavailable. The deterministic judge result above is still valid.',
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {aiReview?.status === 'generated' && (
+                    <div className="grid w-full gap-3 sm:grid-cols-2 xl:max-w-xl xl:grid-cols-2">
+                      {aiDimensionCards.map((item) => (
+                        <div key={item.key} className="rounded-2xl border border-sky-100 bg-white p-3 dark:border-sky-900 dark:bg-slate-900/70">
+                          <div className="text-xs text-slate-500 dark:text-slate-400">{item.label}</div>
+                          <div className="mt-1 text-2xl font-bold text-slate-900 dark:text-white">
+                            {item.score}
+                            <span className="ml-1 text-sm font-medium text-slate-500 dark:text-slate-400">/ {item.max}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {aiReview?.status === 'generated' && (
+                  <div className="mt-4 grid gap-3 lg:grid-cols-2">
+                    {aiReview.errorPoints.length > 0 && (
+                      <div className="rounded-2xl border border-rose-200 bg-white p-4 dark:border-rose-900 dark:bg-slate-900/60">
+                        <h4 className="text-sm font-semibold text-rose-700 dark:text-rose-300">{judgeText('错误点分析', 'Error Points')}</h4>
+                        <ul className="mt-2 space-y-2 text-[15px] leading-6 text-slate-700 dark:text-slate-200 sm:text-sm">
+                          {aiReview.errorPoints.map((item, index) => <li key={`${item}-${index}`}>- {item}</li>)}
+                        </ul>
+                      </div>
+                    )}
+
+                    {aiReview.fixSuggestions.length > 0 && (
+                      <div className="rounded-2xl border border-emerald-200 bg-white p-4 dark:border-emerald-900 dark:bg-slate-900/60">
+                        <h4 className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">{judgeText('修改建议', 'Fix Suggestions')}</h4>
+                        <ul className="mt-2 space-y-2 text-[15px] leading-6 text-slate-700 dark:text-slate-200 sm:text-sm">
+                          {aiReview.fixSuggestions.map((item, index) => <li key={`${item}-${index}`}>- {item}</li>)}
+                        </ul>
+                      </div>
+                    )}
+
+                    {aiReview.optimizationSuggestions.length > 0 && (
+                      <div className="rounded-2xl border border-violet-200 bg-white p-4 dark:border-violet-900 dark:bg-slate-900/60">
+                        <h4 className="text-sm font-semibold text-violet-700 dark:text-violet-300">{judgeText('优化建议', 'Optimization Suggestions')}</h4>
+                        <ul className="mt-2 space-y-2 text-[15px] leading-6 text-slate-700 dark:text-slate-200 sm:text-sm">
+                          {aiReview.optimizationSuggestions.map((item, index) => <li key={`${item}-${index}`}>- {item}</li>)}
+                        </ul>
+                      </div>
+                    )}
+
+                    <div className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900/60">
+                      <h4 className="text-sm font-semibold text-slate-900 dark:text-white">{judgeText('下一步', 'Next Step')}</h4>
+                      <p className="mt-2 text-[15px] leading-6 text-slate-700 dark:text-slate-200 sm:text-sm">{aiReview.nextStep}</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
 
@@ -380,19 +495,14 @@ export function FillInBlank({ exerciseId, title, description, difficulty, catego
   const { recordExerciseComplete, user } = useUser();
   const { isEnglish, t } = useI18n();
   const availableLangs = useMemo(() => SUPPORTED_LANGS.filter((item) => codeTemplate[item]), [codeTemplate]);
+  const preferredLang = (user?.targetLanguage && availableLangs.includes(user.targetLanguage) ? user.targetLanguage : availableLangs[0]) || 'cpp';
   const [lang, setLang] = useState<Lang>(
-    (user?.targetLanguage && availableLangs.includes(user.targetLanguage) ? user.targetLanguage : availableLangs[0]) || 'cpp'
+    preferredLang
   );
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [submitted, setSubmitted] = useState(false);
   const [results, setResults] = useState<Record<string, boolean>>({});
-
-  useEffect(() => {
-    const preferred = user?.targetLanguage && availableLangs.includes(user.targetLanguage)
-      ? user.targetLanguage
-      : availableLangs[0];
-    setLang(preferred || 'cpp');
-  }, [availableLangs, user?.targetLanguage]);
+  const activeLang = availableLangs.includes(lang) ? lang : preferredLang;
 
   const checkAnswers = () => {
     const next: Record<string, boolean> = {};
@@ -408,7 +518,7 @@ export function FillInBlank({ exerciseId, title, description, difficulty, catego
     if (exerciseId) recordExerciseComplete(exerciseId, title, category || '', allCorrect, { score: blanks.length ? Math.round((correctCount / blanks.length) * 100) : 0, passRate: blanks.length ? Math.round((correctCount / blanks.length) * 100) : 0, verdict: allCorrect ? 'Accepted' : 'Review', feedbackLevel: allCorrect ? 'excellent' : 'review' });
   };
 
-  const renderCode = () => (codeTemplate[lang] || '').split('\n').map((line, lineIndex) => {
+  const renderCode = () => (codeTemplate[activeLang] || '').split('\n').map((line, lineIndex) => {
     const parts: ReactNode[] = [];
     let lastIndex = 0;
     const regex = /___(\w+)___/g;
@@ -443,7 +553,7 @@ export function FillInBlank({ exerciseId, title, description, difficulty, catego
           </div>
           <div className="grid w-full grid-cols-2 gap-2 sm:w-auto sm:grid-cols-4">
             {availableLangs.map((item) => (
-              <button key={item} onClick={() => { setLang(item); setAnswers({}); setResults({}); setSubmitted(false); }} className={`min-h-[48px] rounded-2xl border px-3.5 py-2.5 text-[15px] font-medium sm:min-h-[44px] sm:text-sm ${lang === item ? 'border-emerald-500 bg-emerald-600 text-white' : 'border-slate-200 bg-white text-slate-700 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200'}`}>{LANG_NAMES[item]}</button>
+              <button key={item} onClick={() => { setLang(item); setAnswers({}); setResults({}); setSubmitted(false); }} className={`min-h-[48px] rounded-2xl border px-3.5 py-2.5 text-[15px] font-medium sm:min-h-[44px] sm:text-sm ${activeLang === item ? 'border-emerald-500 bg-emerald-600 text-white' : 'border-slate-200 bg-white text-slate-700 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200'}`}>{LANG_NAMES[item]}</button>
             ))}
           </div>
         </div>
