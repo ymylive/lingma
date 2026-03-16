@@ -97,17 +97,17 @@ export default function Book() {
 
   return (
     <div className="min-h-screen transition-colors duration-300 pt-24 pb-12">
-      <div className="max-w-6xl mx-auto px-6">
+      <div className="mx-auto max-w-6xl px-4 sm:px-6">
         {/* 页面标题 */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="text-center mb-10"
+          className="mb-10 text-center"
         >
-          <h1 className="text-4xl font-bold text-slate-900 dark:text-white mb-3">📖 {isEnglish ? 'Data Structure Tutorials' : '数据结构教程'}</h1>
-          <p className="text-slate-600 dark:text-slate-300 text-lg">{t('系统学习数据结构与算法，从入门到精通')}</p>
-          <div className="flex justify-center gap-6 mt-6">
+          <h1 className="mb-3 text-3xl font-bold text-slate-900 dark:text-white sm:text-4xl">📖 {isEnglish ? 'Data Structure Tutorials' : '数据结构教程'}</h1>
+          <p className="text-base text-slate-600 dark:text-slate-300 sm:text-lg">{t('系统学习数据结构与算法，从入门到精通')}</p>
+          <div className="mt-6 grid grid-cols-2 gap-4 sm:flex sm:justify-center sm:gap-6">
             <div className="text-center">
               <div className="text-3xl font-bold text-klein-500 dark:text-klein-400">{curriculum.length}</div>
               <div className="text-sm text-slate-500 dark:text-slate-400">{chapterCountLabel}</div>
@@ -135,10 +135,10 @@ export default function Book() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.5 }}
-          className="bg-gradient-to-r from-klein-500 to-klein-600 rounded-2xl p-6 mb-8 text-white shadow-lg shadow-klein-500/20"
+          className="mb-8 rounded-2xl bg-gradient-to-r from-klein-500 to-klein-600 p-5 text-white shadow-lg shadow-klein-500/20 sm:p-6"
         >
-          <div className="flex items-start gap-4">
-            <span className="text-4xl">🎯</span>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:gap-4">
+            <span className="text-3xl sm:text-4xl">🎯</span>
             <div>
               <h3 className="font-bold text-lg mb-1">{t('推荐学习路径')}</h3>
               <p className="text-klein-100 text-sm leading-relaxed">
@@ -172,21 +172,21 @@ export default function Book() {
                 {/* 章节头部 */}
                 <button
                   onClick={() => setExpandedChapter(isExpanded ? null : chapter.id)}
-                  className="w-full cursor-pointer p-5 flex items-center gap-4 transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/60 focus-visible:ring-inset dark:hover:bg-slate-700/50"
+                  className="flex w-full cursor-pointer flex-col items-start gap-4 p-4 text-left transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/60 focus-visible:ring-inset dark:hover:bg-slate-700/50 sm:flex-row sm:items-center sm:p-5"
                 >
-                  <div className={`w-12 h-12 ${colors.light} ${colors.darkSurface} rounded-xl flex items-center justify-center text-2xl`}>
+                  <div className={`flex h-10 w-10 items-center justify-center rounded-xl text-xl sm:h-12 sm:w-12 sm:text-2xl ${colors.light} ${colors.darkSurface}`}>
                     {chapter.icon}
                   </div>
                   <div className="flex-1 text-left">
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <span className={`text-xs font-medium ${colors.text} ${colors.light} ${colors.darkSurface} ${colors.darkText} px-2 py-0.5 rounded`}>
                         {chapterBadgeLabel(index + 1)}
                       </span>
-                      <h2 className="text-xl font-bold text-slate-900 dark:text-white">{t(chapter.name)}</h2>
+                      <h2 className="text-lg font-bold text-slate-900 dark:text-white sm:text-xl">{t(chapter.name)}</h2>
                     </div>
                     <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{t(chapter.desc)}</p>
                   </div>
-                  <div className="flex items-center gap-3">
+                  <div className="flex w-full items-center justify-between gap-3 sm:w-auto sm:justify-end">
                     {isLoggedIn && (
                       <span className="text-sm text-emerald-600 dark:text-emerald-400 font-medium">
                         {chapterProgressLabel(getChapterProgress(chapter), chapter.topics.length)}
@@ -208,13 +208,13 @@ export default function Book() {
 
                 {/* 章节内容 */}
                 {isExpanded && (
-                  <div className="px-5 pb-5 border-t border-slate-100 dark:border-slate-700">
+                  <div className="border-t border-slate-100 px-4 pb-4 dark:border-slate-700 sm:px-5 sm:pb-5">
                     <div className="grid gap-3 mt-4">
                       {chapter.topics.map((topic, topicIndex) => (
                         <Link
                           key={t(topic.name)}
                           to={topic.link}
-                          className={`group flex items-center gap-4 p-4 rounded-xl transition-all ${
+                          className={`group flex items-center gap-3 rounded-xl p-3.5 transition-all sm:gap-4 sm:p-4 ${
                             isCompleted(topic.link)
                               ? 'bg-emerald-50 dark:bg-emerald-900/20 hover:bg-emerald-100 dark:hover:bg-emerald-900/30'
                               : 'bg-slate-50 dark:bg-slate-700/30 hover:bg-slate-100 dark:hover:bg-slate-700/50'

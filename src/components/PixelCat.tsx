@@ -13,20 +13,28 @@ const messages = [
   "Zzz...",
 ];
 
-export default function PixelCat() {
+type PixelCatProps = {
+  lowMotion?: boolean;
+};
+
+export default function PixelCat({ lowMotion = false }: PixelCatProps) {
   const [showMessage, setShowMessage] = useState(false);
   const [message, setMessage] = useState("");
   const [isSleeping, setIsSleeping] = useState(false);
 
   const [isBlinking, setIsBlinking] = useState(false);
+  const sleeping = lowMotion ? false : isSleeping;
+  const blinking = lowMotion ? false : isBlinking;
 
   // Random behavior
   useEffect(() => {
+    if (lowMotion) return;
+
     const interval = setInterval(() => {
       const random = Math.random();
       if (random < 0.3) {
         setIsSleeping(prev => !prev);
-      } else if (random > 0.7 && !isSleeping) {
+      } else if (random > 0.7 && !sleeping) {
         // Show random message
         setMessage(messages[Math.floor(Math.random() * messages.length)]);
         setShowMessage(true);
@@ -36,7 +44,7 @@ export default function PixelCat() {
 
     // Blinking logic
     const blinkInterval = setInterval(() => {
-      if (!isSleeping && Math.random() > 0.7) {
+      if (!sleeping && Math.random() > 0.7) {
         setIsBlinking(true);
         setTimeout(() => setIsBlinking(false), 150);
       }
@@ -46,7 +54,7 @@ export default function PixelCat() {
       clearInterval(interval);
       clearInterval(blinkInterval);
     };
-  }, [isSleeping]);
+  }, [lowMotion, sleeping]);
 
   const handleClick = () => {
     setIsSleeping(false);
@@ -57,14 +65,14 @@ export default function PixelCat() {
 
   return (
     <motion.div
-      drag
+      drag={!lowMotion}
       dragMomentum={false}
       whileDrag={{ scale: 1.1, cursor: 'grabbing' }}
       className="fixed bottom-4 right-4 sm:bottom-8 sm:right-8 z-50 cursor-grab touch-none"
       onClick={handleClick}
-      initial={{ y: 100, opacity: 0 }}
-      animate={{ y: 0, opacity: 1 }}
-      transition={{ delay: 1, type: 'spring' }}
+      initial={lowMotion ? false : { y: 100, opacity: 0 }}
+      animate={lowMotion ? { opacity: 1 } : { y: 0, opacity: 1 }}
+      transition={lowMotion ? { duration: 0 } : { delay: 1, type: 'spring' }}
     >
       {/* Speech Bubble */}
       <AnimatePresence>
@@ -93,8 +101,8 @@ export default function PixelCat() {
         >
           {/* Tail Animation */}
           <motion.g
-            animate={{ rotate: [0, 15, 0, -5, 0] }}
-            transition={{ repeat: Infinity, duration: 2, ease: "linear", times: [0, 0.25, 0.5, 0.75, 1] }}
+            animate={lowMotion ? undefined : { rotate: [0, 15, 0, -5, 0] }}
+            transition={lowMotion ? undefined : { repeat: Infinity, duration: 2, ease: "linear", times: [0, 0.25, 0.5, 0.75, 1] }}
             style={{ transformOrigin: "27px 25px" }} // Fixed origin at the base of the tail
           >
              {/* Tail pixels */}
@@ -106,8 +114,8 @@ export default function PixelCat() {
 
           {/* Body */}
           <motion.g
-            animate={{ y: isSleeping ? 1 : [0, -1, 0] }}
-            transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+            animate={lowMotion ? undefined : { y: sleeping ? 1 : [0, -1, 0] }}
+            transition={lowMotion ? undefined : { duration: 2, repeat: Infinity, ease: "easeInOut" }}
           >
             {/* Main Body */}
             <rect x="8" y="18" width="18" height="10" rx="1" fill="#fb923c" /> {/* Orange Body */}
@@ -123,17 +131,17 @@ export default function PixelCat() {
             <rect x="17" y="7" width="2" height="2" fill="#fb923c" />
 
             {/* Face details */}
-            {isSleeping ? (
+            {sleeping ? (
               <>
                 {/* Sleeping Eyes (Lines) */}
                 <rect x="9" y="14" width="2" height="1" fill="#1e293b" />
                 <rect x="15" y="14" width="2" height="1" fill="#1e293b" />
                 <motion.text x="22" y="10" className="text-[8px] font-bold fill-indigo-500"
-                  animate={{ opacity: [0, 1, 0], y: -5 }}
-                  transition={{ duration: 2, repeat: Infinity }}
+                  animate={lowMotion ? undefined : { opacity: [0, 1, 0], y: -5 }}
+                  transition={lowMotion ? undefined : { duration: 2, repeat: Infinity }}
                 >z</motion.text>
               </>
-            ) : isBlinking ? (
+            ) : blinking ? (
               <>
                  {/* Blinking Eyes (Closed Line) */}
                  <rect x="9" y="14" width="2" height="1" fill="#1e293b" />

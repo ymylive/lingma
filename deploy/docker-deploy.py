@@ -15,6 +15,7 @@ except ImportError:
 VPS_HOST = os.getenv("LINGMA_VPS_HOST", "8.134.33.19")
 VPS_USER = os.getenv("LINGMA_VPS_USER", "root")
 VPS_PASSWORD = os.getenv("LINGMA_VPS_PASSWORD", "")
+PUBLIC_DOMAIN = os.getenv("LINGMA_PUBLIC_DOMAIN", "lingma.cornna.xyz")
 REMOTE_DIR = "/var/www/lingma"
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 DEFAULT_REMOTE_ENV = {
@@ -176,9 +177,20 @@ def main():
     health = ssh_exec(ssh, "curl -sf http://127.0.0.1:18081/api/health 2>&1 || echo HEALTH_CHECK_PENDING", check=False)
     print(f"\nHealth: {health}")
 
+    domain_health = ssh_exec(
+        ssh,
+        (
+            "curl -k -sf --resolve "
+            f"{PUBLIC_DOMAIN}:443:127.0.0.1 https://{PUBLIC_DOMAIN}/api/health 2>&1 "
+            "|| echo DOMAIN_HEALTH_CHECK_PENDING"
+        ),
+        check=False,
+    )
+    print(f"Domain Health: {domain_health}")
+
     sftp.close()
     ssh.close()
-    print(f"\nDone. Site: http://{VPS_HOST}:18081")
+    print(f"\nDone. Site: https://{PUBLIC_DOMAIN}")
 
 
 if __name__ == "__main__":
