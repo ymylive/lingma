@@ -66,8 +66,8 @@ def first_env(*names: str) -> str:
     return ""
 
 AI_API_KEY = os.getenv("AI_API_KEY", "").strip()
-AI_BASE_URL = (os.getenv("AI_BASE_URL") or os.getenv("AI_API_URL") or "https://openrouter.ai/api/v1").strip()
-AI_MODEL = os.getenv("AI_MODEL", "openrouter/auto").strip()
+AI_BASE_URL = (os.getenv("AI_BASE_URL") or os.getenv("AI_API_URL") or "https://gmn.chuangzuoli.com/v1/responses").strip()
+AI_MODEL = os.getenv("AI_MODEL", "gpt-5.4").strip()
 AI_SITE_URL = os.getenv("AI_SITE_URL", "https://lingma.cornna.xyz").strip()
 AI_SITE_NAME = os.getenv("AI_SITE_NAME", "LingMa").strip()
 ENABLE_THINKING = os.getenv("ENABLE_THINKING", "false").strip().lower() in {"1", "true", "yes", "on"}
