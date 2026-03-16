@@ -11,6 +11,8 @@ import {
   WandSparkles,
 } from 'lucide-react';
 import {
+  clearAIConfig,
+  DEFAULT_AI_MODEL,
   generateCodingExercise,
   generateFillBlank,
   getAIConfig,
@@ -25,14 +27,6 @@ import { useUser } from '../../contexts/UserContext';
 import CodingExercise, { FillInBlank } from './CodingExercise';
 import { buildAiDefaults, getSkillLevelMeta } from '../../utils/userPersonalization';
 import { getTargetLanguageMeta } from '../../utils/targetLanguages';
-
-const PROVIDERS = [
-  { id: 'gmn', name: 'GMN GPT', baseUrl: 'https://gmn.chuangzuoli.com/v1/responses', model: 'gpt-5.4' },
-  { id: 'deepseek', name: 'DeepSeek', baseUrl: 'https://api.deepseek.com/v1', model: 'deepseek-chat' },
-  { id: 'openai', name: 'OpenAI', baseUrl: 'https://api.openai.com/v1', model: 'gpt-3.5-turbo' },
-  { id: 'zhipu', name: '智谱 AI', baseUrl: 'https://open.bigmodel.cn/api/paas/v4', model: 'glm-4' },
-  { id: 'custom', name: '自定义', baseUrl: '', model: '' },
-] as const;
 
 const CATEGORIES = [
   { id: 'c-basic', name: 'C语言基础', group: 'C语言' },
@@ -249,7 +243,13 @@ export default function AIExerciseGenerator() {
   }, [aiDefaults.dataStructure, aiDefaults.difficulty, hasManualCategory, hasManualDifficulty]);
 
   const handleSaveConfig = () => {
-    setAIConfig(config);
+    setAIConfig({ model: config.model });
+    setShowConfig(false);
+  };
+
+  const handleResetConfig = () => {
+    clearAIConfig();
+    setConfig(getAIConfig());
     setShowConfig(false);
   };
 
@@ -287,93 +287,47 @@ export default function AIExerciseGenerator() {
                   <Settings2 className="h-5 w-5" />
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-slate-900 dark:text-white">{t('AI API 配置')}</h3>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">{isEnglish ? 'Optional local override' : '可选的本地覆盖配置'}</p>
+                  <h3 className="text-base font-bold text-slate-900 dark:text-white">{isEnglish ? 'AI Model' : 'AI 模型配置'}</h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    {isEnglish ? `Leave blank to use the site default: ${DEFAULT_AI_MODEL}` : `留空时使用网站默认模型：${DEFAULT_AI_MODEL}`}
+                  </p>
                 </div>
               </div>
 
               <div className="space-y-4">
                 <div>
-                  <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-200">{t('AI 服务商')}</label>
-                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                    {PROVIDERS.map((provider) => (
-                      <button
-                        key={provider.id}
-                        type="button"
-                        onClick={() =>
-                          setConfig({
-                            ...config,
-                            provider: provider.id as AIConfig['provider'],
-                            baseUrl: provider.baseUrl,
-                            model: provider.model,
-                          })
-                        }
-                        className={`min-h-[44px] cursor-pointer rounded-2xl px-4 py-2 text-sm font-medium transition-colors ${
-                          config.provider === provider.id
-                            ? 'bg-slate-900 text-white dark:bg-indigo-500'
-                            : 'border border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700'
-                        }`}
-                      >
-                        {t(provider.name)}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-200">{t('API 密钥')}</label>
+                  <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-200">
+                    {isEnglish ? 'Model name' : '模型名称'}
+                  </label>
                   <input
-                    type="password"
-                    value={config.apiKey}
-                    onChange={(event) => setConfig({ ...config, apiKey: event.target.value })}
-                    placeholder={t('输入你的 API 密钥')}
+                    type="text"
+                    value={config.model ?? ''}
+                    onChange={(event) => setConfig({ ...config, model: event.target.value })}
+                    placeholder={DEFAULT_AI_MODEL}
                     className={inputClass}
                   />
                   <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
-                    {t('当前默认通过服务端代理请求 AI，此处输入不会持久化保存')}
+                    {isEnglish
+                      ? 'This setting only overrides the model field sent to the server-side AI proxy.'
+                      : '这里只覆盖发送给服务端 AI 代理的 model 字段，不会修改站点默认密钥和上游地址。'}
                   </p>
                 </div>
-
-                {config.provider === 'custom' && (
-                  <>
-                    <div>
-                      <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-200">{t('API 地址')}</label>
-                      <input
-                        type="text"
-                        value={config.baseUrl}
-                        onChange={(event) => setConfig({ ...config, baseUrl: event.target.value })}
-                        placeholder="https://api.example.com/v1"
-                        className={inputClass}
-                      />
-                    </div>
-                    <div>
-                      <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-200">{t('模型名称')}</label>
-                      <input
-                        type="text"
-                        value={config.model}
-                        onChange={(event) => setConfig({ ...config, model: event.target.value })}
-                        placeholder="gpt-4o-mini"
-                        className={inputClass}
-                      />
-                    </div>
-                  </>
-                )}
               </div>
 
               <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row">
                 <button
                   type="button"
-                  onClick={() => setShowConfig(false)}
+                  onClick={handleResetConfig}
                   className="min-h-[44px] flex-1 cursor-pointer rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2 font-medium text-slate-700 transition-colors hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
                 >
-                  {t('取消')}
+                  {isEnglish ? 'Use default' : '恢复默认'}
                 </button>
                 <button
                   type="button"
                   onClick={handleSaveConfig}
                   className="min-h-[44px] flex-1 cursor-pointer rounded-2xl bg-slate-900 px-4 py-2 font-medium text-white transition-colors hover:bg-slate-800 dark:bg-indigo-500 dark:hover:bg-indigo-400"
                 >
-                  {t('保存配置')}
+                  {isEnglish ? 'Save model' : '保存模型'}
                 </button>
               </div>
             </div>
@@ -404,7 +358,7 @@ export default function AIExerciseGenerator() {
             className="inline-flex min-h-[44px] w-full cursor-pointer items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white/90 px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-200 dark:hover:bg-slate-800 sm:w-auto"
           >
             <Settings2 className="h-4 w-4" />
-            {t('配置API')}
+            {isEnglish ? 'Model settings' : '配置模型'}
           </button>
         </div>
 

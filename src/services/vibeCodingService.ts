@@ -5,6 +5,7 @@ import type {
   VibeProfile,
   VibeTrack,
 } from '../types/vibeCoding';
+import { getConfiguredModelOverride } from './aiService';
 
 interface CacheEntry<T> {
   data: T;
@@ -77,13 +78,14 @@ export async function fetchVibeHistory(forceRefresh?: boolean): Promise<VibeHist
 }
 
 export async function generateVibeChallenge(track: VibeTrack): Promise<VibeChallenge> {
+  const modelOverride = getConfiguredModelOverride();
   const response = await fetch('/api/vibe-coding/generate', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
     credentials: 'include',
-    body: JSON.stringify({ track }),
+    body: JSON.stringify(modelOverride ? { track, model: modelOverride } : { track }),
   });
   const data = await readJson<VibeChallenge>(response);
   invalidateVibeCache();
@@ -91,16 +93,25 @@ export async function generateVibeChallenge(track: VibeTrack): Promise<VibeChall
 }
 
 export async function evaluateVibePrompt(challengeId: string, userPrompt: string): Promise<VibeEvaluation> {
+  const modelOverride = getConfiguredModelOverride();
   const response = await fetch('/api/vibe-coding/evaluate', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
     credentials: 'include',
-    body: JSON.stringify({
-      challenge_id: challengeId,
-      user_prompt: userPrompt,
-    }),
+    body: JSON.stringify(
+      modelOverride
+        ? {
+            challenge_id: challengeId,
+            user_prompt: userPrompt,
+            model: modelOverride,
+          }
+        : {
+            challenge_id: challengeId,
+            user_prompt: userPrompt,
+          }
+    ),
   });
   const data = await readJson<VibeEvaluation>(response);
   invalidateVibeCache();

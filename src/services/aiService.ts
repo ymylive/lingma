@@ -52,6 +52,7 @@ export interface AIConfig {
   model?: string;
 }
 const AI_CONFIG_STORAGE_KEY = 'ai_config';
+export const DEFAULT_AI_MODEL = 'gpt-5.4';
 
 // 代理服务地址 (API密钥存储在服务器端，前端不暴露)
 const DEFAULT_PROXY_ORIGIN =
@@ -62,49 +63,70 @@ const AI_STREAM_URL = import.meta.env.DEV
   ? 'http://localhost:3001/api/ai/stream'
   : (import.meta.env.VITE_AI_PROXY_URL?.replace('/api/ai', '/api/ai/stream') || `${DEFAULT_PROXY_ORIGIN}/api/ai/stream`);
 
-// AI服务商列表
-export const PROVIDERS = [
-  { id: 'gmn', name: 'GMN GPT', baseUrl: 'https://gmn.chuangzuoli.com/v1/responses', model: 'gpt-5.4' },
-  { id: 'modelscope', name: 'ModelScope 魔搭', baseUrl: 'https://api-inference.modelscope.cn/v1', model: 'deepseek-ai/DeepSeek-V3.2' },
-  { id: 'deepseek', name: 'DeepSeek', baseUrl: 'https://api.deepseek.com/v1', model: 'deepseek-chat' },
-  { id: 'openai', name: 'OpenAI', baseUrl: 'https://api.openai.com/v1', model: 'gpt-3.5-turbo' },
-  { id: 'zhipu', name: '智谱AI', baseUrl: 'https://open.bigmodel.cn/api/paas/v4', model: 'glm-4' },
-  { id: 'custom', name: '自定义', baseUrl: '', model: '' },
-];
-
-// 默认配置 - 使用服务端默认 GMN Responses provider
-let aiConfig: AIConfig = {
+const DEFAULT_AI_CONFIG: AIConfig = {
   provider: 'gmn',
   apiKey: '',
-  baseUrl: 'https://gmn.chuangzuoli.com/v1/responses',
-  model: 'gpt-5.4'
+  baseUrl: '',
+  model: '',
 };
 
-// 获取/设置AI配置
-export const getAIConfig = () => aiConfig;
-export const setAIConfig = (config: Partial<AIConfig>) => {
-  aiConfig = { ...aiConfig, ...config };
-  // 保存到localStorage
-  localStorage.setItem(
-    AI_CONFIG_STORAGE_KEY,
-    JSON.stringify({
-      provider: aiConfig.provider,
-      baseUrl: aiConfig.baseUrl,
-      model: aiConfig.model,
-    })
-  );
-};
+let aiConfig: AIConfig = { ...DEFAULT_AI_CONFIG };
 
-// 从localStorage加载配置
-export const loadAIConfig = () => {
-  const saved = localStorage.getItem(AI_CONFIG_STORAGE_KEY);
-  if (saved) {
-    try {
-      aiConfig = { ...aiConfig, ...JSON.parse(saved), apiKey: '' };
-    } catch (e) {
-      console.error('Failed to load AI config:', e);
-    }
+function normalizeModelValue(value: unknown): string {
+  return typeof value === 'string' ? value.trim() : '';
+}
+
+function readStoredModelOverride(): string {
+  if (typeof window === 'undefined') {
+    return normalizeModelValue(aiConfig.model);
   }
+
+  const saved = localStorage.getItem(AI_CONFIG_STORAGE_KEY);
+  if (!saved) {
+    return '';
+  }
+
+  try {
+    const parsed = JSON.parse(saved) as Partial<AIConfig>;
+    return normalizeModelValue(parsed.model);
+  } catch (error) {
+    console.error('Failed to load AI config:', error);
+    return '';
+  }
+}
+
+export const getAIConfig = () => aiConfig;
+
+export const setAIConfig = (config: Partial<AIConfig>) => {
+  const model = normalizeModelValue(config.model ?? aiConfig.model);
+  aiConfig = { ...DEFAULT_AI_CONFIG, ...aiConfig, ...config, apiKey: '', baseUrl: '', model };
+
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  if (model) {
+    localStorage.setItem(AI_CONFIG_STORAGE_KEY, JSON.stringify({ model }));
+  } else {
+    localStorage.removeItem(AI_CONFIG_STORAGE_KEY);
+  }
+};
+
+export const loadAIConfig = () => {
+  const model = readStoredModelOverride();
+  aiConfig = { ...DEFAULT_AI_CONFIG, model };
+};
+
+export const clearAIConfig = () => {
+  aiConfig = { ...DEFAULT_AI_CONFIG };
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem(AI_CONFIG_STORAGE_KEY);
+  }
+};
+
+export const getConfiguredModelOverride = (): string | undefined => {
+  const model = readStoredModelOverride();
+  return model || undefined;
 };
 
 function getUiLanguageLabel() {
@@ -140,7 +162,8 @@ function getUserFacingOutputInstruction() {
 // 调用AI API (流式输出)
 async function callAI(prompt: string, onProgress?: (text: string) => void): Promise<string> {
   const apiUrl = AI_STREAM_URL;
-  
+  const modelOverride = getConfiguredModelOverride();
+
   const messages = [
     {
       role: 'system',
@@ -196,7 +219,7 @@ async function callAI(prompt: string, onProgress?: (text: string) => void): Prom
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ messages }),
+      body: JSON.stringify(modelOverride ? { messages, model: modelOverride } : { messages }),
       signal: controller.signal,
     });
     clearTimeout(timeoutId);
