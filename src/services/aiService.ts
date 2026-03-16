@@ -46,7 +46,7 @@ export interface GeneratedFillBlank {
 }
 
 export interface AIConfig {
-  provider: 'openai' | 'deepseek' | 'zhipu' | 'modelscope' | 'custom';
+  provider: 'gmn' | 'openai' | 'deepseek' | 'zhipu' | 'modelscope' | 'custom';
   apiKey: string;
   baseUrl?: string;
   model?: string;
@@ -64,6 +64,7 @@ const AI_STREAM_URL = import.meta.env.DEV
 
 // AI服务商列表
 export const PROVIDERS = [
+  { id: 'gmn', name: 'GMN GPT', baseUrl: 'https://gmn.chuangzuoli.com/v1/responses', model: 'gpt-5.4' },
   { id: 'modelscope', name: 'ModelScope 魔搭', baseUrl: 'https://api-inference.modelscope.cn/v1', model: 'deepseek-ai/DeepSeek-V3.2' },
   { id: 'deepseek', name: 'DeepSeek', baseUrl: 'https://api.deepseek.com/v1', model: 'deepseek-chat' },
   { id: 'openai', name: 'OpenAI', baseUrl: 'https://api.openai.com/v1', model: 'gpt-3.5-turbo' },
@@ -71,13 +72,12 @@ export const PROVIDERS = [
   { id: 'custom', name: '自定义', baseUrl: '', model: '' },
 ];
 
-// 默认配置 - 使用ModelScope魔搭平台
+// 默认配置 - 使用服务端默认 GMN Responses provider
 let aiConfig: AIConfig = {
-  provider: 'modelscope',
+  provider: 'gmn',
   apiKey: '',
-  baseUrl: 'https://api-inference.modelscope.cn/v1',
-  model: 'deepseek-ai/DeepSeek-V3.2'
-  // 备用模型: 'deepseek-ai/DeepSeek-V3.2'
+  baseUrl: 'https://gmn.chuangzuoli.com/v1/responses',
+  model: 'gpt-5.4'
 };
 
 // 获取/设置AI配置

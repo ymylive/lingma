@@ -24,10 +24,10 @@ def get_vps_config() -> Dict[str, str]:
 def get_ai_proxy_config() -> Dict[str, str]:
     return {
         "AI_API_KEY": read_required_env("LINGMA_AI_API_KEY"),
-        "AI_API_URL": os.getenv("LINGMA_AI_API_URL", "https://api.aabao.top/v1/chat/completions").strip()
-        or "https://api.aabao.top/v1/chat/completions",
-        "AI_MODEL": os.getenv("LINGMA_AI_MODEL", "deepseek-v3.2-exp-thinking").strip()
-        or "deepseek-v3.2-exp-thinking",
+        "AI_API_URL": os.getenv("LINGMA_AI_API_URL", "https://gmn.chuangzuoli.com/v1/responses").strip()
+        or "https://gmn.chuangzuoli.com/v1/responses",
+        "AI_MODEL": os.getenv("LINGMA_AI_MODEL", "gpt-5.4").strip()
+        or "gpt-5.4",
         "JUDGE_BASE_URL": os.getenv("LINGMA_JUDGE_BASE_URL", "http://127.0.0.1:3002").strip()
         or "http://127.0.0.1:3002",
         "JUDGE_INTERNAL_TOKEN": read_required_env("LINGMA_JUDGE_INTERNAL_TOKEN"),
