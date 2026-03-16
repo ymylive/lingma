@@ -14,39 +14,59 @@ interface TutorialPanelProps {
 
 export default function TutorialPanel({ title, sections }: TutorialPanelProps) {
   const [activeTab, setActiveTab] = useState(0);
-  const { t } = useI18n();
+  const { isEnglish, t } = useI18n();
 
   return (
     <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
       {/* 标题 */}
-      <div className="bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-4">
-        <h2 className="text-xl font-bold text-white flex items-center gap-2">
+      <div className="bg-gradient-to-r from-indigo-600 to-purple-600 px-4 py-4 sm:px-6">
+        <h2 className="flex flex-wrap items-center gap-2 text-lg font-bold text-white sm:text-xl">
           <span>📚</span> {t(title)} - {t('学习教程')}
         </h2>
       </div>
 
       {/* 标签页 */}
-      <div className="flex border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900">
-        {sections.map((section, i) => (
-          <button
-            key={i}
-            onClick={() => setActiveTab(i)}
-            className={`flex cursor-pointer items-center gap-2 px-4 py-3 text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/60 focus-visible:ring-inset ${
-              activeTab === i
-                ? 'text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-600 bg-white dark:bg-slate-800'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
-            }`}
-          >
-            <span>{section.icon}</span>
-            {t(section.title)}
-          </button>
-        ))}
+      <div className="border-b border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-900">
+        <div className="overflow-x-auto px-2 sm:px-0">
+          <div className="flex min-w-max">
+            {sections.map((section, i) => (
+              <button
+                key={i}
+                onClick={() => setActiveTab(i)}
+                className={`flex min-h-[44px] items-center gap-2 whitespace-nowrap px-4 py-3 text-[15px] font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/60 focus-visible:ring-inset sm:text-sm ${activeTab === i
+                  ? 'border-b-2 border-indigo-600 bg-white text-indigo-600 dark:bg-slate-800 dark:text-indigo-400'
+                  : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200'
+                }`}
+              >
+                <span>{section.icon}</span>
+                {t(section.title)}
+              </button>
+            ))}
+          </div>
+        </div>
+        {sections.length > 2 && (
+          <div className="px-4 pb-3 text-[11px] text-slate-500 dark:text-slate-400 sm:hidden">
+            {isEnglish ? 'Swipe sideways to switch sections.' : t('左右滑动切换章节')}
+          </div>
+        )}
       </div>
 
       {/* 内容 */}
-      <div className="p-6">
+      <div className="p-4 sm:p-6">
         {sections[activeTab]?.content}
       </div>
+    </div>
+  );
+}
+
+function MobileScrollHint() {
+  const { isEnglish, t } = useI18n();
+
+  return (
+    <div className="sm:hidden">
+      <span className="inline-flex rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-medium text-slate-500 dark:bg-slate-700 dark:text-slate-300">
+        {isEnglish ? 'Swipe sideways for full content.' : t('左右滑动查看完整内容')}
+      </span>
     </div>
   );
 }
@@ -65,9 +85,9 @@ export function KnowledgeCard({ title, children, color = 'indigo' }: {
   };
   
   return (
-    <div className={`rounded-lg border p-4 ${colors[color]}`}>
-      <h4 className="font-bold text-slate-800 dark:text-slate-200 mb-2">{title}</h4>
-      <div className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">{children}</div>
+    <div className={`rounded-xl border p-4 sm:p-5 ${colors[color]}`}>
+      <h4 className="mb-2 text-base font-bold text-slate-800 dark:text-slate-200">{title}</h4>
+      <div className="text-[15px] leading-7 text-slate-700 dark:text-slate-300 sm:text-sm">{children}</div>
     </div>
   );
 }
@@ -75,15 +95,15 @@ export function KnowledgeCard({ title, children, color = 'indigo' }: {
 // 工具组件：步骤列表
 export function StepList({ steps }: { steps: { title: string; desc: string }[] }) {
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       {steps.map((step, i) => (
         <div key={i} className="flex gap-3">
-          <div className="w-7 h-7 rounded-full bg-indigo-600 text-white flex items-center justify-center text-sm font-bold flex-shrink-0">
+          <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-indigo-600 text-sm font-bold text-white">
             {i + 1}
           </div>
           <div>
-            <div className="font-medium text-slate-800 dark:text-slate-200">{step.title}</div>
-            <div className="text-sm text-slate-600 dark:text-slate-400">{step.desc}</div>
+            <div className="text-base font-medium text-slate-800 dark:text-slate-200">{step.title}</div>
+            <div className="text-[15px] leading-6 text-slate-600 dark:text-slate-400 sm:text-sm">{step.desc}</div>
           </div>
         </div>
       ))}
@@ -98,35 +118,43 @@ export function CompareTable({ headers, rows }: {
 }) {
   const { t } = useI18n();
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="bg-slate-100 dark:bg-slate-700">
-            {headers.map((h, i) => (
-              <th key={i} className="px-4 py-2 text-left font-medium text-slate-700 dark:text-slate-200">{t(h)}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row, i) => (
-            <tr key={i} className="border-t border-slate-200 dark:border-slate-600">
-              {row.map((cell, j) => (
-                <td key={j} className="px-4 py-2 text-slate-600 dark:text-slate-300">{cell}</td>
+    <div className="space-y-2">
+      <MobileScrollHint />
+      <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-700">
+        <table className="min-w-[540px] w-full text-[13px] sm:text-sm">
+          <thead>
+            <tr className="bg-slate-100 dark:bg-slate-700">
+              {headers.map((h, i) => (
+                <th key={i} className="px-3 py-2.5 text-left font-medium text-slate-700 dark:text-slate-200 sm:px-4">{t(h)}</th>
               ))}
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {rows.map((row, i) => (
+              <tr key={i} className="border-t border-slate-200 dark:border-slate-600">
+                {row.map((cell, j) => (
+                  <td key={j} className="px-3 py-2.5 align-top text-slate-600 dark:text-slate-300 sm:px-4">{cell}</td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
 
 // 工具组件：单语言代码示例
 export function CodeExample({ code, lang = 'cpp' }: { code: string; lang?: string }) {
+  useI18n();
+
   return (
-    <div className="bg-slate-800 rounded-lg p-4 overflow-x-auto">
-      <div className="text-xs text-slate-400 mb-2">{lang.toUpperCase()}</div>
-      <pre className="text-sm text-slate-300 font-mono whitespace-pre">{code}</pre>
+    <div className="space-y-2">
+      <MobileScrollHint />
+      <div className="overflow-x-auto rounded-xl bg-slate-800 p-3 sm:p-4">
+        <div className="mb-2 text-xs text-slate-400">{lang.toUpperCase()}</div>
+        <pre className="min-w-max whitespace-pre font-mono text-[13px] leading-6 text-slate-300 sm:text-sm">{code}</pre>
+      </div>
     </div>
   );
 }
@@ -140,27 +168,28 @@ export function MultiLangCode({ codes, title }: {
   const { t } = useI18n();
   const langNames = { cpp: 'C++', java: 'Java', python: 'Python' };
   const available = Object.keys(codes).filter(k => codes[k as keyof typeof codes]) as ('cpp' | 'java' | 'python')[];
-  
+
   return (
-    <div className="bg-slate-800 rounded-lg overflow-hidden">
-      <div className="flex items-center justify-between px-4 py-2 bg-slate-700/50">
-        {title && <span className="text-slate-300 text-sm font-medium">{t(title)}</span>}
-        <div className="flex gap-1">
-          {available.map(l => (
+    <div className="overflow-hidden rounded-xl bg-slate-800">
+      <div className="flex flex-col gap-3 bg-slate-700/50 px-3 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-4 sm:py-2">
+        {title && <span className="text-sm font-medium text-slate-300">{t(title)}</span>}
+        <div className="flex flex-wrap gap-1.5">
+          {available.map((l) => (
             <button
               key={l}
               onClick={() => setLang(l)}
-              className={`px-3 py-1 rounded text-xs font-medium transition-all ${
-                lang === l ? 'bg-indigo-600 text-white' : 'bg-slate-600 text-slate-300 hover:bg-slate-500'
-              }`}
+              className={`min-h-[40px] rounded-lg px-3 py-2 text-sm font-medium transition-all sm:py-1 sm:text-xs ${lang === l ? 'bg-indigo-600 text-white' : 'bg-slate-600 text-slate-300 hover:bg-slate-500'}`}
             >
               {langNames[l]}
             </button>
           ))}
         </div>
       </div>
-      <div className="p-4 overflow-x-auto">
-        <pre className="text-sm text-slate-300 font-mono whitespace-pre">{codes[lang]}</pre>
+      <div className="space-y-2 p-3 sm:p-4">
+        <MobileScrollHint />
+        <div className="overflow-x-auto">
+          <pre className="min-w-max whitespace-pre font-mono text-[13px] leading-6 text-slate-300 sm:text-sm">{codes[lang]}</pre>
+        </div>
       </div>
     </div>
   );
@@ -171,7 +200,7 @@ export function DemoLink({ to, text, icon = '🎬' }: { to: string; text: string
   return (
     <a
       href={to}
-      className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-lg text-sm font-medium hover:from-indigo-600 hover:to-purple-600 transition-all shadow-md"
+      className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-indigo-500 to-purple-500 px-4 py-3 text-sm font-medium text-white shadow-md transition-all hover:from-indigo-600 hover:to-purple-600 sm:justify-start sm:py-2"
     >
       <span>{icon}</span>
       {text}
@@ -185,8 +214,8 @@ export function DemoLink({ to, text, icon = '🎬' }: { to: string; text: string
 // 工具组件：图解说明（用于展示概念）
 export function Diagram({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-4">
-      <div className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-3 flex items-center gap-2">
+    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800 sm:p-5">
+      <div className="mb-3 flex items-center gap-2 text-[15px] font-medium text-slate-700 dark:text-slate-300 sm:text-sm">
         <span>📐</span> {title}
       </div>
       <div className="flex justify-center">{children}</div>
@@ -215,7 +244,7 @@ export function DifficultyBadge({ level }: { level: 'easy' | 'medium' | 'hard' }
     hard: { text: '⭐⭐⭐ 困难', color: 'bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-400' },
   };
   const c = config[level];
-  return <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${c.color}`}>{t(c.text)}</span>;
+  return <span className={`inline-block rounded px-2.5 py-1 text-[13px] font-medium ${c.color}`}>{t(c.text)}</span>;
 }
 
 // 工具组件：提示框
@@ -232,11 +261,11 @@ export function TipBox({ type, children }: {
   const s = styles[type];
   
   return (
-    <div className={`${s.bg} ${s.border} border rounded-lg p-4`}>
-      <div className="flex items-center gap-2 font-medium text-slate-800 dark:text-slate-200 mb-1">
+    <div className={`${s.bg} ${s.border} rounded-xl border p-4 sm:p-5`}>
+      <div className="mb-1 flex items-center gap-2 text-base font-medium text-slate-800 dark:text-slate-200">
         <span>{s.icon}</span> {t(s.title)}
       </div>
-      <div className="text-sm text-slate-700 dark:text-slate-300">{children}</div>
+      <div className="text-[15px] leading-7 text-slate-700 dark:text-slate-300 sm:text-sm">{children}</div>
     </div>
   );
 }
@@ -259,15 +288,14 @@ export function QuizQuestion({ question, options, answer, explanation }: {
   const { t } = useI18n();
 
   return (
-    <div className="border border-slate-200 dark:border-slate-700 rounded-lg p-4">
-      <div className="font-medium text-slate-800 dark:text-slate-200 mb-3">{question}</div>
-      <div className="space-y-2 mb-3">
+    <div className="rounded-xl border border-slate-200 p-4 dark:border-slate-700 sm:p-5">
+      <div className="mb-3 text-base font-medium text-slate-800 dark:text-slate-200">{question}</div>
+      <div className="mb-3 space-y-2">
         {options.map((opt, i) => (
           <button
             key={i}
             onClick={() => { setSelected(i); setShowAnswer(true); }}
-            className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-all ${
-              showAnswer
+            className={`w-full rounded-lg px-4 py-3 text-left text-[15px] transition-all sm:text-sm ${showAnswer
                 ? i === answer
                   ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700'
                   : i === selected
@@ -276,16 +304,16 @@ export function QuizQuestion({ question, options, answer, explanation }: {
                 : selected === i
                   ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-800 dark:text-indigo-300 border border-indigo-300 dark:border-indigo-700'
                   : 'bg-slate-50 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-600'
-            }`}
+              }`}
           >
             {String.fromCharCode(65 + i)}. {opt}
           </button>
         ))}
       </div>
       {showAnswer && (
-        <div className="bg-slate-50 dark:bg-slate-700 rounded-lg p-3 text-sm">
+        <div className="rounded-lg bg-slate-50 p-3 text-[15px] dark:bg-slate-700 sm:text-sm">
           <span className="font-medium text-emerald-600 dark:text-emerald-400">{t('正确答案')}: {String.fromCharCode(65 + answer)}</span>
-          <p className="text-slate-600 dark:text-slate-300 mt-1">{explanation}</p>
+          <p className="mt-1 text-slate-600 dark:text-slate-300">{explanation}</p>
         </div>
       )}
     </div>
