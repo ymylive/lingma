@@ -682,7 +682,7 @@ def serialize_vibe_profile_row(row: Optional[sqlite3.Row], fallback_track: str, 
     }
 
 
-def build_vibe_generation_prompt(track: str, difficulty: str, profile: Dict[str, Any], user: sqlite3.Row) -> Dict[str, Any]:
+def build_vibe_generation_prompt(track: str, difficulty: str, profile: Dict[str, Any], user: sqlite3.Row, model: str) -> Dict[str, Any]:
     profile_summary = (
         f"recommendedTrack={profile['recommendedTrack']}, "
         f"recommendedDifficulty={profile['recommendedDifficulty']}, "
@@ -702,7 +702,7 @@ def build_vibe_generation_prompt(track: str, difficulty: str, profile: Dict[str,
         "Make the exercise realistic, professional, and bounded."
     )
     return {
-        "model": AI_MODEL,
+        "model": model,
         "input": [
             {
                 "role": "system",
@@ -717,7 +717,7 @@ def build_vibe_generation_prompt(track: str, difficulty: str, profile: Dict[str,
     }
 
 
-def build_vibe_evaluation_prompt(challenge: Dict[str, Any], prompt_text: str) -> Dict[str, Any]:
+def build_vibe_evaluation_prompt(challenge: Dict[str, Any], prompt_text: str, model: str) -> Dict[str, Any]:
     instructions = (
         "You are evaluating the quality of a user's software-engineering prompt only. "
         "Do not score hypothetical code quality. Return JSON only with keys: "
@@ -740,7 +740,7 @@ def build_vibe_evaluation_prompt(challenge: Dict[str, Any], prompt_text: str) ->
         ensure_ascii=False,
     )
     return {
-        "model": AI_MODEL,
+        "model": model,
         "input": [
             {
                 "role": "system",
@@ -1330,6 +1330,11 @@ def normalize_token_value(value: Any) -> int:
         raise HTTPException(status_code=400, detail="invalid max_tokens") from exc
 
 
+def resolve_requested_model(value: Any) -> str:
+    requested = str(value or "").strip()
+    return requested or AI_MODEL
+
+
 def build_responses_payload(body: Dict[str, Any], stream: Optional[bool] = None) -> Dict[str, Any]:
     payload = dict(body or {})
     payload["model"] = str(payload.get("model") or AI_MODEL).strip() or AI_MODEL
@@ -1852,6 +1857,7 @@ async def vibe_coding_generate(request: Request):
     body = await request.json()
     fallback_track = "frontend"
     fallback_difficulty = default_vibe_difficulty_for_skill(user["skill_level"])
+    model_name = resolve_requested_model(body.get("model"))
 
     with db_lock:
         conn = get_db_connection(AUTH_DB_PATH)
@@ -1867,7 +1873,7 @@ async def vibe_coding_generate(request: Request):
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
-    payload = build_vibe_generation_prompt(track, difficulty, profile, user)
+    payload = build_vibe_generation_prompt(track, difficulty, profile, user, model_name)
     data = await run_in_threadpool(read_upstream_responses_json, payload)
     normalized = normalize_generated_challenge_payload(parse_upstream_json_object(data), track, difficulty, user["id"])
 
@@ -1889,6 +1895,7 @@ async def vibe_coding_evaluate(request: Request):
         raise HTTPException(status_code=500, detail="AI_API_KEY is not configured")
 
     body = await request.json()
+    model_name = resolve_requested_model(body.get("model"))
     challenge_id = str(body.get("challenge_id") or "").strip()
     if not challenge_id:
         raise HTTPException(status_code=400, detail="challenge_id is required")
@@ -1908,7 +1915,7 @@ async def vibe_coding_evaluate(request: Request):
         raise HTTPException(status_code=404, detail="challenge not found")
 
     challenge = serialize_vibe_challenge_row(challenge_row)
-    payload = build_vibe_evaluation_prompt(challenge, prompt_text)
+    payload = build_vibe_evaluation_prompt(challenge, prompt_text, model_name)
     data = await run_in_threadpool(read_upstream_responses_json, payload)
     evaluation = normalize_evaluation_payload(parse_upstream_json_object(data), challenge_id)
     attempt_id = f"attempt_{secrets.token_urlsafe(12)}"

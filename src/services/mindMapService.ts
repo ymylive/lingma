@@ -1,4 +1,5 @@
 import { isEnglishRuntimeLocale, localizeRuntimeText, pickRuntimeText } from '../utils/runtimeLocale';
+import { getConfiguredModelOverride } from './aiService';
 
 const DEFAULT_PROXY_ORIGIN =
   typeof window !== 'undefined' && window.location ? window.location.origin : 'https://lingma.cornna.xyz';
@@ -167,11 +168,12 @@ const sanitizeMindMapNodes = (
 };
 
 async function callAI(messages: { role: 'system' | 'user'; content: string }[]) {
+  const modelOverride = getConfiguredModelOverride();
   const response = await fetch(AI_PROXY_URL, {
     method: 'POST',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ messages }),
+    body: JSON.stringify(modelOverride ? { messages, model: modelOverride } : { messages }),
   });
 
   if (!response.ok) {
