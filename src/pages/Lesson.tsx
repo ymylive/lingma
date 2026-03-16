@@ -1,6 +1,7 @@
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { useUser } from '../contexts/UserContext';
+import { useI18n } from '../contexts/I18nContext';
 import { getAdjacentTopics, curriculum } from '../data/curriculum';
 import { allExercises } from '../data/exercises';
 import { 
@@ -2730,6 +2731,7 @@ export default function Lesson() {
   const { '*': path } = useParams();
   const lesson = path ? lessons[path] : null;
   const { recordLessonVisit, isLessonCompleted, isLoggedIn } = useUser();
+  const { t } = useI18n();
   const currentPathKey = path ?? '';
   const [openSidebarPath, setOpenSidebarPath] = useState<string | null>(null);
   const navigate = useNavigate();
@@ -2961,7 +2963,7 @@ export default function Lesson() {
             {relatedExercises.length > 0 && (
               <div className="mt-12">
                 <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
-                  <span>📝</span> 课后练习
+                  <span>📝</span> {t('课后练习')}
                 </h3>
                 <div className="grid sm:grid-cols-2 gap-4">
                   {relatedExercises.map(ex => (
@@ -2972,12 +2974,12 @@ export default function Lesson() {
                     >
                       <div className="flex justify-between items-start mb-2">
                         <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400 bg-white dark:bg-slate-800 px-2 py-1 rounded">
-                          {ex.type === 'coding' ? '编程题' : '填空题'}
+                          {t(ex.type === 'coding' ? '编程题' : '填空题')}
                         </span>
-                        <span className="text-xs text-slate-500 dark:text-slate-400">简单</span>
+                        <span className="text-xs text-slate-500 dark:text-slate-400">{t('简单')}</span>
                       </div>
                       <div className="font-medium text-slate-900 dark:text-white group-hover:text-indigo-700 dark:group-hover:text-indigo-300">
-                        {ex.title}
+                        {t(ex.title)}
                       </div>
                     </div>
                   ))}

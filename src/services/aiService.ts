@@ -1,6 +1,6 @@
 // AI出题服务 - 支持多种AI API
 
-import { isEnglishRuntimeLocale, pickRuntimeText } from '../utils/runtimeLocale';
+import { isEnglishRuntimeLocale, localizeRuntimeText, pickRuntimeText } from '../utils/runtimeLocale';
 
 export interface GeneratedExercise {
   title: string;
@@ -159,15 +159,59 @@ function getUserFacingOutputInstruction() {
     : '所有用户可见的 JSON 字段都必须使用中文，包括标题、题面、提示、解析和测试用例说明。';
 }
 
-// 调用AI API (流式输出)
-async function callAI(prompt: string, onProgress?: (text: string) => void): Promise<string> {
-  const apiUrl = AI_STREAM_URL;
-  const modelOverride = getConfiguredModelOverride();
+function localizePromptValue(value: string) {
+  return localizeRuntimeText(value, value);
+}
 
-  const messages = [
-    {
-      role: 'system',
-      content: `你是一个专业的ACM/OJ竞赛题目出题专家，严格遵循国际编程竞赛标准格式生成高质量编程练习题。
+function buildExerciseSystemPrompt() {
+  if (isEnglishRuntimeLocale()) {
+    return `You are an expert ACM/OJ problem designer. Generate high-quality programming exercises that strictly follow standard competitive-programming formatting.
+
+[ACM/OJ standards - follow strictly]
+
+1. Problem statement
+- Keep the scenario concise and clear
+- State the task accurately and without ambiguity
+- Explain input format line by line, including data type and constraints
+- Explain output format precisely, including formatting and precision when needed
+- State the full data range and edge conditions
+
+2. Input format
+- Usually start with T or n when appropriate
+- Arrays: first line n, second line the n space-separated values
+- Multiple parameters: one parameter per line when helpful
+- Strings: plain input without quotes
+- Matrices: first line m n, followed by m rows
+- Linked lists: first line n, second line node values
+- Binary trees: level-order traversal, use -1 or N for null
+
+3. Output format
+- Output only the required result
+- Separate multiple values with spaces
+- Print array results directly without []
+- Boolean values should be "true"/"false" or "Yes"/"No"
+- Respect required decimal precision
+
+4. Code templates
+- Must be complete and compilable
+- Include required imports / headers
+- Use standard input and standard output
+- C++: cin/cout, Java: Scanner/System.out, Python: input()/print()
+- Main entry should be standard (main / Main)
+
+5. Test cases
+- Provide at least 3 test cases
+- Include normal, boundary, and special cases
+- input and expectedOutput must be plain text
+
+6. JSON output
+- Return JSON only, with no markdown or extra explanation
+
+7. Output language
+- ${getUserFacingOutputInstruction()}`;
+  }
+
+  return `你是一个专业的ACM/OJ竞赛题目出题专家，严格遵循国际编程竞赛标准格式生成高质量编程练习题。
 
 【ACM/OJ标准规范 - 必须严格遵守】
 
@@ -206,7 +250,278 @@ async function callAI(prompt: string, onProgress?: (text: string) => void): Prom
 - 包含：基本功能测试、边界条件测试、特殊情况测试
 - input和expectedOutput必须是纯文本格式
 
-六、JSON输出：严格按照要求格式，不包含任何其他文字说明\n\n七、输出语言要求：${getUserFacingOutputInstruction()}`
+六、JSON输出：严格按照要求格式，不包含任何其他文字说明
+
+七、输出语言要求：${getUserFacingOutputInstruction()}`;
+}
+
+function buildCodingPrompt(
+  topic: string,
+  difficulty: 'easy' | 'medium' | 'hard',
+  dataStructure: string,
+  profileHint?: string,
+) {
+  const difficultyText = getDifficultyText(difficulty);
+  const promptTopic = localizePromptValue(topic);
+  const promptDataStructure = localizePromptValue(dataStructure);
+  const profileSection = profileHint
+    ? isEnglishRuntimeLocale()
+      ? `\n[User profile constraints]\n${profileHint}\n- Match the abstraction level, sample complexity, hint strength, and boundary cases to this learner profile.\n`
+      : `\n【用户画像约束】\n${profileHint}\n- 请根据这组画像控制题目抽象层级、样例复杂度、提示力度和边界条件强度。\n`
+    : '';
+
+  if (isEnglishRuntimeLocale()) {
+    return `Generate one ${difficultyText} ACM/OJ problem about "${promptDataStructure} - ${promptTopic}".
+
+[Problem requirements]
+- Knowledge area: ${promptDataStructure}
+- Topic: ${promptTopic}
+- Difficulty: ${difficultyText} (${getDifficultyGuidance(difficulty)})
+- Output language: ${getUiLanguageLabel()} (${getUserFacingOutputInstruction()})
+${profileSection}
+
+[ACM/OJ format - must follow]
+
+1. description must include all of these sections:
+   [Problem Description]
+   [Input Format]
+   [Output Format]
+   [Data Range]
+   [Sample Explanation] (optional)
+
+2. templates:
+   - Must be complete compilable main-program templates
+   - Must include standard input parsing
+   - Use // TODO: to mark the core algorithm area students need to implement
+   - Keep standard-output scaffolding
+
+3. solutions:
+   - Full accepted solutions for OJ submission
+   - Correct parsing and output formatting
+   - Complexity must satisfy the declared constraints
+
+4. testCases (at least 3):
+   - input: plain text, use \\n for new lines
+   - expectedOutput: exact expected text
+   - Must cover normal, boundary, and special cases
+
+[Return JSON only]
+{
+  "title": "A short title related to ${promptTopic}",
+  "description": "[Problem Description]\\nDescribe the task clearly...\\n\\n[Input Format]\\nLine 1: integer n, representing ...\\nLine 2: n integers a1, a2, ..., an\\n\\n[Output Format]\\nPrint one line representing ...\\n\\n[Data Range]\\n- 1 ≤ n ≤ 10^5\\n- -10^9 ≤ ai ≤ 10^9",
+  "difficulty": "${difficulty}",
+  "templates": {
+    "c": "#include <stdio.h>\\n\\nint main() {\\n    int n;\\n    scanf(\\"%d\\", &n);\\n    int arr[100005];\\n    for (int i = 0; i < n; i++) scanf(\\"%d\\", &arr[i]);\\n\\n    // TODO: Implement the algorithm\\n\\n    printf(\\"%d\\\\n\\", result);\\n    return 0;\\n}",
+    "cpp": "#include <iostream>\\n#include <vector>\\nusing namespace std;\\n\\nint main() {\\n    int n;\\n    cin >> n;\\n    vector<int> arr(n);\\n    for (int i = 0; i < n; i++) cin >> arr[i];\\n\\n    // TODO: Implement the algorithm\\n\\n    cout << result << endl;\\n    return 0;\\n}",
+    "java": "import java.util.*;\\n\\npublic class Main {\\n    public static void main(String[] args) {\\n        Scanner sc = new Scanner(System.in);\\n        int n = sc.nextInt();\\n        int[] arr = new int[n];\\n        for (int i = 0; i < n; i++) arr[i] = sc.nextInt();\\n\\n        // TODO: Implement the algorithm\\n\\n        System.out.println(result);\\n        sc.close();\\n    }\\n}",
+    "python": "n = int(input())\\narr = list(map(int, input().split()))\\n\\n# TODO: Implement the algorithm\\n\\nprint(result)"
+  },
+  "solutions": {
+    "c": "A complete accepted C solution",
+    "cpp": "A complete accepted C++ solution",
+    "java": "A complete accepted Java solution",
+    "python": "A complete accepted Python solution"
+  },
+  "testCases": [
+    {"input": "5\\n1 2 3 4 5", "expectedOutput": "15", "description": "Basic functionality"},
+    {"input": "1\\n100", "expectedOutput": "100", "description": "Boundary case: single element"},
+    {"input": "3\\n-1 0 1", "expectedOutput": "0", "description": "Special case: includes negative values and zero"}
+  ],
+  "hints": ["Hint 1: identify the core pattern", "Hint 2: consider the right data structure or algorithm"],
+  "explanation": "[Solution Walkthrough]\\nExplain the approach...\\n\\n[Algorithm Design]\\n1. ...\\n2. ...\\n\\n[Time Complexity] O(n)\\n[Space Complexity] O(1)"
+}`;
+  }
+
+  return `请生成一道严格符合ACM/OJ竞赛标准的"${promptDataStructure} - ${promptTopic}"${difficultyText}难度编程题。
+
+【题目要求】
+- 知识点：${promptDataStructure}
+- 主题：${promptTopic}  
+- 难度：${difficultyText}（${getDifficultyGuidance(difficulty)}）
+- 输出语言：${getUiLanguageLabel()}（${getUserFacingOutputInstruction()}）
+${profileSection}
+
+【ACM/OJ标准格式 - 必须严格遵守】
+
+1. description格式（必须包含以下所有段落，使用【】标记）：
+   【题目描述】清晰描述问题背景、任务目标、约束条件
+   【输入格式】每行输入的精确含义，数据类型
+   【输出格式】输出的精确格式要求
+   【数据范围】所有变量的取值范围，使用数学符号如 1 ≤ n ≤ 10^5
+   【样例说明】（可选）解释样例的推导过程
+
+2. templates代码模板（OJ标准格式）：
+   - 必须是完整可编译的main函数程序
+   - 包含标准输入读取代码（scanf/cin/Scanner/input）
+   - 用 // TODO: 标记学生需要填写的核心算法位置
+   - 包含标准输出代码框架
+
+3. solutions完整答案：
+   - 可直接提交到OJ并AC的完整代码
+   - 包含完整的输入解析和输出格式化
+   - 算法正确，效率满足数据范围要求
+
+4. testCases测试用例（至少3个）：
+   - input: 纯文本，多行用\\n分隔
+   - expectedOutput: 精确匹配的期望输出
+   - 必须包含：正常用例、边界用例（最小/最大值）、特殊用例
+
+【返回JSON格式】只返回JSON，不要其他文字：
+{
+  "title": "${promptTopic}相关的简短标题",
+  "description": "【题目描述】\\n具体问题描述...\\n\\n【输入格式】\\n第一行：整数n，表示...（1 ≤ n ≤ ...）\\n第二行：n个整数a1,a2,...,an\\n\\n【输出格式】\\n输出一行，表示...\\n\\n【数据范围】\\n- 1 ≤ n ≤ 10^5\\n- -10^9 ≤ ai ≤ 10^9",
+  "difficulty": "${difficulty}",
+  "templates": {
+    "c": "#include <stdio.h>\\n\\nint main() {\\n    int n;\\n    scanf(\\"%d\\", &n);\\n    int arr[100005];\\n    for(int i = 0; i < n; i++) scanf(\\"%d\\", &arr[i]);\\n    \\n    // TODO: 实现算法\\n    \\n    printf(\\"%d\\\\n\\", result);\\n    return 0;\\n}",
+    "cpp": "#include <iostream>\\n#include <vector>\\nusing namespace std;\\n\\nint main() {\\n    int n;\\n    cin >> n;\\n    vector<int> arr(n);\\n    for(int i = 0; i < n; i++) cin >> arr[i];\\n    \\n    // TODO: 实现算法\\n    \\n    cout << result << endl;\\n    return 0;\\n}",
+    "java": "import java.util.*;\\n\\npublic class Main {\\n    public static void main(String[] args) {\\n        Scanner sc = new Scanner(System.in);\\n        int n = sc.nextInt();\\n        int[] arr = new int[n];\\n        for(int i = 0; i < n; i++) arr[i] = sc.nextInt();\\n        \\n        // TODO: 实现算法\\n        \\n        System.out.println(result);\\n        sc.close();\\n    }\\n}",
+    "python": "n = int(input())\\narr = list(map(int, input().split()))\\n\\n# TODO: 实现算法\\n\\nprint(result)"
+  },
+  "solutions": {
+    "c": "完整可AC的C代码",
+    "cpp": "完整可AC的C++代码",
+    "java": "完整可AC的Java代码",
+    "python": "完整可AC的Python代码"
+  },
+  "testCases": [
+    {"input": "5\\n1 2 3 4 5", "expectedOutput": "15", "description": "基本功能测试"},
+    {"input": "1\\n100", "expectedOutput": "100", "description": "边界：单元素"},
+    {"input": "3\\n-1 0 1", "expectedOutput": "0", "description": "特殊：含负数和零"}
+  ],
+  "hints": ["提示1：分析问题本质", "提示2：考虑使用的数据结构或算法"],
+  "explanation": "【解题思路】\\n分析...\\n\\n【算法设计】\\n1. ...\\n2. ...\\n\\n【时间复杂度】O(n)\\n【空间复杂度】O(1)"
+}`;
+}
+
+function buildFillBlankPrompt(
+  topic: string,
+  difficulty: 'easy' | 'medium' | 'hard',
+  dataStructure: string,
+  profileHint?: string,
+) {
+  const difficultyText = getDifficultyText(difficulty);
+  const promptTopic = localizePromptValue(topic);
+  const promptDataStructure = localizePromptValue(dataStructure);
+  const profileSection = profileHint
+    ? isEnglishRuntimeLocale()
+      ? `\n[User profile constraints]\n${profileHint}\n- Match the number of blanks, function length, hint strength, and boundary conditions to this learner profile.\n`
+      : `\n【用户画像约束】\n${profileHint}\n- 请让待填空函数数量、函数体长度、提示强度和边界条件与该用户画像匹配。\n`
+    : '';
+
+  if (isEnglishRuntimeLocale()) {
+    return `Generate one ${difficultyText} function-implementation fill-in-the-blank exercise about "${promptDataStructure} - ${promptTopic}".
+${profileSection}
+
+[Format requirements]
+This is an exam-style programming fill-in exercise:
+- Provide a complete program scaffold (structs/classes, helper functions, main, etc.)
+- Students should fill in entire function bodies, not just a single expression
+- Mark each missing function body with ___FUNC1___, ___FUNC2___, etc.
+- Each blank should require about 3-10 lines of code
+
+[Example scaffold]
+#include <stdio.h>
+struct Node {
+    int data;
+    struct Node* next;
+};
+// Function 1: create a node
+struct Node* createNode(int val) {
+___FUNC1___
+}
+// Function 2: insert a node
+void insert(struct Node** head, int val) {
+___FUNC2___
+}
+int main() {
+    // main function is already implemented
+}
+
+[Return JSON only]
+{
+  "title": "A short title, for example: Linked List Basics",
+  "description": "Complete the marked function implementations in the program below.",
+  "difficulty": "${difficulty}",
+  "codeTemplate": {
+    "c": "A complete C program with function bodies marked by ___FUNC1___ and similar placeholders"
+  },
+  "blanks": [
+    {"id": "FUNC1", "answer": "Complete multi-line function body", "hint": "Hint about what this function should do"},
+    {"id": "FUNC2", "answer": "Complete multi-line function body", "hint": "Hint about what this function should do"}
+  ],
+  "explanation": "Explain how each function should be implemented."
+}
+
+[Important rules]
+1. There must be 2-4 blanks.
+2. Each answer must be a complete function body, possibly multi-line.
+3. The scaffold must be fully compilable after the blanks are filled.
+4. Use \\n for line breaks in JSON strings.
+5. Return JSON only, with no extra explanation.
+6. All user-facing fields must be written in ${getUiLanguageLabel()}.`;
+  }
+
+  return `生成一道关于"${promptDataStructure} - ${promptTopic}"的${difficultyText}难度【函数实现填空题】。
+${profileSection}
+
+【题目格式要求】
+这是一道需要补全多个函数体的填空题，类似考试题：
+- 给出完整的程序框架（包含结构体定义、main函数等）
+- 需要学生填写的是【整个函数的实现代码】，不是单个表达式
+- 每个需要填写的函数用 ___FUNC1___ ___FUNC2___ 等标记
+- 每个空需要填写3-10行代码
+
+【示例格式】
+#include <stdio.h>
+struct Node {
+    int data;
+    struct Node* next;
+};
+// 函数1：创建节点
+struct Node* createNode(int val) {
+___FUNC1___
+}
+// 函数2：插入节点
+void insert(struct Node** head, int val) {
+___FUNC2___
+}
+int main() {
+    // main函数已实现
+}
+
+【JSON格式返回】
+{
+  "title": "简短标题（如：单链表基本操作）",
+  "description": "完成以下程序中标记的函数实现",
+  "difficulty": "${difficulty}",
+  "codeTemplate": {
+    "c": "完整C语言程序，函数体用___FUNC1___等标记"
+  },
+  "blanks": [
+    {"id": "FUNC1", "answer": "完整的函数实现代码（多行）", "hint": "函数功能提示"},
+    {"id": "FUNC2", "answer": "完整的函数实现代码（多行）", "hint": "函数功能提示"}
+  ],
+  "explanation": "解释每个函数的实现思路"
+}
+
+【重要规则】
+1. 必须有2-4个需要填写的函数
+2. 每个函数答案是完整的函数体代码（多行）
+3. 给出的代码框架必须完整可编译（填空后）
+4. 代码换行用\\n表示
+5. 只返回JSON，不要其他文字
+6. 用户可见字段必须使用 ${getUiLanguageLabel()}`;
+}
+
+// 调用AI API (流式输出)
+async function callAI(prompt: string, onProgress?: (text: string) => void): Promise<string> {
+  const apiUrl = AI_STREAM_URL;
+  const modelOverride = getConfiguredModelOverride();
+
+  const messages = [
+    {
+      role: 'system',
+      content: buildExerciseSystemPrompt(),
     },
     { role: 'user', content: prompt }
   ];
@@ -306,145 +621,32 @@ async function callAI(prompt: string, onProgress?: (text: string) => void): Prom
 export async function generateCodingExercise(
   topic: string,
   difficulty: 'easy' | 'medium' | 'hard' = 'medium',
-  dataStructure: string = '链表',
+  dataStructure: string = pickRuntimeText('链表', 'Linked List'),
   onProgress?: (text: string) => void,
   profileHint?: string
 ): Promise<GeneratedExercise> {
-  const difficultyText = getDifficultyText(difficulty);
-  const profileSection = profileHint
-    ? `\n【用户画像约束】\n${profileHint}\n- 请根据这组画像控制题目抽象层级、样例复杂度、提示力度和边界条件强度。\n`
-    : '';
-  const prompt = `请生成一道严格符合ACM/OJ竞赛标准的"${dataStructure} - ${topic}"${difficultyText}难度编程题。
-
-【题目要求】
-- 知识点：${dataStructure}
-- 主题：${topic}  
-- 难度：${difficultyText}（${getDifficultyGuidance(difficulty)}）\n- 输出语言：${getUiLanguageLabel()}（${getUserFacingOutputInstruction()}）
-${profileSection}
-
-【ACM/OJ标准格式 - 必须严格遵守】
-
-1. description格式（必须包含以下所有段落，使用【】标记）：
-   【题目描述】清晰描述问题背景、任务目标、约束条件
-   【输入格式】每行输入的精确含义，数据类型
-   【输出格式】输出的精确格式要求
-   【数据范围】所有变量的取值范围，使用数学符号如 1 ≤ n ≤ 10^5
-   【样例说明】（可选）解释样例的推导过程
-
-2. templates代码模板（OJ标准格式）：
-   - 必须是完整可编译的main函数程序
-   - 包含标准输入读取代码（scanf/cin/Scanner/input）
-   - 用 // TODO: 标记学生需要填写的核心算法位置
-   - 包含标准输出代码框架
-
-3. solutions完整答案：
-   - 可直接提交到OJ并AC的完整代码
-   - 包含完整的输入解析和输出格式化
-   - 算法正确，效率满足数据范围要求
-
-4. testCases测试用例（至少3个）：
-   - input: 纯文本，多行用\\n分隔
-   - expectedOutput: 精确匹配的期望输出
-   - 必须包含：正常用例、边界用例（最小/最大值）、特殊用例
-
-【返回JSON格式】只返回JSON，不要其他文字：
-{
-  "title": "${topic}相关的简短标题",
-  "description": "【题目描述】\\n具体问题描述...\\n\\n【输入格式】\\n第一行：整数n，表示...（1 ≤ n ≤ ...）\\n第二行：n个整数a1,a2,...,an\\n\\n【输出格式】\\n输出一行，表示...\\n\\n【数据范围】\\n- 1 ≤ n ≤ 10^5\\n- -10^9 ≤ ai ≤ 10^9",
-  "difficulty": "${difficulty}",
-  "templates": {
-    "c": "#include <stdio.h>\\n\\nint main() {\\n    int n;\\n    scanf(\\"%d\\", &n);\\n    int arr[100005];\\n    for(int i = 0; i < n; i++) scanf(\\"%d\\", &arr[i]);\\n    \\n    // TODO: 实现算法\\n    \\n    printf(\\"%d\\\\n\\\", result);\\n    return 0;\\n}",
-    "cpp": "#include <iostream>\\n#include <vector>\\nusing namespace std;\\n\\nint main() {\\n    int n;\\n    cin >> n;\\n    vector<int> arr(n);\\n    for(int i = 0; i < n; i++) cin >> arr[i];\\n    \\n    // TODO: 实现算法\\n    \\n    cout << result << endl;\\n    return 0;\\n}",
-    "java": "import java.util.*;\\n\\npublic class Main {\\n    public static void main(String[] args) {\\n        Scanner sc = new Scanner(System.in);\\n        int n = sc.nextInt();\\n        int[] arr = new int[n];\\n        for(int i = 0; i < n; i++) arr[i] = sc.nextInt();\\n        \\n        // TODO: 实现算法\\n        \\n        System.out.println(result);\\n        sc.close();\\n    }\\n}",
-    "python": "n = int(input())\\narr = list(map(int, input().split()))\\n\\n# TODO: 实现算法\\n\\nprint(result)"
-  },
-  "solutions": {
-    "c": "完整可AC的C代码",
-    "cpp": "完整可AC的C++代码",
-    "java": "完整可AC的Java代码",
-    "python": "完整可AC的Python代码"
-  },
-  "testCases": [
-    {"input": "5\\n1 2 3 4 5", "expectedOutput": "15", "description": "基本功能测试"},
-    {"input": "1\\n100", "expectedOutput": "100", "description": "边界：单元素"},
-    {"input": "3\\n-1 0 1", "expectedOutput": "0", "description": "特殊：含负数和零"}
-  ],
-  "hints": ["提示1：分析问题本质", "提示2：考虑使用的数据结构或算法"],
-  "explanation": "【解题思路】\\n分析...\\n\\n【算法设计】\\n1. ...\\n2. ...\\n\\n【时间复杂度】O(n)\\n【空间复杂度】O(1)"
-}`;
+  const prompt = buildCodingPrompt(topic, difficulty, dataStructure, profileHint);
 
   const response = await callAI(prompt, onProgress);
-  return parseAIJsonResponse(response, 'coding exercise');
+  return parseAIJsonResponse<GeneratedExercise>(response, 'coding exercise');
 }
 
 // 生成填空题 (支持流式输出)
 export async function generateFillBlank(
   topic: string,
   difficulty: 'easy' | 'medium' | 'hard' = 'easy',
-  dataStructure: string = '链表',
+  dataStructure: string = pickRuntimeText('链表', 'Linked List'),
   onProgress?: (text: string) => void,
   profileHint?: string
 ): Promise<GeneratedFillBlank> {
-  const profileSection = profileHint
-    ? `\n【用户画像约束】\n${profileHint}\n- 请让待填空函数数量、函数体长度、提示强度和边界条件与该用户画像匹配。\n`
-    : '';
-  const difficultyText = getDifficultyText(difficulty);
-  const prompt = `生成一道关于"${dataStructure} - ${topic}"的${difficultyText}难度【函数实现填空题】。
-${profileSection}
-
-【题目格式要求】
-这是一道需要补全多个函数体的填空题，类似考试题：
-- 给出完整的程序框架（包含结构体定义、main函数等）
-- 需要学生填写的是【整个函数的实现代码】，不是单个表达式
-- 每个需要填写的函数用 ___FUNC1___ ___FUNC2___ 等标记
-- 每个空需要填写3-10行代码
-
-【示例格式】
-#include <stdio.h>
-struct Node {
-    int data;
-    struct Node* next;
-};
-// 函数1：创建节点
-struct Node* createNode(int val) {
-___FUNC1___
-}
-// 函数2：插入节点
-void insert(struct Node** head, int val) {
-___FUNC2___
-}
-int main() {
-    // main函数已实现
-}
-
-【JSON格式返回】
-{
-  "title": "简短标题（如：单链表基本操作）",
-  "description": "完成以下程序中标记的函数实现",
-  "difficulty": "${difficulty}",
-  "codeTemplate": {
-    "c": "完整C语言程序，函数体用___FUNC1___等标记"
-  },
-  "blanks": [
-    {"id": "FUNC1", "answer": "完整的函数实现代码（多行）", "hint": "函数功能提示"},
-    {"id": "FUNC2", "answer": "完整的函数实现代码（多行）", "hint": "函数功能提示"}
-  ],
-  "explanation": "解释每个函数的实现思路"
-}
-
-【重要规则】
-1. 必须有2-4个需要填写的函数
-2. 每个函数答案是完整的函数体代码（多行）
-3. 给出的代码框架必须完整可编译（填空后）
-4. 代码换行用\\n表示
-5. 只返回JSON，不要其他文字\n6. 用户可见字段必须使用 ${getUiLanguageLabel()}`;
+  const prompt = buildFillBlankPrompt(topic, difficulty, dataStructure, profileHint);
 
   const response = await callAI(prompt, onProgress);
-  return parseAIJsonResponse(response, 'fill blank');
+  return parseAIJsonResponse<GeneratedFillBlank>(response, 'fill blank exercise');
 }
 
 // 通用JSON解析函数 - 处理AI返回中的换行问题
-function parseAIJsonResponse(response: string, _type: string): any {
+function parseAIJsonResponse<T>(response: string, responseType: string): T {
   let jsonStr = response;
   
   // 移除可能的markdown代码块
@@ -462,7 +664,7 @@ function parseAIJsonResponse(response: string, _type: string): any {
   
   // 方法1: 直接尝试解析
   try {
-    return JSON.parse(rawJson);
+    return JSON.parse(rawJson) as T;
   } catch (e1) {
     void e1;
   }
@@ -511,7 +713,7 @@ function parseAIJsonResponse(response: string, _type: string): any {
       }
     }
     
-    return JSON.parse(fixed);
+    return JSON.parse(fixed) as T;
   } catch (e2) {
     void e2;
   }
@@ -554,13 +756,18 @@ function parseAIJsonResponse(response: string, _type: string): any {
       fixed += char;
     }
     
-    return JSON.parse(fixed);
+    return JSON.parse(fixed) as T;
   } catch (e3) {
     void e3;
   }
   
   const preview = rawJson.substring(0, 300);
-  throw new Error(pickRuntimeText(`AI返回格式错误: ${preview}...`, `AI returned malformed JSON: ${preview}...`));
+  throw new Error(
+    pickRuntimeText(
+      `${responseType} 返回格式错误: ${preview}...`,
+      `${responseType} returned malformed JSON: ${preview}...`,
+    ),
+  );
 }
 
 // 批量生成题目
@@ -591,13 +798,21 @@ export async function generateExerciseSet(
 function getTopicsForDataStructure(ds: string): string[] {
   const topicMap: Record<string, string[]> = {
     '链表': ['单链表插入', '单链表删除', '链表反转', '链表合并', '环形链表检测', '链表排序'],
+    'Linked List': ['单链表插入', '单链表删除', '链表反转', '链表合并', '环形链表检测', '链表排序'],
     '栈': ['栈的基本操作', '括号匹配', '表达式求值', '最小栈', '栈排序'],
+    'Stack': ['栈的基本操作', '括号匹配', '表达式求值', '最小栈', '栈排序'],
     '队列': ['队列基本操作', '循环队列', '优先队列', '双端队列', '队列实现栈'],
+    'Queue': ['队列基本操作', '循环队列', '优先队列', '双端队列', '队列实现栈'],
     '二叉树': ['树的遍历', '二叉搜索树', '树的深度', '路径求和', '树的构建'],
+    'Binary Tree': ['树的遍历', '二叉搜索树', '树的深度', '路径求和', '树的构建'],
     '图': ['BFS遍历', 'DFS遍历', '最短路径', '拓扑排序', '连通分量'],
+    'Graph': ['BFS遍历', 'DFS遍历', '最短路径', '拓扑排序', '连通分量'],
     '排序': ['冒泡排序', '快速排序', '归并排序', '堆排序', '插入排序'],
+    'Sorting': ['冒泡排序', '快速排序', '归并排序', '堆排序', '插入排序'],
     '查找': ['二分查找', '哈希查找', '顺序查找', '插值查找'],
+    'Searching': ['二分查找', '哈希查找', '顺序查找', '插值查找'],
   };
-  
-  return topicMap[ds] || ['基本操作', '进阶应用', '综合练习'];
+
+  const topics = topicMap[ds] || ['基本操作', '进阶应用', '综合练习'];
+  return topics.map((item) => localizeRuntimeText(item, item));
 }
