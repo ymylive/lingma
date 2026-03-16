@@ -25,7 +25,7 @@ const itemVariants: Variants = {
 
 export default function Dashboard() {
   const { user, progress, isLoggedIn, logout, updatePreferences } = useUser();
-  const { formatDate, isEnglish } = useI18n();
+  const { formatDate, isEnglish, t } = useI18n();
   const navigate = useNavigate();
   const [skillLevel, setSkillLevel] = useState<UserSkillLevel>('beginner');
   const [targetLanguage, setTargetLanguage] = useState<TargetLanguage>('cpp');
@@ -43,8 +43,6 @@ export default function Dashboard() {
     setSkillLevel(user.skillLevel);
     setTargetLanguage(user.targetLanguage);
   }, [user]);
-
-  if (!user) return null;
 
   const greeting = (() => {
     const hour = new Date().getHours();
@@ -84,6 +82,8 @@ export default function Dashboard() {
     aiPractice: isEnglish ? 'AI Practice' : 'AI练习',
     tutorials: isEnglish ? 'Tutorials' : '教程文档',
   }), [isEnglish, saving]);
+
+  if (!user) return null;
 
   const handleSave = async () => {
     setSaving(true);
@@ -313,7 +313,7 @@ export default function Dashboard() {
                           {record.isCorrect ? '✅' : '❌'}
                         </span>
                         <span className="max-w-[140px] truncate text-sm text-slate-700 dark:text-slate-300">
-                          {record.exerciseTitle}
+                          {t(record.exerciseTitle)}
                         </span>
                       </div>
                       <span className="text-xs text-slate-400 dark:text-slate-500">
