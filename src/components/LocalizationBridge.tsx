@@ -1,5 +1,4 @@
 import { useEffect, useRef } from 'react';
-import { useLocation } from 'react-router-dom';
 import { useI18n } from '../contexts/I18nContext';
 
 const TRANSLATABLE_ATTRIBUTES = ['placeholder', 'title', 'aria-label'] as const;
@@ -7,12 +6,14 @@ const SKIP_TAGS = new Set(['SCRIPT', 'STYLE', 'TEXTAREA', 'PRE', 'CODE']);
 
 export default function LocalizationBridge() {
   const { locale, t } = useI18n();
-  const location = useLocation();
   const textOriginalsRef = useRef(new WeakMap<Text, string>());
   const attrOriginalsRef = useRef(new WeakMap<Element, Map<string, string>>());
   const isApplyingRef = useRef(false);
 
   useEffect(() => {
+    const root = document.body;
+    let frameId: number | null = null;
+
     const shouldSkip = (element: Element | null) => {
       if (!element) return true;
       if (SKIP_TAGS.has(element.tagName)) return true;
@@ -32,9 +33,14 @@ export default function LocalizationBridge() {
       let current = walker.nextNode();
       while (current) {
         const textNode = current as Text;
-        const original = textOriginalsRef.current.get(textNode) ?? textNode.textContent ?? '';
+        const currentText = textNode.textContent ?? '';
+        const cachedOriginal = textOriginalsRef.current.get(textNode);
+        const original = cachedOriginal && currentText === t(cachedOriginal) ? cachedOriginal : currentText;
+        const translated = t(original);
         textOriginalsRef.current.set(textNode, original);
-        textNode.textContent = t(original);
+        if (currentText !== translated) {
+          textNode.textContent = translated;
+        }
         current = walker.nextNode();
       }
     };
@@ -52,9 +58,13 @@ export default function LocalizationBridge() {
         TRANSLATABLE_ATTRIBUTES.forEach((attr) => {
           const current = element.getAttribute(attr);
           if (!current) return;
-          const original = attributeMap?.get(attr) ?? current;
+          const cachedOriginal = attributeMap?.get(attr);
+          const original = cachedOriginal && current === t(cachedOriginal) ? cachedOriginal : current;
+          const translated = t(original);
           attributeMap?.set(attr, original);
-          element.setAttribute(attr, t(original));
+          if (current !== translated) {
+            element.setAttribute(attr, translated);
+          }
         });
       });
     };
@@ -69,7 +79,16 @@ export default function LocalizationBridge() {
       isApplyingRef.current = false;
     };
 
-    applyAll(document.body);
+    const scheduleFullApply = () => {
+      if (frameId !== null) {
+        window.cancelAnimationFrame(frameId);
+      }
+      frameId = window.requestAnimationFrame(() => {
+        applyAll(root);
+      });
+    };
+
+    scheduleFullApply();
 
     const observer = new MutationObserver((mutations) => {
       if (isApplyingRef.current) return;
@@ -88,7 +107,7 @@ export default function LocalizationBridge() {
       }
     });
 
-    observer.observe(document.body, {
+    observer.observe(root, {
       subtree: true,
       childList: true,
       characterData: true,
@@ -96,8 +115,13 @@ export default function LocalizationBridge() {
       attributeFilter: [...TRANSLATABLE_ATTRIBUTES],
     });
 
-    return () => observer.disconnect();
-  }, [locale, location.pathname, t]);
+    return () => {
+      observer.disconnect();
+      if (frameId !== null) {
+        window.cancelAnimationFrame(frameId);
+      }
+    };
+  }, [locale, t]);
 
   return null;
 }
