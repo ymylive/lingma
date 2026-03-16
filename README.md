@@ -1,75 +1,137 @@
-# 灵码
+# Lingma
 
-灵码是一个面向算法学习与 AI 协作开发训练的在线平台。
+Lingma is an interactive data structure and algorithm learning platform that combines visual demos, guided tutorials, AI-assisted practice, and methodology training in a single web app.
 
-在线地址：[https://lingma.cornna.xyz](https://lingma.cornna.xyz)
+Live site: `https://lingma.cornna.xyz`
 
-## 项目亮点
+## What It Includes
 
-- 统一的 Klein Blue (#002FA7) + Pine Yellow (#FFE135) 品牌设计体系
-- 分层算法题库与练习路径
-- 受保护的在线判题与 AI 代理链路
-- AI 智能出题与填空题练习
-- `Vibe Coding Lab` 方法论学习界面
-- `Prompt Arena` 训练场：AI 生成 prompt 练习题，五条赛道，评分与改写示范
-- 独立的 `/methodology` 方法论文档阅读页面（侧边栏 TOC + 滚动高亮 + 移动端 FAB）
-- 完整的中英文国际化支持
-- 响应式布局，移动端汉堡菜单
+- Interactive algorithm visualizations and step-by-step explanations
+- Structured tutorial content under `/book`
+- Protected learner dashboard and progress tracking
+- AI practice workspace for coding exercises
+- `Vibe Coding Lab` and `Prompt Arena` for prompt-driven training
+- Dedicated methodology documentation at `/methodology`
+- Responsive frontend optimized for desktop and mobile
+- Bilingual UI foundation with Chinese and English support
 
-## 技术栈
+## Tech Stack
 
-- React 19 + TypeScript + Vite
-- Tailwind CSS + Framer Motion
-- FastAPI (Python) + SQLite
-- Node.js 判题服务
-- Docker Compose 三服务部署
-- Nginx + HTTPS (Let's Encrypt)
+- Frontend: React 19, TypeScript, Vite, Tailwind CSS, Framer Motion
+- API proxy: FastAPI, Uvicorn, SQLite
+- Judge service: Node.js, Express
+- Deployment: Docker Compose, Nginx, HTTPS
 
-## 本地开发
+## Project Structure
 
-### 前端
+```text
+src/
+  components/        shared UI and tutorial components
+  contexts/          auth, i18n, and app state
+  data/              curriculum and methodology content
+  pages/             route-level pages
+api-proxy/
+  main.py            FastAPI backend proxy
+judge-server/
+  server.js          code judging service
+deploy/
+  docker-compose.yml production services
+  docker-deploy.py   VPS deployment script
+  nginx.conf         reverse proxy config
+```
+
+## Local Development
+
+### Frontend
+
+Requirements:
+
+- Node.js 20+
+- npm 10+
 
 ```bash
 npm install
 npm run dev
 ```
 
-### 生产构建
+### Production Build
 
 ```bash
-npx tsc -b          # 类型检查
-npx vite build      # 构建产物
+npm run build
 ```
 
 ### API Proxy
 
+Requirements:
+
+- Python 3.11+
+
 ```bash
 cd api-proxy
 pip install -r requirements.txt
-uvicorn main:app --host 127.0.0.1 --port 3001
+python -m uvicorn main:app --host 127.0.0.1 --port 3001 --reload
 ```
 
-## 关键目录
-
-- `src/pages/` — 页面组件（Home、Algorithms、Book、Practice、Dashboard、MindMap、Methodology）
-- `src/components/Header.tsx` — 全局导航（含移动端汉堡菜单）
-- `src/components/Footer.tsx` — 全局页脚（品牌信息、快捷链接、技术栈）
-- `src/components/tutorials/VibeCodingLab.tsx` — Vibe Coding 学习与 Prompt Arena
-- `api-proxy/main.py` — 鉴权、AI 代理、判题代理、Prompt Arena 后端
-- `deploy/docker-compose.yml` — 生产环境 Docker 编排
-- `deploy/docker-deploy.py` — 一键部署脚本（paramiko，Windows 兼容）
-- `tailwind.config.js` — 品牌色阶定义（klein-50~900、pine-50~900）
-
-## 部署
+### Judge Server
 
 ```bash
-LINGMA_VPS_PASSWORD=<密码> python deploy/docker-deploy.py
+cd judge-server
+npm install
+node server.js
 ```
 
-脚本自动完成打包、上传、解压、构建镜像、启动容器、清理旧镜像和健康检查。
+## Environment Notes
 
-生产环境通过 `lingma.cornna.xyz` 对外提供 HTTPS 访问，Nginx 反向代理到 Docker 容器的 18081 端口。
+The Docker deployment expects `deploy/.env` for backend-related runtime values. At minimum, the deployment script will create:
 
-## 许可证
+```env
+FRONTEND_BIND_HOST=0.0.0.0
+FRONTEND_BIND_PORT=18081
+```
+
+If you use AI-related features in production, add the corresponding API variables to `deploy/.env` on the server.
+
+## Deploy to VPS
+
+This repository includes a Windows-friendly deployment script based on `paramiko`.
+
+Default target from the script:
+
+- Host: `8.134.33.19`
+- User: `root`
+- Remote path: `/var/www/lingma`
+
+Run:
+
+```bash
+LINGMA_VPS_PASSWORD=<your-password> python deploy/docker-deploy.py
+```
+
+The script will:
+
+1. Package the current workspace
+2. Upload it to the VPS
+3. Extract the bundle into `/var/www/lingma`
+4. Stop old services
+5. Rebuild Docker images and start containers
+6. Run a health check against `http://127.0.0.1:18081/api/health`
+
+## Production Services
+
+`deploy/docker-compose.yml` starts three containers:
+
+- `frontend`: static frontend served by Nginx on port `18081`
+- `api-proxy`: FastAPI service on internal port `3001`
+- `judge-server`: judging service on internal port `3002`
+
+## Current Verification
+
+Latest checks completed locally:
+
+- `npm run build`
+- VPS deployment via `python deploy/docker-deploy.py`
+- Health check: `curl http://127.0.0.1:18081/api/health`
+
+## License
 
 MIT

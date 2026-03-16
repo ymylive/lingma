@@ -111,7 +111,7 @@ export default function Auth() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white px-6 pb-12 pt-20 transition-colors duration-300 dark:from-slate-900 dark:to-slate-800">
+    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white px-4 pb-12 pt-20 transition-colors duration-300 dark:from-slate-900 dark:to-slate-800 sm:px-6">
       <div className="mx-auto max-w-lg">
         <div className="mb-8 text-center">
           <Link to="/" className="inline-flex items-center gap-2">
@@ -123,7 +123,7 @@ export default function Auth() {
           <p className="mt-2 text-slate-600 dark:text-slate-400">{copy.subtitle}</p>
         </div>
 
-        <div className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:p-8">
           <form onSubmit={handleSubmit} className="space-y-5">
             {!isLogin && (
               <div>
@@ -265,16 +265,16 @@ export default function Auth() {
           </div>
         </div>
 
-        <div className="mt-8 grid grid-cols-3 gap-4 text-center">
-          <div className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-800">
+        <div className="mt-8 grid grid-cols-3 gap-3 text-center sm:gap-4">
+          <div className="rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-800 sm:p-4">
             <div className="mb-2 text-2xl">📈</div>
             <div className="text-xs text-slate-600 dark:text-slate-400">{copy.feature1}</div>
           </div>
-          <div className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-800">
+          <div className="rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-800 sm:p-4">
             <div className="mb-2 text-2xl">🧭</div>
             <div className="text-xs text-slate-600 dark:text-slate-400">{copy.feature2}</div>
           </div>
-          <div className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-800">
+          <div className="rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-800 sm:p-4">
             <div className="mb-2 text-2xl">🔥</div>
             <div className="text-xs text-slate-600 dark:text-slate-400">{copy.feature3}</div>
           </div>

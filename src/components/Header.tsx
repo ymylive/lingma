@@ -30,6 +30,11 @@ export default function Header() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  useEffect(() => {
+    setMobileMenuOpen(false);
+    setShowDropdown(false);
+  }, [location.pathname]);
+
   return (
     <header
       className={`fixed inset-x-0 top-0 z-50 transition-all duration-300 ${
@@ -48,13 +53,14 @@ export default function Header() {
           </span>
         </Link>
 
-        <div className="flex items-center gap-2 sm:gap-4">
+        <div className="flex items-center gap-1.5 sm:gap-4">
           {/* Mobile hamburger */}
           <button
             type="button"
             onClick={() => setMobileMenuOpen((v) => !v)}
             className="relative cursor-pointer rounded-full p-2 text-slate-600 transition-all hover:bg-slate-100 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-klein-500/60 dark:text-slate-400 dark:hover:bg-slate-800 md:hidden"
             aria-label="Toggle menu"
+            aria-expanded={mobileMenuOpen}
           >
             <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               {mobileMenuOpen ? (
@@ -91,8 +97,8 @@ export default function Header() {
             })}
           </div>
 
-          <div className="flex items-center gap-2 border-l border-slate-200 pl-3 dark:border-slate-800 sm:gap-3 sm:pl-5">
-            <div className="flex items-center rounded-full border border-slate-200 bg-white/70 p-1 text-xs dark:border-slate-700 dark:bg-slate-900/70">
+          <div className="flex items-center gap-1.5 border-l border-slate-200 pl-2 dark:border-slate-800 sm:gap-3 sm:pl-5">
+            <div className="hidden items-center rounded-full border border-slate-200 bg-white/70 p-1 text-xs dark:border-slate-700 dark:bg-slate-900/70 sm:flex">
               <button
                 type="button"
                 onClick={() => setLocale('zh-CN')}
@@ -120,7 +126,7 @@ export default function Header() {
             <button
               type="button"
               onClick={toggleTheme}
-              className="relative cursor-pointer rounded-full p-2 text-slate-500 transition-all hover:scale-105 hover:bg-slate-100 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-klein-500/60 dark:text-slate-400 dark:hover:bg-slate-800"
+              className="relative min-h-[44px] min-w-[44px] cursor-pointer rounded-full p-2 text-slate-500 transition-all hover:scale-105 hover:bg-slate-100 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-klein-500/60 dark:text-slate-400 dark:hover:bg-slate-800"
               title={isAuto ? t('自动模式 (19:30-7:30开启夜间)') : t('点击切换主题')}
             >
               {theme === 'light' ? (
@@ -214,7 +220,7 @@ export default function Header() {
             ) : (
               <Link
                 to="/auth"
-                className="rounded-full bg-klein-500 px-5 py-2 text-sm font-medium text-white shadow-lg shadow-klein-500/20 transition-all hover:-translate-y-0.5 hover:bg-klein-600 hover:shadow-klein-500/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-klein-500/60"
+                className="rounded-full bg-klein-500 px-4 py-2 text-sm font-medium text-white shadow-lg shadow-klein-500/20 transition-all hover:-translate-y-0.5 hover:bg-klein-600 hover:shadow-klein-500/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-klein-500/60 sm:px-5"
               >
                 {isEnglish ? 'Sign In' : '登录'}
               </Link>
@@ -233,7 +239,31 @@ export default function Header() {
             transition={{ duration: 0.2 }}
             className="overflow-hidden border-t border-slate-200/50 bg-white/90 backdrop-blur-xl dark:border-white/5 dark:bg-slate-950/90 md:hidden"
           >
-            <div className="space-y-1 px-4 py-3">
+            <div className="space-y-3 px-4 py-4">
+              <div className="flex items-center gap-2 rounded-2xl border border-slate-200/70 bg-slate-50/80 p-1 dark:border-slate-800 dark:bg-slate-900/70 sm:hidden">
+                <button
+                  type="button"
+                  onClick={() => setLocale('zh-CN')}
+                  className={`min-h-[44px] flex-1 cursor-pointer rounded-xl px-3 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-klein-500/60 ${
+                    locale === 'zh-CN'
+                      ? 'bg-klein-600 text-white'
+                      : 'text-slate-600 hover:bg-white dark:text-slate-300 dark:hover:bg-slate-800'
+                  }`}
+                >
+                  中文
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLocale('en-US')}
+                  className={`min-h-[44px] flex-1 cursor-pointer rounded-xl px-3 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-klein-500/60 ${
+                    locale === 'en-US'
+                      ? 'bg-klein-600 text-white'
+                      : 'text-slate-600 hover:bg-white dark:text-slate-300 dark:hover:bg-slate-800'
+                  }`}
+                >
+                  English
+                </button>
+              </div>
               {navItems.map((item) => {
                 const isActive = location.pathname.startsWith(item.path);
                 return (
@@ -251,6 +281,15 @@ export default function Header() {
                   </Link>
                 );
               })}
+              {!isAuthLoading && !isLoggedIn && (
+                <Link
+                  to="/auth"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex min-h-[44px] items-center justify-center rounded-xl bg-klein-500 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-klein-500/20 transition-colors hover:bg-klein-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-klein-500/60"
+                >
+                  {isEnglish ? 'Sign In / Sign Up' : '登录 / 注册'}
+                </Link>
+              )}
             </div>
           </motion.div>
         )}

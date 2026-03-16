@@ -364,22 +364,22 @@ const lessons: Record<string, LessonContent> = {
               <div className="grid md:grid-cols-2 gap-4">
                 <div className="bg-white rounded-lg p-4 border border-slate-200">
                   <p className="font-medium text-emerald-600 mb-2">O(1) - 没有循环</p>
-                  <pre className="text-sm bg-slate-100 p-3 rounded">{'int x = arr[5];  // 直接访问'}</pre>
+                  <pre className="overflow-x-auto rounded bg-slate-100 p-3 text-xs leading-6 sm:text-sm">{'int x = arr[5];  // 直接访问'}</pre>
                   <p className="text-xs text-slate-500 mt-2">不管数组多大，都只执行1次</p>
                 </div>
                 <div className="bg-white rounded-lg p-4 border border-slate-200">
                   <p className="font-medium text-blue-600 mb-2">O(n) - 一层循环</p>
-                  <pre className="text-sm bg-slate-100 p-3 rounded">{'for(i=0; i<n; i++)\n  sum += arr[i];'}</pre>
+                  <pre className="overflow-x-auto rounded bg-slate-100 p-3 text-xs leading-6 sm:text-sm">{'for(i=0; i<n; i++)\n  sum += arr[i];'}</pre>
                   <p className="text-xs text-slate-500 mt-2">数组有n个元素，循环n次</p>
                 </div>
                 <div className="bg-white rounded-lg p-4 border border-slate-200">
                   <p className="font-medium text-amber-600 mb-2">O(n²) - 两层循环</p>
-                  <pre className="text-sm bg-slate-100 p-3 rounded">{'for(i=0; i<n; i++)\n  for(j=0; j<n; j++)\n    count++;'}</pre>
+                  <pre className="overflow-x-auto rounded bg-slate-100 p-3 text-xs leading-6 sm:text-sm">{'for(i=0; i<n; i++)\n  for(j=0; j<n; j++)\n    count++;'}</pre>
                   <p className="text-xs text-slate-500 mt-2">外层n次×内层n次 = n²次</p>
                 </div>
                 <div className="bg-white rounded-lg p-4 border border-slate-200">
                   <p className="font-medium text-purple-600 mb-2">O(log n) - 每次减半</p>
-                  <pre className="text-sm bg-slate-100 p-3 rounded">{'while(n > 1)\n  n = n / 2;'}</pre>
+                  <pre className="overflow-x-auto rounded bg-slate-100 p-3 text-xs leading-6 sm:text-sm">{'while(n > 1)\n  n = n / 2;'}</pre>
                   <p className="text-xs text-slate-500 mt-2">1024→512→256→...→1，共10次</p>
                 </div>
               </div>
@@ -821,14 +821,14 @@ for (auto& e : adj[u]) {
             <Diagram title="BFS搜索过程示意">
               <div className="text-center font-mono text-sm">
                 <div className="mb-2 text-indigo-600 font-bold">第1层：距离=1</div>
-                <div className="flex justify-center gap-4 mb-4">
+                <div className="flex flex-wrap justify-center gap-2 sm:gap-4 mb-4">
                   <span className="px-3 py-1 bg-indigo-100 rounded">A</span>
                   <span>→</span>
                   <span className="px-3 py-1 bg-emerald-100 rounded">B</span>
                   <span className="px-3 py-1 bg-emerald-100 rounded">C</span>
                 </div>
                 <div className="mb-2 text-amber-600 font-bold">第2层：距离=2</div>
-                <div className="flex justify-center gap-4">
+                <div className="flex flex-wrap justify-center gap-2 sm:gap-4">
                   <span className="px-3 py-1 bg-amber-100 rounded">D</span>
                   <span className="px-3 py-1 bg-amber-100 rounded">E</span>
                   <span className="px-3 py-1 bg-amber-100 rounded">F</span>
@@ -1749,7 +1749,7 @@ void levelOrder(TreeNode* root) {
             <div className="flex justify-center">
               <div className="text-center">
                 <div className="text-2xl font-bold text-indigo-600 mb-2">50</div>
-                <div className="flex justify-center gap-16">
+                <div className="flex flex-wrap justify-center gap-8 sm:gap-16">
                   <div className="text-center">
                     <div className="text-xl font-bold text-emerald-600">30</div>
                     <div className="flex gap-4">
@@ -2354,7 +2354,7 @@ bool ListDelete(SqList &L, int i, int &e) {
             </KnowledgeCard>
             <div className="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl border border-emerald-100 p-6 dark:from-emerald-950/40 dark:to-teal-950/30 dark:border-emerald-800/60">
               <h4 className="text-lg font-bold text-emerald-800 mb-3 dark:text-emerald-200">🚂 生活例子：火车车厢</h4>
-              <div className="flex items-center justify-center gap-2 text-2xl my-4">
+              <div className="flex flex-wrap items-center justify-center gap-2 text-xl sm:text-2xl my-4">
                 <span>🚃</span><span>→</span><span>🚃</span><span>→</span><span>🚃</span><span>→</span><span>🚃</span><span>→</span><span className="text-slate-400">NULL</span>
               </div>
               <ul className="text-sm text-slate-600 dark:text-slate-300 space-y-1">
@@ -2416,7 +2416,7 @@ bool ListDelete(SqList &L, int i, int &e) {
             <KnowledgeCard title="↔️ 双向链表 = 可以双向遍历" color="amber">
               <p>每个节点有<strong>两个指针</strong>：prior指向前驱，next指向后继。</p>
             </KnowledgeCard>
-            <div className="flex items-center justify-center gap-1 text-lg my-4 font-mono">
+            <div className="flex flex-wrap items-center justify-center gap-1 text-base sm:text-lg my-4 font-mono">
               <span className="text-slate-400">NULL</span>
               <span>←</span>
               <span className="bg-blue-100 px-2 py-1 rounded">A</span>
@@ -2591,9 +2591,9 @@ bool Pop(SqStack &S, int &e) {
                 </div>
               </div>
             </div>
-            <div className="flex items-center justify-center gap-2">
+            <div className="flex flex-wrap items-center justify-center gap-2">
               <div className="text-slate-500">出队 ←</div>
-              <div className="flex border-2 border-slate-300 rounded-lg p-2 [&>div:nth-child(-n+2)]:text-emerald-950 dark:[&>div:nth-child(-n+2)]:text-white">
+              <div className="flex flex-wrap justify-center border-2 border-slate-300 rounded-lg p-2 [&>div:nth-child(-n+2)]:text-emerald-950 dark:[&>div:nth-child(-n+2)]:text-white">
                 <div className="bg-emerald-300 text-white px-3 py-1 rounded mx-1">1</div>
                 <div className="bg-emerald-400 text-white px-3 py-1 rounded mx-1">2</div>
                 <div className="bg-emerald-500 text-white px-3 py-1 rounded mx-1">3</div>
@@ -2809,8 +2809,10 @@ export default function Lesson() {
 
         {/* 移动端目录按钮 */}
         <button
+          type="button"
           onClick={() => setIsSidebarOpen(true)}
-          className="lg:hidden fixed bottom-6 right-6 w-12 h-12 bg-indigo-600 text-white rounded-full shadow-lg flex items-center justify-center z-40 hover:bg-indigo-700 transition-colors"
+          aria-label="Open course navigation"
+          className="lg:hidden fixed bottom-6 right-6 z-40 flex h-12 w-12 cursor-pointer items-center justify-center rounded-full bg-indigo-600 text-white shadow-lg transition-colors duration-200 hover:bg-indigo-700"
         >
           <span className="text-xl">☰</span>
         </button>
@@ -2826,8 +2828,10 @@ export default function Lesson() {
               <div className="flex justify-between items-center mb-6">
                 <h3 className="font-bold text-lg text-slate-900 dark:text-white">课程目录</h3>
                 <button 
+                  type="button"
                   onClick={() => setIsSidebarOpen(false)}
-                  className="p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg"
+                  aria-label="Close course navigation"
+                  className="flex h-11 w-11 cursor-pointer items-center justify-center rounded-lg text-slate-500 transition-colors duration-200 hover:bg-slate-100 dark:hover:bg-slate-700"
                 >
                   ✕
                 </button>
@@ -2846,7 +2850,7 @@ export default function Lesson() {
                             <Link
                               to={topic.link}
                               onClick={() => setIsSidebarOpen(false)}
-                              className={`block px-3 py-2 rounded-lg text-sm transition-colors ${
+                              className={`block min-h-11 cursor-pointer rounded-lg px-3 py-3 text-sm leading-5 transition-colors duration-200 ${
                                 isActive
                                   ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-medium'
                                   : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-white'

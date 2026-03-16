@@ -98,7 +98,7 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen pb-12 pt-24 transition-colors duration-300">
-      <div className="mx-auto max-w-6xl px-6">
+      <div className="mx-auto max-w-6xl px-4 sm:px-6">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -111,10 +111,10 @@ export default function Dashboard() {
             </h1>
             <p className="mt-1 text-slate-600 dark:text-slate-400">{copy.subtitle}</p>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center sm:justify-end sm:gap-4">
             <Link
               to="/book"
-              className="min-h-[44px] rounded-xl bg-klein-500 px-4 py-2 font-medium text-white transition-colors hover:bg-klein-600"
+              className="inline-flex min-h-[44px] w-full items-center justify-center rounded-xl bg-klein-500 px-4 py-2 font-medium text-white transition-colors hover:bg-klein-600 sm:w-auto"
             >
               {copy.continueLearning}
             </Link>
@@ -124,7 +124,7 @@ export default function Dashboard() {
                 logout();
                 navigate('/');
               }}
-              className="min-h-[44px] cursor-pointer px-4 py-2 text-slate-600 transition-colors hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
+              className="inline-flex min-h-[44px] w-full items-center justify-center px-4 py-2 text-slate-600 transition-colors hover:text-slate-900 dark:text-slate-400 dark:hover:text-white sm:w-auto"
             >
               {copy.signOut}
             </button>
@@ -135,17 +135,17 @@ export default function Dashboard() {
           variants={containerVariants}
           initial="hidden"
           animate="visible"
-          className="mb-8 grid grid-cols-2 gap-4 md:grid-cols-4"
+          className="mb-8 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4"
         >
           {stats.map((item) => (
-            <motion.div key={item.label} variants={itemVariants} className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-800">
-              <div className="flex items-center gap-3">
+            <motion.div key={item.label} variants={itemVariants} className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-800 sm:p-5">
+              <div className="flex items-start gap-3 sm:items-center">
                 <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-slate-100 text-2xl dark:bg-slate-700/60">
                   {item.icon}
                 </div>
                 <div>
-                  <div className="text-2xl font-bold text-slate-900 dark:text-white">{item.value}</div>
-                  <div className="text-sm text-slate-500 dark:text-slate-400">{item.label}</div>
+                  <div className="text-xl font-bold text-slate-900 dark:text-white sm:text-2xl">{item.value}</div>
+                  <div className="text-sm leading-5 text-slate-500 dark:text-slate-400">{item.label}</div>
                 </div>
               </div>
             </motion.div>
@@ -160,10 +160,10 @@ export default function Dashboard() {
             transition={{ duration: 0.5 }}
             className="space-y-6 md:col-span-2"
           >
-            <div className="rounded-2xl border border-slate-200 bg-white p-6 dark:border-slate-700 dark:bg-slate-800">
-              <div className="mb-4 flex items-center justify-between">
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-800 sm:p-6">
+              <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <h2 className="text-lg font-bold text-slate-900 dark:text-white">{copy.recentLearning}</h2>
-                <Link to="/book" className="text-sm text-klein-500 hover:text-klein-600 dark:text-klein-400 dark:hover:text-klein-300">
+                <Link to="/book" className="inline-flex min-h-[44px] items-center self-start text-sm text-klein-500 hover:text-klein-600 dark:text-klein-400 dark:hover:text-klein-300">
                   {copy.viewAll}
                 </Link>
               </div>
@@ -174,7 +174,7 @@ export default function Dashboard() {
                     <Link
                       key={`${record.lessonId}-${record.completedAt}`}
                       to={`/book/${record.lessonId}`}
-                      className="flex items-center justify-between rounded-lg bg-slate-50 p-3 transition-colors hover:bg-slate-100 dark:bg-slate-700/30 dark:hover:bg-slate-700/50"
+                      className="flex flex-col gap-3 rounded-lg bg-slate-50 p-3 transition-colors hover:bg-slate-100 dark:bg-slate-700/30 dark:hover:bg-slate-700/50 sm:flex-row sm:items-center sm:justify-between"
                     >
                       <div className="flex items-center gap-3">
                         <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-klein-100 text-sm font-medium text-klein-500 dark:bg-klein-900/30 dark:text-klein-300">
@@ -185,7 +185,7 @@ export default function Dashboard() {
                           <div className="text-xs text-slate-500 dark:text-slate-400">{record.category}</div>
                         </div>
                       </div>
-                      <div className="text-xs text-slate-400 dark:text-slate-500">
+                      <div className="self-end text-xs text-slate-400 dark:text-slate-500 sm:self-auto sm:text-right">
                         {formatDate(record.completedAt, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                       </div>
                     </Link>
@@ -199,7 +199,7 @@ export default function Dashboard() {
               )}
             </div>
 
-            <div className="rounded-2xl border border-slate-200 bg-white p-6 dark:border-slate-700 dark:bg-slate-800">
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-800 sm:p-6">
               <h2 className="mb-4 text-lg font-bold text-slate-900 dark:text-white">{copy.preferences}</h2>
               <div className="grid gap-6 lg:grid-cols-2">
                 <div>
@@ -266,14 +266,14 @@ export default function Dashboard() {
             transition={{ duration: 0.5, delay: 0.15 }}
             className="space-y-6"
           >
-            <div className="rounded-2xl bg-gradient-to-br from-klein-500 to-klein-600 p-6 text-white shadow-lg shadow-klein-500/20">
-              <div className="mb-4 flex items-center gap-4">
+            <div className="rounded-2xl bg-gradient-to-br from-klein-500 to-klein-600 p-5 text-white shadow-lg shadow-klein-500/20 sm:p-6">
+              <div className="mb-4 flex items-start gap-4">
                 <div className="flex h-14 w-14 items-center justify-center rounded-full bg-white/20 text-2xl">
                   👤
                 </div>
                 <div>
                   <div className="text-lg font-bold">{user.username}</div>
-                  <div className="text-sm text-klein-200">{user.email}</div>
+                  <div className="break-all text-sm text-klein-200">{user.email}</div>
                 </div>
               </div>
               <div className="text-sm text-klein-100">
@@ -281,34 +281,34 @@ export default function Dashboard() {
               </div>
             </div>
 
-            <div className="rounded-2xl border border-slate-200 bg-white p-6 dark:border-slate-700 dark:bg-slate-800">
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-800 sm:p-6">
               <h3 className="mb-4 font-bold text-slate-900 dark:text-white">{copy.quickLinks}</h3>
               <div className="space-y-2">
-                <Link to="/algorithms" className="flex items-center gap-3 rounded-lg p-3 transition-colors hover:bg-slate-50 dark:hover:bg-slate-700/50">
+                <Link to="/algorithms" className="flex min-h-[44px] items-center gap-3 rounded-lg p-3 transition-colors hover:bg-slate-50 dark:hover:bg-slate-700/50">
                   <span className="text-xl">🎬</span>
                   <span className="text-slate-700 dark:text-slate-300">{copy.algorithms}</span>
                 </Link>
-                <Link to="/practice" className="flex items-center gap-3 rounded-lg p-3 transition-colors hover:bg-slate-50 dark:hover:bg-slate-700/50">
+                <Link to="/practice" className="flex min-h-[44px] items-center gap-3 rounded-lg p-3 transition-colors hover:bg-slate-50 dark:hover:bg-slate-700/50">
                   <span className="text-xl">🤖</span>
                   <span className="text-slate-700 dark:text-slate-300">{copy.aiPractice}</span>
                 </Link>
-                <Link to="/book" className="flex items-center gap-3 rounded-lg p-3 transition-colors hover:bg-slate-50 dark:hover:bg-slate-700/50">
+                <Link to="/book" className="flex min-h-[44px] items-center gap-3 rounded-lg p-3 transition-colors hover:bg-slate-50 dark:hover:bg-slate-700/50">
                   <span className="text-xl">📚</span>
                   <span className="text-slate-700 dark:text-slate-300">{copy.tutorials}</span>
                 </Link>
               </div>
             </div>
 
-            <div className="rounded-2xl border border-slate-200 bg-white p-6 dark:border-slate-700 dark:bg-slate-800">
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-800 sm:p-6">
               <h3 className="mb-4 font-bold text-slate-900 dark:text-white">{copy.practiceHistory}</h3>
               {recentExercises.length > 0 ? (
                 <div className="space-y-2">
                   {recentExercises.map((record) => (
                     <div
                       key={`${record.exerciseId}-${record.completedAt}`}
-                      className="flex items-center justify-between rounded-lg bg-slate-50 p-2 dark:bg-slate-700/30"
+                      className="flex items-start justify-between gap-3 rounded-lg bg-slate-50 p-3 dark:bg-slate-700/30"
                     >
-                      <div className="flex items-center gap-2">
+                      <div className="flex min-w-0 items-center gap-2">
                         <span className={record.isCorrect ? 'text-emerald-500 dark:text-emerald-400' : 'text-rose-500 dark:text-rose-400'}>
                           {record.isCorrect ? '✅' : '❌'}
                         </span>
