@@ -41,13 +41,13 @@ function MethodologySidebar({
               <span className="truncate">{t(unit.title)}</span>
             </button>
             {isActive && (
-              <div className="ml-9 mt-1 space-y-0.5 border-l-2 border-klein-200 pl-3 dark:border-klein-800">
+              <div className="ml-9 mt-1 space-y-1 border-l-2 border-klein-200 pl-3 dark:border-klein-800 lg:space-y-0.5">
                 {unit.points.map((pt, pi) => (
                   <button
                     key={pi}
                     type="button"
                     onClick={() => onSelect(`${unit.id}-${pi}`)}
-                    className="block w-full cursor-pointer truncate py-1 text-left text-xs text-slate-500 transition-colors hover:text-klein-600 dark:text-slate-500 dark:hover:text-klein-400"
+                    className="block min-h-11 w-full cursor-pointer rounded-xl px-2 py-2 text-left text-sm leading-5 text-slate-500 transition-colors hover:text-klein-600 dark:text-slate-500 dark:hover:text-klein-400 lg:min-h-0 lg:rounded-none lg:px-0 lg:py-1 lg:text-xs lg:leading-4 lg:truncate"
                   >
                     {t(pt.title)}
                   </button>
@@ -109,7 +109,8 @@ function MobileTOC({
                 <button
                   type="button"
                   onClick={() => setOpen(false)}
-                  className="cursor-pointer rounded-full p-2 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+                  aria-label="Close table of contents"
+                  className="flex h-11 w-11 cursor-pointer items-center justify-center rounded-full text-slate-400 transition-colors duration-200 hover:bg-slate-100 dark:hover:bg-slate-800"
                 >
                   <X className="h-5 w-5" />
                 </button>
@@ -273,14 +274,14 @@ export default function Methodology() {
                         {t(pt.detail)}
                       </p>
                       {pt.example && (
-                        <pre className="mt-4 whitespace-pre-wrap rounded-xl bg-slate-50 px-4 py-4 text-xs leading-6 text-slate-700 dark:bg-slate-900 dark:text-slate-300">
+                        <pre className="mt-4 overflow-x-auto whitespace-pre-wrap rounded-xl bg-slate-50 px-4 py-4 text-sm leading-6 text-slate-700 dark:bg-slate-900 dark:text-slate-300 sm:text-xs">
                           {pt.example}
                         </pre>
                       )}
                       {pt.tips && (
                         <div className="mt-4 flex items-start gap-2 rounded-xl bg-klein-50/60 px-4 py-3 dark:bg-klein-900/20">
                           <Lightbulb className="mt-0.5 h-4 w-4 shrink-0 text-klein-500" />
-                          <p className="text-xs leading-5 text-klein-700 dark:text-klein-300">
+                          <p className="text-sm leading-6 text-klein-700 dark:text-klein-300 sm:text-xs sm:leading-5">
                             {t(pt.tips)}
                           </p>
                         </div>

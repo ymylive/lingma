@@ -7,10 +7,10 @@ export default function Footer() {
   return (
     <footer className="relative z-10 border-t border-slate-200/50 bg-white/60 backdrop-blur-md dark:border-slate-800 dark:bg-slate-950/60">
       <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
-        <div className="grid gap-8 sm:grid-cols-3">
+        <div className="grid gap-8 text-center sm:grid-cols-3 sm:text-left">
           {/* Brand */}
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center justify-center gap-2 sm:justify-start">
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-klein-500 to-klein-600 text-xs font-bold text-white">
                 DS
               </div>
@@ -54,7 +54,7 @@ export default function Footer() {
             <h4 className="mb-3 text-sm font-semibold text-slate-900 dark:text-white">
               {isEnglish ? 'Built With' : '技术栈'}
             </h4>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap justify-center gap-2 sm:justify-start">
               {['React', 'TypeScript', 'Tailwind CSS', 'Vite', 'Framer Motion'].map((tech) => (
                 <span
                   key={tech}
