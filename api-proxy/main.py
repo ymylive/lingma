@@ -329,6 +329,11 @@ def sanitize_vibe_prompt(prompt: Any) -> str:
     return value
 
 
+def sanitize_app_locale(locale: Any) -> str:
+    value = str(locale or "").strip()
+    return "en-US" if value == "en-US" else "zh-CN"
+
+
 def sanitize_string_list(values: Any, field_name: str, min_items: int = 1, max_items: int = 8) -> List[str]:
     if not isinstance(values, list):
         raise ValueError(f"{field_name} must be a list")
@@ -715,25 +720,104 @@ def serialize_vibe_profile_row(row: Optional[sqlite3.Row], fallback_track: str, 
     }
 
 
-def build_vibe_generation_prompt(track: str, difficulty: str, profile: Dict[str, Any], user: sqlite3.Row, model: str) -> Dict[str, Any]:
-    profile_summary = (
-        f"recommendedTrack={profile['recommendedTrack']}, "
-        f"recommendedDifficulty={profile['recommendedDifficulty']}, "
-        f"weakestDimension={profile['weakestDimension'] or 'none'}, "
-        f"skillLevel={user['skill_level']}, targetLanguage={user['target_language']}"
-    )
-    instructions = (
-        "Generate one prompt-writing exercise for AI-assisted software engineering. "
-        "Return JSON only with keys: title, scenario, requirements, constraints, success_criteria, expected_focus. "
-        "Make the challenge concrete, scorable, and aligned to the selected track and difficulty. "
-        "expected_focus must use only: goal_clarity, boundary_constraints, verification_design, output_format."
-    )
-    user_text = (
-        f"track={track}\n"
-        f"difficulty={difficulty}\n"
-        f"profile={profile_summary}\n"
-        "Make the exercise realistic, professional, and bounded."
-    )
+def build_vibe_track_brief(track: str, locale: str) -> str:
+    normalized_locale = sanitize_app_locale(locale)
+    zh_briefs = {
+        "frontend": "围绕现有 React/Vite/Tailwind 页面或组件改造，强调布局、交互、状态、可访问性或样式回归。",
+        "backend": "围绕接口、鉴权、数据库、缓存、任务队列或部署代理，强调输入输出契约、兼容性和回归验证。",
+        "debugging": "围绕线上缺陷、异常日志、复现路径和根因定位，强调证据收集、最小修复和验证闭环。",
+        "refactoring": "围绕职责拆分、重复逻辑收口、模块边界清理或技术债治理，强调可回滚和低风险演进。",
+        "review": "围绕代码审查、风险分级、性能/安全/正确性问题识别，强调给出明确结论和修复建议。",
+    }
+    en_briefs = {
+        "frontend": "Use a real React/Vite/Tailwind page or component task focused on layout, interaction, state, accessibility, or styling regressions.",
+        "backend": "Use an API, auth, database, cache, job, or deployment-proxy task focused on contracts, compatibility, and regression verification.",
+        "debugging": "Use a production bug or failing flow focused on reproduction, evidence gathering, root-cause isolation, and a minimal fix.",
+        "refactoring": "Use a maintainability task focused on tightening ownership, deduplicating logic, clarifying module boundaries, and keeping the rollout reversible.",
+        "review": "Use a code-review task focused on correctness, performance, security, or release risk with explicit findings and remediation advice.",
+    }
+    briefs = en_briefs if normalized_locale == "en-US" else zh_briefs
+    return briefs.get(track, briefs["frontend"])
+
+
+def build_vibe_difficulty_brief(difficulty: str, locale: str) -> str:
+    normalized_locale = sanitize_app_locale(locale)
+    zh_briefs = {
+        "beginner": "题目应控制在单模块或单链路内，边界清晰，避免跨多个系统协同。",
+        "intermediate": "题目可以涉及两个相关模块，但依旧要有明确边界和可执行验证路径。",
+        "advanced": "题目可以包含跨模块影响、兼容性压力或发布风险，但必须保持任务范围可评分、可落地。",
+    }
+    en_briefs = {
+        "beginner": "Keep the task within one module or one delivery path, with obvious scope boundaries and low coordination cost.",
+        "intermediate": "The task may span two related modules, but it still needs crisp boundaries and a concrete verification path.",
+        "advanced": "The task may involve cross-module impact, compatibility pressure, or release risk, but it must remain bounded and scorable.",
+    }
+    briefs = en_briefs if normalized_locale == "en-US" else zh_briefs
+    return briefs.get(difficulty, briefs["beginner"])
+
+
+def build_vibe_generation_prompt(track: str, difficulty: str, profile: Dict[str, Any], user: sqlite3.Row, model: str, locale: str) -> Dict[str, Any]:
+    normalized_locale = sanitize_app_locale(locale)
+    if normalized_locale == "en-US":
+        profile_summary = (
+            f"recommendedTrack={profile['recommendedTrack']}, "
+            f"recommendedDifficulty={profile['recommendedDifficulty']}, "
+            f"weakestDimension={profile['weakestDimension'] or 'none'}, "
+            f"skillLevel={user['skill_level']}, targetLanguage={user['target_language']}"
+        )
+        instructions = (
+            "You are a senior software-engineering coach creating one realistic prompt-writing exercise for an AI-assisted coding lab. "
+            "Return JSON only with exactly these keys: title, scenario, requirements, constraints, success_criteria, expected_focus. "
+            "All user-facing fields must be written in natural American English. Do not mix in Chinese unless a code symbol, path, command, API name, or library name requires it. "
+            "Do not output markdown, code fences, commentary, or unicode escape sequences. "
+            "The exercise must feel like a real ticket from an existing product team, not a meta prompt-engineering lecture. "
+            "Title: specific and concrete, naming the module, flow, or defect. "
+            "Scenario: 2-4 sentences covering product context, the current problem, the requested outcome, and the expected deliverable. "
+            "Requirements: 3-5 actionable items describing what the learner's prompt should ask the AI to do. "
+            "Constraints: 2-4 hard boundaries that limit scope, dependencies, compatibility, rollout, or forbidden changes. "
+            "Success criteria: 2-4 reviewable outcomes, including at least one verification or regression expectation. "
+            "expected_focus must contain 2-4 items chosen only from goal_clarity, boundary_constraints, verification_design, output_format. "
+            "Do not generate abstract prompt-engineering drills, checklist fragments, vague best-practice advice, or exercises whose entire topic is 'write a better prompt'. "
+            "The task must revolve around one concrete bug, feature, refactor, or review scenario aligned to the requested track and difficulty."
+        )
+        user_text = (
+            f"track={track}\n"
+            f"difficulty={difficulty}\n"
+            f"profile={profile_summary}\n"
+            f"track_brief={build_vibe_track_brief(track, normalized_locale)}\n"
+            f"difficulty_brief={build_vibe_difficulty_brief(difficulty, normalized_locale)}\n"
+            "Make the exercise realistic, bounded, professional, and immediately usable in a training session."
+        )
+    else:
+        profile_summary = (
+            f"recommendedTrack={profile['recommendedTrack']}, "
+            f"recommendedDifficulty={profile['recommendedDifficulty']}, "
+            f"weakestDimension={profile['weakestDimension'] or 'none'}, "
+            f"skillLevel={user['skill_level']}, targetLanguage={user['target_language']}"
+        )
+        instructions = (
+            "你是资深软件工程教练，需要为 AI 协作编程训练场生成一道真实的 prompt 书写练习题。 "
+            "只返回 JSON，对象字段必须且只能是：title, scenario, requirements, constraints, success_criteria, expected_focus。 "
+            "所有面向用户的字段都必须使用自然、专业的简体中文；命令、路径、API 名、库名可以保留原文。 "
+            "不要输出 markdown、代码块、解释性前后缀，也不要输出 \\uXXXX 形式的转义文本。 "
+            "题目必须像真实研发团队里的工单，而不是 prompt 工程元讨论。 "
+            "title 要具体，能看出模块、流程或缺陷。 "
+            "scenario 用 2-4 句交代产品背景、当前问题、目标结果和期望交付物。 "
+            "requirements 提供 3-5 条可执行要求，描述学员写出的 prompt 应该要求 AI 做什么。 "
+            "constraints 提供 2-4 条硬性边界，限制改动范围、依赖、兼容性、上线方式或不可触碰区域。 "
+            "success_criteria 提供 2-4 条可核查的完成标准，至少一条包含验证或回归要求。 "
+            "expected_focus 必须给出 2-4 个评分维度，只能从 goal_clarity, boundary_constraints, verification_design, output_format 中选择。 "
+            "禁止生成抽象题、清单碎片、空泛最佳实践总结、或题目本身只是“写一个更好的 prompt”。 "
+            "整道题必须围绕一个具体 bug、feature、refactor 或 review 场景展开，并与给定赛道和难度匹配。"
+        )
+        user_text = (
+            f"track={track}\n"
+            f"difficulty={difficulty}\n"
+            f"profile={profile_summary}\n"
+            f"track_brief={build_vibe_track_brief(track, normalized_locale)}\n"
+            f"difficulty_brief={build_vibe_difficulty_brief(difficulty, normalized_locale)}\n"
+            "请生成真实、专业、边界清晰、可以直接用于训练的练习题。"
+        )
     return {
         "model": model,
         "input": [
@@ -750,15 +834,28 @@ def build_vibe_generation_prompt(track: str, difficulty: str, profile: Dict[str,
     }
 
 
-def build_vibe_evaluation_prompt(challenge: Dict[str, Any], prompt_text: str, model: str) -> Dict[str, Any]:
-    instructions = (
-        "You are evaluating the quality of a user's software-engineering prompt only. "
-        "Do not score hypothetical code quality. Return JSON only with keys: "
-        "total_score, dimension_scores, strengths, weaknesses, rewrite_example, next_difficulty_recommendation. "
-        "dimension_scores must include goal_clarity (0-30), boundary_constraints (0-25), "
-        "verification_design (0-25), output_format (0-20). "
-        "next_difficulty_recommendation must be one of beginner, intermediate, advanced."
-    )
+def build_vibe_evaluation_prompt(challenge: Dict[str, Any], prompt_text: str, model: str, locale: str) -> Dict[str, Any]:
+    normalized_locale = sanitize_app_locale(locale)
+    if normalized_locale == "en-US":
+        instructions = (
+            "You are evaluating the quality of the user's software-engineering prompt only. Do not score hypothetical code quality. "
+            "Return JSON only with keys: total_score, dimension_scores, strengths, weaknesses, rewrite_example, next_difficulty_recommendation. "
+            "All user-facing fields must be written in natural American English. Do not output markdown, code fences, commentary, or unicode escape sequences. "
+            "dimension_scores must include goal_clarity (0-30), boundary_constraints (0-25), verification_design (0-25), output_format (0-20). "
+            "strengths and weaknesses must be concrete observations tied to the prompt, not generic advice. "
+            "rewrite_example must be a polished, directly usable replacement prompt for this exact challenge, not an outline or checklist. "
+            "next_difficulty_recommendation must be one of beginner, intermediate, advanced."
+        )
+    else:
+        instructions = (
+            "你只评估用户这段软件工程协作 prompt 的质量，不评估假设中的代码质量。 "
+            "只返回 JSON，字段必须且只能是：total_score, dimension_scores, strengths, weaknesses, rewrite_example, next_difficulty_recommendation。 "
+            "所有面向用户的字段都必须使用自然、专业的简体中文；不要输出 markdown、代码块、解释性前后缀，也不要输出 \\uXXXX 形式的转义文本。 "
+            "dimension_scores 必须包含 goal_clarity (0-30), boundary_constraints (0-25), verification_design (0-25), output_format (0-20)。 "
+            "strengths 和 weaknesses 必须是结合当前 prompt 的具体观察，不能写成空泛建议。 "
+            "rewrite_example 必须是一段可以直接提交给 AI 的完整改写 prompt，而不是点评提纲或关键词列表。 "
+            "next_difficulty_recommendation 只能是 beginner, intermediate, advanced。"
+        )
     challenge_summary = json.dumps(
         {
             "track": challenge["track"],
@@ -2127,6 +2224,7 @@ async def vibe_coding_generate(request: Request):
     fallback_track = "frontend"
     fallback_difficulty = default_vibe_difficulty_for_skill(user["skill_level"])
     model_name = resolve_requested_model(body.get("model"))
+    locale = sanitize_app_locale(body.get("locale"))
 
     with db_lock:
         conn = get_db_connection(AUTH_DB_PATH)
@@ -2142,7 +2240,7 @@ async def vibe_coding_generate(request: Request):
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
-    payload = build_vibe_generation_prompt(track, difficulty, profile, user, model_name)
+    payload = build_vibe_generation_prompt(track, difficulty, profile, user, model_name, locale)
     data = await run_in_threadpool(read_upstream_responses_json, payload)
     normalized = normalize_generated_challenge_payload(parse_upstream_json_object(data), track, difficulty, user["id"])
 
@@ -2167,6 +2265,7 @@ async def vibe_coding_generate_stream(request: Request):
     fallback_track = "frontend"
     fallback_difficulty = default_vibe_difficulty_for_skill(user["skill_level"])
     model_name = resolve_requested_model(body.get("model"))
+    locale = sanitize_app_locale(body.get("locale"))
 
     with db_lock:
         conn = get_db_connection(AUTH_DB_PATH)
@@ -2182,7 +2281,7 @@ async def vibe_coding_generate_stream(request: Request):
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
-    payload = build_vibe_generation_prompt(track, difficulty, profile, user, model_name)
+    payload = build_vibe_generation_prompt(track, difficulty, profile, user, model_name, locale)
 
     def event_stream() -> Iterator[str]:
         try:
@@ -2222,6 +2321,7 @@ async def vibe_coding_evaluate(request: Request):
 
     body = await request.json()
     model_name = resolve_requested_model(body.get("model"))
+    locale = sanitize_app_locale(body.get("locale"))
     challenge_id = str(body.get("challenge_id") or "").strip()
     if not challenge_id:
         raise HTTPException(status_code=400, detail="challenge_id is required")
@@ -2241,7 +2341,7 @@ async def vibe_coding_evaluate(request: Request):
         raise HTTPException(status_code=404, detail="challenge not found")
 
     challenge = serialize_vibe_challenge_row(challenge_row)
-    payload = build_vibe_evaluation_prompt(challenge, prompt_text, model_name)
+    payload = build_vibe_evaluation_prompt(challenge, prompt_text, model_name, locale)
     data = await run_in_threadpool(read_upstream_responses_json, payload)
     evaluation = normalize_evaluation_payload(parse_upstream_json_object(data), challenge_id)
     attempt_id = f"attempt_{secrets.token_urlsafe(12)}"
@@ -2281,6 +2381,7 @@ async def vibe_coding_evaluate_stream(request: Request):
 
     body = await request.json()
     model_name = resolve_requested_model(body.get("model"))
+    locale = sanitize_app_locale(body.get("locale"))
     challenge_id = str(body.get("challenge_id") or "").strip()
     if not challenge_id:
         raise HTTPException(status_code=400, detail="challenge_id is required")
@@ -2300,7 +2401,7 @@ async def vibe_coding_evaluate_stream(request: Request):
         raise HTTPException(status_code=404, detail="challenge not found")
 
     challenge = serialize_vibe_challenge_row(challenge_row)
-    payload = build_vibe_evaluation_prompt(challenge, prompt_text, model_name)
+    payload = build_vibe_evaluation_prompt(challenge, prompt_text, model_name, locale)
 
     def event_stream() -> Iterator[str]:
         try:

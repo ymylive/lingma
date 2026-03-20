@@ -76,7 +76,7 @@ function useCountUp(target: number, duration = 600) {
 }
 
 export default function VibeCodingLab({ onOpenAiGenerator, onOpenPracticeLibrary, initialTrack }: Props) {
-  const { t } = useI18n();
+  const { locale, t } = useI18n();
 
   const difficultyLabel = (level: string) => t(DIFFICULTY_LABEL[level] ?? level);
 
@@ -181,7 +181,7 @@ export default function VibeCodingLab({ onOpenAiGenerator, onOpenPracticeLibrary
     setStreamingChallengePreview('');
     setStreamingEvaluationPreview('');
     try {
-      const nextChallenge = await generateVibeChallengeStream(track, setStreamingChallengePreview);
+      const nextChallenge = await generateVibeChallengeStream(track, locale, setStreamingChallengePreview);
       setChallenge(nextChallenge);
       setDraftPrompt('');
       setStreamingChallengePreview('');
@@ -200,7 +200,7 @@ export default function VibeCodingLab({ onOpenAiGenerator, onOpenPracticeLibrary
     setEvaluation(null);
     setStreamingEvaluationPreview('');
     try {
-      const nextEvaluation = await evaluateVibePromptStream(challenge.id, draftPrompt, setStreamingEvaluationPreview);
+      const nextEvaluation = await evaluateVibePromptStream(challenge.id, draftPrompt, locale, setStreamingEvaluationPreview);
       setEvaluation(nextEvaluation);
       setStreamingEvaluationPreview('');
       const [profileData, historyData] = await Promise.all([fetchVibeProfile(), fetchVibeHistory()]);
@@ -403,10 +403,10 @@ export default function VibeCodingLab({ onOpenAiGenerator, onOpenPracticeLibrary
                     <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">{t('场景')}</div>
                     <p className="mt-2 text-sm leading-7 text-slate-700 dark:text-slate-200">{challenge.scenario}</p>
                   </div>
-                  <div className="grid gap-3 md:grid-cols-3">
+                  <div className="grid gap-3 xl:grid-cols-2">
                     <BulletPanel title={t('要求')} items={challenge.requirements} />
                     <BulletPanel title={t('限制')} items={challenge.constraints} />
-                    <BulletPanel title={t('成功标准')} items={challenge.successCriteria} />
+                    <BulletPanel title={t('成功标准')} items={challenge.successCriteria} className="xl:col-span-2" />
                   </div>
                 </div>
               ) : (
@@ -619,15 +619,16 @@ function ScoreDisplay({ score }: { score: number }) {
   return <div className="mt-2 text-4xl font-black text-emerald-900 dark:text-emerald-100">{display}<span className="ml-1 text-lg font-semibold">/100</span></div>;
 }
 
-function BulletPanel({ title, items }: { title: string; items: string[] }) {
+function BulletPanel({ title, items, className }: { title: string; items: string[]; className?: string }) {
   const visibleItems = items.filter(Boolean);
   return (
-    <div className="rounded-3xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-800">
+    <div className={`rounded-3xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-800 ${className ?? ''}`}>
       <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">{title}</div>
       <div className="mt-3 space-y-2">
         {visibleItems.map((item, index) => (
-          <div key={`${title}-${index}`} className="rounded-2xl bg-slate-50 px-3 py-3 text-sm leading-7 text-slate-700 dark:bg-slate-900 dark:text-slate-200">
-            {item}
+          <div key={`${title}-${index}`} className="flex min-w-0 gap-3 rounded-2xl bg-slate-50 px-3 py-3 dark:bg-slate-900">
+            <span aria-hidden className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-slate-400 dark:bg-slate-500" />
+            <span className="min-w-0 break-words text-sm leading-6 text-slate-700 dark:text-slate-200">{item}</span>
           </div>
         ))}
       </div>

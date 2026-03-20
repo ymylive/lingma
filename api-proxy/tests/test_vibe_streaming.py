@@ -114,11 +114,11 @@ def test_vibe_generate_stream_emits_preview_and_final_and_persists(client: TestC
     user = register_user(client, email="vibe-generate@example.com")
     upstream_payloads: list[dict] = []
     generated = {
-        "title": "前端提效改造训练",
-        "scenario": "你需要为一个已有 React 页面编写高质量协作 prompt。",
-        "requirements": ["明确目标", "限定交付范围", "要求验证步骤"],
-        "constraints": ["不要大改架构", "保持现有设计语言"],
-        "success_criteria": ["输出可执行步骤", "说明验证方式"],
+        "title": "Harden a dashboard activity feed refresh",
+        "scenario": "The product team shipped a new activity feed card, but the auto-refresh flow now causes layout jumps on tablet screens. Write a prompt that asks the AI to fix the issue without changing unrelated dashboard widgets.",
+        "requirements": ["State the goal and target module clearly", "Ask for a minimal reversible patch", "Require explicit validation steps"],
+        "constraints": ["Do not redesign unrelated dashboard widgets", "Keep the existing API contract unchanged"],
+        "success_criteria": ["The output includes a concrete implementation plan", "The prompt asks for regression verification on tablet and desktop"],
         "expected_focus": ["goal_clarity", "verification_design"],
     }
 
@@ -129,16 +129,19 @@ def test_vibe_generate_stream_emits_preview_and_final_and_persists(client: TestC
 
     monkeypatch.setattr(api_module, "open_upstream_responses", fake_open_upstream)
 
-    response = client.post("/api/vibe-coding/generate/stream", json={"track": "frontend"})
+    response = client.post("/api/vibe-coding/generate/stream", json={"track": "frontend", "locale": "en-US"})
     assert response.status_code == 200, response.text
     assert response.headers["content-type"].startswith("text/event-stream")
 
     events = parse_sse_events(response.text)
-    assert any(event.get("type") == "preview" and "前端提效改造训练" in event.get("text", "") for event in events)
+    assert any(event.get("type") == "preview" and "Harden a dashboard activity feed refresh" in event.get("text", "") for event in events)
     final_event = next(event for event in events if event.get("type") == "final")
-    assert final_event["payload"]["title"] == "前端提效改造训练"
+    assert final_event["payload"]["title"] == "Harden a dashboard activity feed refresh"
     assert final_event["payload"]["userId"] == user["id"]
     assert len(upstream_payloads) == 1
+    system_text = upstream_payloads[0]["input"][0]["content"][0]["text"]
+    assert "natural American English" in system_text
+    assert "Do not generate abstract prompt-engineering drills" in system_text
 
     conn = sqlite3.connect(api_env["auth_db"])
     conn.row_factory = sqlite3.Row
@@ -147,12 +150,13 @@ def test_vibe_generate_stream_emits_preview_and_final_and_persists(client: TestC
     finally:
         conn.close()
     assert row is not None
-    assert row["title"] == "前端提效改造训练"
+    assert row["title"] == "Harden a dashboard activity feed refresh"
 
 
 def test_vibe_evaluate_stream_emits_preview_and_final_and_persists(client: TestClient, api_env, monkeypatch: pytest.MonkeyPatch):
     api_module = api_env["module"]
     user = register_user(client, email="vibe-eval@example.com")
+    upstream_payloads: list[dict] = []
     challenge = {
         "id": "challenge_stream_test",
         "userId": user["id"],
@@ -188,14 +192,19 @@ def test_vibe_evaluate_stream_emits_preview_and_final_and_persists(client: TestC
         conn.close()
 
     @contextmanager
-    def fake_open_upstream(_: dict):
+    def fake_open_upstream(payload: dict):
+        upstream_payloads.append(payload)
         yield FakeSseResponse(stream_lines_for_json_payload(evaluation))
 
     monkeypatch.setattr(api_module, "open_upstream_responses", fake_open_upstream)
 
     response = client.post(
         "/api/vibe-coding/evaluate/stream",
-        json={"challenge_id": challenge["id"], "user_prompt": "请补全这个页面的真实流式方案，并明确范围、验证方式和输出格式要求。"},
+        json={
+            "challenge_id": challenge["id"],
+            "user_prompt": "请补全这个页面的真实流式方案，并明确范围、验证方式和输出格式要求。",
+            "locale": "zh-CN",
+        },
     )
     assert response.status_code == 200, response.text
     events = parse_sse_events(response.text)
@@ -203,6 +212,10 @@ def test_vibe_evaluate_stream_emits_preview_and_final_and_persists(client: TestC
     final_event = next(event for event in events if event.get("type") == "final")
     assert final_event["payload"]["total_score"] == 86
     assert final_event["payload"]["challengeId"] == challenge["id"]
+    assert len(upstream_payloads) == 1
+    system_text = upstream_payloads[0]["input"][0]["content"][0]["text"]
+    assert "简体中文" in system_text
+    assert "rewrite_example 必须是一段可以直接提交给 AI 的完整改写 prompt" in system_text
 
     conn = sqlite3.connect(api_env["auth_db"])
     conn.row_factory = sqlite3.Row
