@@ -1733,6 +1733,81 @@ def extract_sse_data(event_block: str) -> str:
     return "\n".join(data_lines).strip()
 
 
+def build_sse_data(payload: Dict[str, Any]) -> str:
+    return f"data: {json.dumps(payload, ensure_ascii=False)}\n\n"
+
+
+def build_sse_done() -> str:
+    return "data: [DONE]\n\n"
+
+
+def build_standard_streaming_headers() -> Dict[str, str]:
+    return {
+        "Cache-Control": "no-cache",
+        "Connection": "keep-alive",
+    }
+
+
+def parse_streamed_json_object(final_text: str, fallback_response: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    raw_payload = str(final_text or "").strip()
+    if raw_payload:
+        try:
+            parsed = json.loads(raw_payload)
+        except Exception as exc:
+            if fallback_response is None:
+                raise HTTPException(status_code=502, detail="invalid structured AI output") from exc
+        else:
+            if isinstance(parsed, dict):
+                return parsed
+            raise HTTPException(status_code=502, detail="invalid structured AI output")
+
+    if fallback_response is not None:
+        return parse_upstream_json_object(fallback_response)
+    raise HTTPException(status_code=502, detail="invalid structured AI output")
+
+
+def iter_upstream_text_stream(payload: Dict[str, Any]) -> Iterator[Tuple[str, str, Optional[Dict[str, Any]]]]:
+    accumulated = ""
+    with open_upstream_responses(payload) as upstream:
+        for event_block in iter_sse_events(upstream):
+            data_text = extract_sse_data(event_block)
+            if not data_text or data_text == "[DONE]":
+                continue
+            try:
+                event = json.loads(data_text)
+            except Exception:
+                continue
+            if not isinstance(event, dict):
+                continue
+
+            response_obj = event.get("response") if isinstance(event.get("response"), dict) else None
+            event_type = str(event.get("type") or "")
+            if event_type == "response.output_text.delta":
+                delta = event.get("delta")
+                if isinstance(delta, str) and delta:
+                    accumulated += delta
+                    yield "preview", accumulated, None
+            elif event_type == "response.output_text.done":
+                done_text = event.get("text")
+                if isinstance(done_text, str) and done_text and not accumulated:
+                    accumulated = done_text
+                    yield "preview", accumulated, None
+            elif event_type == "response.completed":
+                if response_obj is not None:
+                    final_text, _ = extract_responses_json_text(response_obj)
+                    if final_text and final_text != accumulated:
+                        accumulated = final_text
+                        yield "preview", accumulated, None
+                yield "final", accumulated, response_obj
+                return
+            elif event_type == "response.failed" or isinstance(event.get("error"), dict):
+                error = event.get("error") if isinstance(event.get("error"), dict) else {}
+                message = str(error.get("message") or "upstream stream failed").strip()
+                raise HTTPException(status_code=502, detail=message or "upstream stream failed")
+
+    yield "final", accumulated, None
+
+
 @app.get("/v1/models")
 async def list_models():
     return JSONResponse(
@@ -1900,6 +1975,7 @@ async def judge_proxy(request: Request):
     forwarded_payload = build_judge_forward_payload(body)
     exercise_context = extract_optional_exercise_context(body)
     model_name = resolve_requested_model(body.get("model"))
+    requested_ai_review_mode = str(body.get("aiReviewMode") or "").strip().lower()
     request_body = json.dumps(forwarded_payload, ensure_ascii=False).encode("utf-8")
 
     try:
@@ -1931,6 +2007,15 @@ async def judge_proxy(request: Request):
         judge_payload["aiReview"] = build_judge_ai_review_skipped()
         return JSONResponse(content=judge_payload, status_code=upstream.status_code)
 
+    if requested_ai_review_mode == "stream":
+        if JUDGE_AI_REVIEW_MODE == JUDGE_AI_REVIEW_STATUS_DEFERRED:
+            judge_payload["aiReview"] = build_judge_ai_review_deferred(model_name)
+        elif not AI_API_KEY:
+            judge_payload["aiReview"] = build_judge_ai_review_unavailable(model_name)
+        else:
+            judge_payload["aiReview"] = build_judge_ai_review_deferred(model_name, triggered=True)
+        return JSONResponse(content=judge_payload, status_code=upstream.status_code)
+
     if JUDGE_AI_REVIEW_MODE == JUDGE_AI_REVIEW_STATUS_DEFERRED:
         judge_payload["aiReview"] = build_judge_ai_review_deferred(model_name)
         return JSONResponse(content=judge_payload, status_code=upstream.status_code)
@@ -1957,6 +2042,69 @@ async def judge_proxy(request: Request):
         judge_payload["aiReview"] = build_judge_ai_review_unavailable(model_name)
 
     return JSONResponse(content=judge_payload, status_code=upstream.status_code)
+
+
+@app.post("/api/judge/review/stream")
+async def judge_review_stream(request: Request):
+    require_authenticated_user(request)
+    body = await request.json()
+    if not isinstance(body, dict):
+        raise HTTPException(status_code=400, detail="invalid request payload")
+
+    model_name = resolve_requested_model(body.get("model"))
+    judge_payload = body.get("judgePayload")
+    if not isinstance(judge_payload, dict):
+        raise HTTPException(status_code=400, detail="judgePayload is required")
+
+    if not should_trigger_judge_ai_review(judge_payload):
+        def skipped_stream() -> Iterator[str]:
+            yield build_sse_data({"type": "final", "payload": build_judge_ai_review_skipped()})
+            yield build_sse_done()
+
+        return StreamingResponse(skipped_stream(), media_type="text/event-stream", headers=build_standard_streaming_headers())
+
+    if JUDGE_AI_REVIEW_MODE == JUDGE_AI_REVIEW_STATUS_DEFERRED:
+        def deferred_stream() -> Iterator[str]:
+            yield build_sse_data({"type": "final", "payload": build_judge_ai_review_deferred(model_name)})
+            yield build_sse_done()
+
+        return StreamingResponse(deferred_stream(), media_type="text/event-stream", headers=build_standard_streaming_headers())
+
+    if not AI_API_KEY:
+        def unavailable_stream() -> Iterator[str]:
+            yield build_sse_data({"type": "final", "payload": build_judge_ai_review_unavailable(model_name)})
+            yield build_sse_done()
+
+        return StreamingResponse(unavailable_stream(), media_type="text/event-stream", headers=build_standard_streaming_headers())
+
+    exercise_context = extract_optional_exercise_context(body)
+    prompt_payload = build_judge_ai_review_prompt(
+        exercise_context,
+        str(body.get("code") or ""),
+        str(body.get("language") or ""),
+        judge_payload,
+        model_name,
+    )
+
+    def event_stream() -> Iterator[str]:
+        try:
+            for phase, text, response_obj in iter_upstream_text_stream(prompt_payload):
+                if phase == "preview":
+                    if text:
+                        yield build_sse_data({"type": "preview", "text": text})
+                    continue
+
+                parsed = parse_streamed_json_object(text, response_obj)
+                normalized = normalize_judge_ai_review_payload(parsed, model_name)
+                yield build_sse_data({"type": "final", "payload": normalized})
+                yield build_sse_done()
+                return
+        except Exception as exc:
+            logger.warning("Judge AI review stream unavailable for model %s: %s", model_name, exc)
+            yield build_sse_data({"type": "final", "payload": build_judge_ai_review_unavailable(model_name)})
+            yield build_sse_done()
+
+    return StreamingResponse(event_stream(), media_type="text/event-stream", headers=build_standard_streaming_headers())
 
 
 @app.post("/api/run")
@@ -2007,6 +2155,63 @@ async def vibe_coding_generate(request: Request):
             conn.close()
 
     return JSONResponse(content=normalized)
+
+
+@app.post("/api/vibe-coding/generate/stream")
+async def vibe_coding_generate_stream(request: Request):
+    user = require_authenticated_user(request)
+    if not AI_API_KEY:
+        raise HTTPException(status_code=500, detail="AI_API_KEY is not configured")
+
+    body = await request.json()
+    fallback_track = "frontend"
+    fallback_difficulty = default_vibe_difficulty_for_skill(user["skill_level"])
+    model_name = resolve_requested_model(body.get("model"))
+
+    with db_lock:
+        conn = get_db_connection(AUTH_DB_PATH)
+        try:
+            stored_profile = get_stored_vibe_profile(conn, user["id"])
+            profile = serialize_vibe_profile_row(stored_profile, fallback_track, fallback_difficulty)
+        finally:
+            conn.close()
+
+    try:
+        track = sanitize_vibe_track(body.get("track"), fallback=profile["recommendedTrack"] or fallback_track)
+        difficulty = sanitize_vibe_difficulty(body.get("difficulty"), fallback=profile["recommendedDifficulty"] or fallback_difficulty)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    payload = build_vibe_generation_prompt(track, difficulty, profile, user, model_name)
+
+    def event_stream() -> Iterator[str]:
+        try:
+            for phase, text, response_obj in iter_upstream_text_stream(payload):
+                if phase == "preview":
+                    if text:
+                        yield build_sse_data({"type": "preview", "text": text})
+                    continue
+
+                parsed = parse_streamed_json_object(text, response_obj)
+                normalized = normalize_generated_challenge_payload(parsed, track, difficulty, user["id"])
+                with db_lock:
+                    conn = get_db_connection(AUTH_DB_PATH)
+                    try:
+                        insert_vibe_challenge(conn, normalized)
+                        conn.commit()
+                    finally:
+                        conn.close()
+                yield build_sse_data({"type": "final", "payload": normalized})
+                yield build_sse_done()
+                return
+        except HTTPException as exc:
+            yield build_sse_data({"type": "error", "message": str(exc.detail)})
+            yield build_sse_done()
+        except Exception as exc:
+            yield build_sse_data({"type": "error", "message": str(exc)})
+            yield build_sse_done()
+
+    return StreamingResponse(event_stream(), media_type="text/event-stream", headers=build_standard_streaming_headers())
 
 
 @app.post("/api/vibe-coding/evaluate")
@@ -2066,6 +2271,83 @@ async def vibe_coding_evaluate(request: Request):
         "createdAt": evaluation["createdAt"],
     }
     return JSONResponse(content=response_payload)
+
+
+@app.post("/api/vibe-coding/evaluate/stream")
+async def vibe_coding_evaluate_stream(request: Request):
+    user = require_authenticated_user(request)
+    if not AI_API_KEY:
+        raise HTTPException(status_code=500, detail="AI_API_KEY is not configured")
+
+    body = await request.json()
+    model_name = resolve_requested_model(body.get("model"))
+    challenge_id = str(body.get("challenge_id") or "").strip()
+    if not challenge_id:
+        raise HTTPException(status_code=400, detail="challenge_id is required")
+    try:
+        prompt_text = sanitize_vibe_prompt(body.get("user_prompt"))
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    with db_lock:
+        conn = get_db_connection(AUTH_DB_PATH)
+        try:
+            challenge_row = get_vibe_challenge(conn, challenge_id, user["id"])
+        finally:
+            conn.close()
+
+    if challenge_row is None:
+        raise HTTPException(status_code=404, detail="challenge not found")
+
+    challenge = serialize_vibe_challenge_row(challenge_row)
+    payload = build_vibe_evaluation_prompt(challenge, prompt_text, model_name)
+
+    def event_stream() -> Iterator[str]:
+        try:
+            for phase, text, response_obj in iter_upstream_text_stream(payload):
+                if phase == "preview":
+                    if text:
+                        yield build_sse_data({"type": "preview", "text": text})
+                    continue
+
+                parsed = parse_streamed_json_object(text, response_obj)
+                evaluation = normalize_evaluation_payload(parsed, challenge_id)
+                attempt_id = f"attempt_{secrets.token_urlsafe(12)}"
+                fallback_difficulty = default_vibe_difficulty_for_skill(user["skill_level"])
+                with db_lock:
+                    conn = get_db_connection(AUTH_DB_PATH)
+                    try:
+                        insert_vibe_attempt(conn, attempt_id, user["id"], prompt_text, evaluation)
+                        recent_rows = get_recent_vibe_attempt_rows(conn, user["id"], limit=VIBE_PROFILE_WINDOW)
+                        profile_snapshot = calculate_vibe_profile_snapshot(recent_rows, challenge["track"], fallback_difficulty)
+                        upsert_vibe_profile(conn, user["id"], profile_snapshot)
+                        conn.commit()
+                    finally:
+                        conn.close()
+
+                response_payload = {
+                    "id": attempt_id,
+                    "challengeId": challenge_id,
+                    "promptText": prompt_text,
+                    "total_score": evaluation["total_score"],
+                    "dimension_scores": evaluation["dimension_scores"],
+                    "strengths": evaluation["strengths"],
+                    "weaknesses": evaluation["weaknesses"],
+                    "rewrite_example": evaluation["rewrite_example"],
+                    "next_difficulty_recommendation": evaluation["next_difficulty_recommendation"],
+                    "createdAt": evaluation["createdAt"],
+                }
+                yield build_sse_data({"type": "final", "payload": response_payload})
+                yield build_sse_done()
+                return
+        except HTTPException as exc:
+            yield build_sse_data({"type": "error", "message": str(exc.detail)})
+            yield build_sse_done()
+        except Exception as exc:
+            yield build_sse_data({"type": "error", "message": str(exc)})
+            yield build_sse_done()
+
+    return StreamingResponse(event_stream(), media_type="text/event-stream", headers=build_standard_streaming_headers())
 
 
 @app.get("/api/vibe-coding/history")

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -21,12 +21,11 @@ import {
 } from 'lucide-react';
 import { useI18n } from '../../contexts/I18nContext';
 import { methodologyUnits } from '../../data/methodologyUnits';
-import useProgressiveAiObject from '../../hooks/useProgressiveAiObject';
 import {
-  evaluateVibePrompt,
+  evaluateVibePromptStream,
   fetchVibeHistory,
   fetchVibeProfile,
-  generateVibeChallenge,
+  generateVibeChallengeStream,
 } from '../../services/vibeCodingService';
 import type {
   VibeChallenge,
@@ -144,6 +143,8 @@ export default function VibeCodingLab({ onOpenAiGenerator, onOpenPracticeLibrary
   const [generating, setGenerating] = useState(false);
   const [evaluating, setEvaluating] = useState(false);
   const [error, setError] = useState('');
+  const [streamingChallengePreview, setStreamingChallengePreview] = useState('');
+  const [streamingEvaluationPreview, setStreamingEvaluationPreview] = useState('');
 
   const loadArenaData = async () => {
     setLoading(true);
@@ -170,46 +171,20 @@ export default function VibeCodingLab({ onOpenAiGenerator, onOpenPracticeLibrary
   const latestScore = history[0]?.evaluation.total_score ?? profile.recentAverageScore;
   const weakestDimensionLabel = profile.weakestDimension ? dimensionMeta[profile.weakestDimension].label : t('暂无');
   const canEvaluate = Boolean(challenge && draftPrompt.trim().length >= 24 && !evaluating);
-  const progressiveChallenge = useProgressiveAiObject(
-    useMemo(
-      () =>
-        challenge
-          ? {
-              title: challenge.title,
-              scenario: challenge.scenario,
-              requirements: challenge.requirements,
-              constraints: challenge.constraints,
-              successCriteria: challenge.successCriteria,
-            }
-          : null,
-      [challenge],
-    ),
-    Boolean(challenge),
-  );
-  const progressiveEvaluation = useProgressiveAiObject(
-    useMemo(
-      () =>
-        evaluation
-          ? {
-              strengths: evaluation.strengths,
-              weaknesses: evaluation.weaknesses,
-              rewrite_example: evaluation.rewrite_example,
-            }
-          : null,
-      [evaluation],
-    ),
-    Boolean(evaluation),
-  );
 
   const generateChallengeForTrack = async (track: VibeTrack) => {
     setGenerating(true);
     setError('');
     setSelectedTrack(track);
+    setChallenge(null);
     setEvaluation(null);
+    setStreamingChallengePreview('');
+    setStreamingEvaluationPreview('');
     try {
-      const nextChallenge = await generateVibeChallenge(track);
+      const nextChallenge = await generateVibeChallengeStream(track, setStreamingChallengePreview);
       setChallenge(nextChallenge);
       setDraftPrompt('');
+      setStreamingChallengePreview('');
     } catch (generationError) {
       const message = generationError instanceof Error ? generationError.message : t('生成题目失败');
       setError(message);
@@ -222,9 +197,12 @@ export default function VibeCodingLab({ onOpenAiGenerator, onOpenPracticeLibrary
     if (!challenge) return;
     setEvaluating(true);
     setError('');
+    setEvaluation(null);
+    setStreamingEvaluationPreview('');
     try {
-      const nextEvaluation = await evaluateVibePrompt(challenge.id, draftPrompt);
+      const nextEvaluation = await evaluateVibePromptStream(challenge.id, draftPrompt, setStreamingEvaluationPreview);
       setEvaluation(nextEvaluation);
+      setStreamingEvaluationPreview('');
       const [profileData, historyData] = await Promise.all([fetchVibeProfile(), fetchVibeHistory()]);
       setProfile(profileData);
       setHistory(historyData);
@@ -241,6 +219,8 @@ export default function VibeCodingLab({ onOpenAiGenerator, onOpenPracticeLibrary
     setChallenge(item.challenge);
     setSelectedTrack(item.track);
     setEvaluation(null);
+    setStreamingChallengePreview('');
+    setStreamingEvaluationPreview('');
     setDraftPrompt(mode === 'rewrite' ? item.evaluation.rewrite_example : item.promptText);
   };
 
@@ -399,7 +379,7 @@ export default function VibeCodingLab({ onOpenAiGenerator, onOpenPracticeLibrary
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <div className="text-sm font-semibold text-slate-900 dark:text-white">
-                    {progressiveChallenge?.title || t('尚未生成题目')}
+                    {challenge?.title || (generating ? t('AI 正在生成题目...') : t('尚未生成题目'))}
                   </div>
                   <div className="mt-1 text-xs uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">
                     {trackMeta[selectedTrack].label} · {difficultyLabel(profile.recommendedDifficulty)}
@@ -415,16 +395,18 @@ export default function VibeCodingLab({ onOpenAiGenerator, onOpenPracticeLibrary
                 </button>
               </div>
 
-              {challenge ? (
+              {generating ? (
+                <LiveStreamingPanel title={t('AI 正在实时生成题目')} text={streamingChallengePreview || t('正在等待首个流式分片...')} />
+              ) : challenge ? (
                 <div className="mt-4 space-y-4">
                   <div>
                     <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">{t('场景')}</div>
-                    <p className="mt-2 text-sm leading-7 text-slate-700 dark:text-slate-200">{progressiveChallenge?.scenario}</p>
+                    <p className="mt-2 text-sm leading-7 text-slate-700 dark:text-slate-200">{challenge.scenario}</p>
                   </div>
                   <div className="grid gap-3 md:grid-cols-3">
-                    <BulletPanel title={t('要求')} items={progressiveChallenge?.requirements || []} />
-                    <BulletPanel title={t('限制')} items={progressiveChallenge?.constraints || []} />
-                    <BulletPanel title={t('成功标准')} items={progressiveChallenge?.successCriteria || []} />
+                    <BulletPanel title={t('要求')} items={challenge.requirements} />
+                    <BulletPanel title={t('限制')} items={challenge.constraints} />
+                    <BulletPanel title={t('成功标准')} items={challenge.successCriteria} />
                   </div>
                 </div>
               ) : (
@@ -478,7 +460,11 @@ export default function VibeCodingLab({ onOpenAiGenerator, onOpenPracticeLibrary
             {t('评分结果')}
           </div>
           <AnimatePresence mode="wait">
-          {evaluation ? (
+          {evaluating ? (
+            <motion.div key="streaming-eval" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }} className="mt-4">
+              <LiveStreamingPanel title={t('AI 正在实时评分')} text={streamingEvaluationPreview || t('正在等待首个流式分片...')} />
+            </motion.div>
+          ) : evaluation ? (
             <motion.div key="eval" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }} className="mt-4 space-y-4">
               <div role="status" aria-live="polite" className="rounded-3xl border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-900/50 dark:bg-emerald-950/20">
                 <div className="text-xs uppercase tracking-[0.16em] text-emerald-700 dark:text-emerald-300">{t('总分')}</div>
@@ -509,12 +495,12 @@ export default function VibeCodingLab({ onOpenAiGenerator, onOpenPracticeLibrary
                 })}
               </div>
 
-              <FeedbackPanel title={t('做得好的地方')} items={progressiveEvaluation?.strengths || []} tone="emerald" />
-              <FeedbackPanel title={t('需要补强的地方')} items={progressiveEvaluation?.weaknesses || []} tone="amber" />
+              <FeedbackPanel title={t('做得好的地方')} items={evaluation.strengths} tone="emerald" />
+              <FeedbackPanel title={t('需要补强的地方')} items={evaluation.weaknesses} tone="amber" />
 
               <div className="rounded-3xl border border-slate-900 bg-slate-950 p-4 text-slate-100 shadow-[0_20px_60px_-40px_rgba(15,23,42,0.9)]">
                 <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">{t('改写示范')}</div>
-                <pre className="mt-3 whitespace-pre-wrap text-sm leading-7 text-slate-200">{progressiveEvaluation?.rewrite_example}</pre>
+                <pre className="mt-3 whitespace-pre-wrap text-sm leading-7 text-slate-200">{evaluation.rewrite_example}</pre>
                 <button
                   type="button"
                   aria-label={t('用示范重练')}
@@ -674,6 +660,20 @@ function FeedbackPanel({
           </div>
         ))}
       </div>
+    </div>
+  );
+}
+
+function LiveStreamingPanel({ title, text }: { title: string; text: string }) {
+  return (
+    <div aria-live="polite" className="mt-4 rounded-3xl border border-indigo-200 bg-indigo-50/80 p-4 shadow-sm dark:border-indigo-800 dark:bg-indigo-950/20">
+      <div className="mb-2 flex items-center gap-2 text-indigo-700 dark:text-indigo-300">
+        <LoaderCircle className="h-4 w-4 animate-spin" />
+        <span className="text-sm font-semibold">{title}</span>
+      </div>
+      <pre className="max-h-80 overflow-auto whitespace-pre-wrap break-words rounded-2xl bg-white/80 p-4 text-xs leading-6 text-slate-700 dark:bg-slate-900/70 dark:text-slate-200">
+        {text}
+      </pre>
     </div>
   );
 }

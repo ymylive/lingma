@@ -245,3 +245,37 @@ def test_judge_deferred_advisory_preserves_deterministic_payload(api_factory, mo
         "status": "deferred",
         "model": "judge-review-model",
     }
+
+
+def test_judge_stream_mode_returns_deferred_placeholder_without_sync_ai_call(api_factory, monkeypatch: pytest.MonkeyPatch):
+    api_module, client = api_factory(
+        judge_internal_token="secret-token",
+        ai_api_key="test-key",
+    )
+    register_user(client, email="stream-mode@example.com")
+    judge_payload = build_judge_payload(all_passed=False, score=55, result_status="WA")
+
+    def fake_judge_request(method: str, path: str, body: bytes | None = None, content_type: str = "application/json"):
+        return make_json_response(judge_payload)
+
+    def fail_ai_call(_: dict):
+        raise AssertionError("sync AI review should not run in stream mode")
+
+    monkeypatch.setattr(api_module, "perform_internal_judge_request", fake_judge_request)
+    monkeypatch.setattr(api_module, "read_upstream_responses_json", fail_ai_call)
+
+    request_body = default_request_body()
+    request_body["aiReviewMode"] = "stream"
+
+    response = client.post("/api/judge", json=request_body)
+    assert response.status_code == 200, response.text
+
+    payload = response.json()
+    assert payload["results"] == judge_payload["results"]
+    assert payload["summary"] == judge_payload["summary"]
+    assert payload["checkpoints"] == judge_payload["checkpoints"]
+    assert payload["aiReview"] == {
+        "triggered": True,
+        "status": "deferred",
+        "model": "judge-review-model",
+    }
