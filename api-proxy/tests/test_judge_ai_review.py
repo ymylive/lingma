@@ -549,7 +549,7 @@ def test_judge_runtime_error_review_includes_runtime_error_text(client: TestClie
     assert "0\\n" in prompt_text
 
 
-def test_judge_invalid_ai_output_degrades_to_unavailable_review(client: TestClient, api_module, monkeypatch: pytest.MonkeyPatch):
+def test_judge_mismatched_total_score_is_recomputed_from_dimensions(client: TestClient, api_module, monkeypatch: pytest.MonkeyPatch):
     register_user(client, email="invalid-ai@example.com")
     judge_payload = build_judge_payload(
         all_passed=False,
@@ -595,11 +595,10 @@ def test_judge_invalid_ai_output_degrades_to_unavailable_review(client: TestClie
     payload = response.json()
     assert payload["results"] == judge_payload["results"]
     assert payload["summary"] == judge_payload["summary"]
-    assert payload["aiReview"] == {
-        "triggered": True,
-        "status": "unavailable",
-        "model": "judge-review-model",
-    }
+    assert payload["aiReview"]["triggered"] is True
+    assert payload["aiReview"]["status"] == "generated"
+    assert payload["aiReview"]["model"] == "judge-review-model"
+    assert payload["aiReview"]["totalScore"] == 90
 
 
 def test_judge_ai_timeout_degrades_to_unavailable_review(client: TestClient, api_module, monkeypatch: pytest.MonkeyPatch):
@@ -685,3 +684,24 @@ def test_iter_sse_events_prefers_utf8_bytes(api_module):
     events = list(api_module.iter_sse_events(FakeStream()))
 
     assert events == ['data: {"type":"response.output_text.delta","delta":"中文"}']
+
+
+def test_normalize_judge_ai_review_payload_recomputes_total_score_from_dimensions(api_module):
+    payload = {
+        "totalScore": 1,
+        "dimensionScores": {
+            "correctness": 28,
+            "boundaryRobustness": 14,
+            "complexityAndPerformance": 15,
+            "codeQualityAndReadability": 15,
+        },
+        "overallDiagnosis": "The solution still misses one failing branch.",
+        "errorPoints": ["The final branch does not update the answer correctly."],
+        "fixSuggestions": ["Repair the final branch before returning."],
+        "optimizationSuggestions": [],
+        "nextStep": "Rerun the failing sample after the branch fix.",
+    }
+
+    normalized = api_module.normalize_judge_ai_review_payload(payload, "judge-review-model")
+
+    assert normalized["totalScore"] == 72
