@@ -1708,11 +1708,13 @@ def build_legacy_stream_chunk(chunk_id: str, model: str, delta: Optional[str] = 
 def iter_sse_events(response: Any) -> Iterator[str]:
     buffer: List[str] = []
     if hasattr(response, "iter_lines"):
-        line_iter = response.iter_lines(decode_unicode=True)
+        line_iter = response.iter_lines(decode_unicode=False)
     else:
-        line_iter = (raw_line.decode("utf-8", errors="replace") for raw_line in response)
+        line_iter = response
 
     for line in line_iter:
+        if isinstance(line, bytes):
+            line = line.decode("utf-8", errors="replace")
         if line in {"", "\n", "\r\n", "\r"}:
             if buffer:
                 yield "\n".join(buffer)

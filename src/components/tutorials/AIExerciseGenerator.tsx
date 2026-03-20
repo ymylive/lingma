@@ -184,6 +184,7 @@ export default function AIExerciseGenerator() {
   const [exerciseType, setExerciseType] = useState<ExerciseType>('coding');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [streamingPreview, setStreamingPreview] = useState('');
   const [generatedExercise, setGeneratedExercise] = useState<GeneratedExercise | null>(null);
   const [generatedFillBlank, setGeneratedFillBlank] = useState<GeneratedFillBlank | null>(null);
   const [hasManualDifficulty, setHasManualDifficulty] = useState(false);
@@ -258,15 +259,16 @@ export default function AIExerciseGenerator() {
 
     setLoading(true);
     setError('');
+    setStreamingPreview('');
     setGeneratedExercise(null);
     setGeneratedFillBlank(null);
 
     try {
       if (exerciseType === 'coding') {
-        const exercise = await generateCodingExercise(finalTopic, difficulty, dataStructure, undefined, profileHint);
+        const exercise = await generateCodingExercise(finalTopic, difficulty, dataStructure, setStreamingPreview, profileHint);
         setGeneratedExercise(exercise);
       } else {
-        const fillBlank = await generateFillBlank(finalTopic, difficulty, dataStructure, undefined, profileHint);
+        const fillBlank = await generateFillBlank(finalTopic, difficulty, dataStructure, setStreamingPreview, profileHint);
         setGeneratedFillBlank(fillBlank);
       }
     } catch (err) {
@@ -550,6 +552,18 @@ export default function AIExerciseGenerator() {
             {error}
           </div>
         )}
+
+        {loading && streamingPreview && (
+          <div className="mt-4 rounded-2xl border border-indigo-200 bg-indigo-50/80 p-4 shadow-sm dark:border-indigo-800 dark:bg-indigo-950/20">
+            <div className="mb-2 flex items-center gap-2 text-indigo-700 dark:text-indigo-300">
+              <LoaderCircle className="h-4 w-4 animate-spin" />
+              <span className="text-sm font-semibold">{isEnglish ? 'Streaming AI output' : 'AI 正在实时生成内容'}</span>
+            </div>
+            <pre className="max-h-80 overflow-auto whitespace-pre-wrap break-words rounded-2xl bg-white/80 p-4 text-xs leading-6 text-slate-700 dark:bg-slate-900/70 dark:text-slate-200">
+              {streamingPreview}
+            </pre>
+          </div>
+        )}
       </div>
 
       {generatedExercise && (
@@ -567,7 +581,6 @@ export default function AIExerciseGenerator() {
             testCases={generatedExercise.testCases}
             hints={generatedExercise.hints}
             explanation={generatedExercise.explanation}
-            progressiveAiText
           />
         </div>
       )}
@@ -585,7 +598,6 @@ export default function AIExerciseGenerator() {
             codeTemplate={generatedFillBlank.codeTemplate}
             blanks={generatedFillBlank.blanks}
             explanation={generatedFillBlank.explanation}
-            progressiveAiText
           />
         </div>
       )}
