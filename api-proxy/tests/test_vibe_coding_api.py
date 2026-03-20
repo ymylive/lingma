@@ -98,37 +98,39 @@ def test_vibe_coding_routes_require_authentication(client: TestClient, method: s
 
 def test_authenticated_generate_returns_normalized_challenge(client: TestClient, api_module, monkeypatch: pytest.MonkeyPatch):
     user = register_user(client)
+    captured_payloads: list[dict] = []
+
+    def fake_upstream(payload: dict) -> dict:
+        captured_payloads.append(payload)
+        return {
+            "output_text": json.dumps(
+                {
+                    "title": "Refine a dashboard KPI card",
+                    "scenario": "The analytics page needs a safer KPI card refresh.",
+                    "requirements": [
+                        "Keep the diff scoped to the dashboard card module",
+                        "Preserve responsive behavior",
+                    ],
+                    "constraints": [
+                        "Do not redesign unrelated panels",
+                        "Keep the API contract unchanged",
+                    ],
+                    "success_criteria": [
+                        "The card renders in light and dark mode",
+                        "The fix includes a verification step",
+                    ],
+                    "expected_focus": ["goal_clarity", "verification_design"],
+                }
+            )
+        }
+
     monkeypatch.setattr(
         api_module,
         "read_upstream_responses_json",
-        fake_ai_responder(
-            [
-                {
-                    "output_text": json.dumps(
-                        {
-                            "title": "Refine a dashboard KPI card",
-                            "scenario": "The analytics page needs a safer KPI card refresh.",
-                            "requirements": [
-                                "Keep the diff scoped to the dashboard card module",
-                                "Preserve responsive behavior",
-                            ],
-                            "constraints": [
-                                "Do not redesign unrelated panels",
-                                "Keep the API contract unchanged",
-                            ],
-                            "success_criteria": [
-                                "The card renders in light and dark mode",
-                                "The fix includes a verification step",
-                            ],
-                            "expected_focus": ["goal_clarity", "verification_design"],
-                        }
-                    )
-                }
-            ]
-        ),
+        fake_upstream,
     )
 
-    response = client.post("/api/vibe-coding/generate", json={"track": "frontend"})
+    response = client.post("/api/vibe-coding/generate", json={"track": "frontend", "locale": "en-US"})
     assert response.status_code == 200, response.text
 
     data = response.json()
@@ -139,58 +141,63 @@ def test_authenticated_generate_returns_normalized_challenge(client: TestClient,
     assert len(data["requirements"]) == 2
     assert len(data["constraints"]) == 2
     assert "id" in data
+    assert len(captured_payloads) == 1
+    system_text = captured_payloads[0]["input"][0]["content"][0]["text"]
+    user_text = captured_payloads[0]["input"][1]["content"][0]["text"]
+    assert "natural American English" in system_text
+    assert "Do not generate abstract prompt-engineering drills" in system_text
+    assert "track_brief=" in user_text
+    assert "difficulty_brief=" in user_text
 
 
 def test_evaluate_persists_attempt_and_updates_profile(client: TestClient, api_module, monkeypatch: pytest.MonkeyPatch):
     register_user(client, email="history@example.com")
+    captured_payloads: list[dict] = []
+
+    def fake_upstream(payload: dict) -> dict:
+        captured_payloads.append(payload)
+        expected = [
+            {
+                "title": "Review a flaky auth redirect fix",
+                "scenario": "A login redirect bug keeps reappearing in production.",
+                "requirements": [
+                    "Ask for a minimal reproducible path",
+                    "Request a regression check",
+                ],
+                "constraints": [
+                    "Do not refactor unrelated auth flows",
+                ],
+                "success_criteria": [
+                    "Prompt asks for evidence and verification",
+                ],
+                "expected_focus": ["verification_design", "boundary_constraints"],
+            },
+            {
+                "total_score": 88,
+                "dimension_scores": {
+                    "goal_clarity": 26,
+                    "boundary_constraints": 22,
+                    "verification_design": 23,
+                    "output_format": 17,
+                },
+                "strengths": [
+                    "The prompt asks for a reproducible path.",
+                    "The scope is constrained to the auth redirect flow.",
+                ],
+                "weaknesses": [
+                    "The verification section could be more explicit.",
+                ],
+                "rewrite_example": "Goal: reproduce the auth redirect bug and fix it with the smallest reversible patch. Scope: only touch the redirect guard. Verification: run the auth redirect regression flow and note the expected result.",
+                "next_difficulty_recommendation": "advanced",
+            },
+        ]
+        index = len(captured_payloads) - 1
+        return {"output_text": json.dumps(expected[index])}
+
     monkeypatch.setattr(
         api_module,
         "read_upstream_responses_json",
-        fake_ai_responder(
-            [
-                {
-                    "output_text": json.dumps(
-                        {
-                            "title": "Review a flaky auth redirect fix",
-                            "scenario": "A login redirect bug keeps reappearing in production.",
-                            "requirements": [
-                                "Ask for a minimal reproducible path",
-                                "Request a regression check",
-                            ],
-                            "constraints": [
-                                "Do not refactor unrelated auth flows",
-                            ],
-                            "success_criteria": [
-                                "Prompt asks for evidence and verification",
-                            ],
-                            "expected_focus": ["verification_design", "boundary_constraints"],
-                        }
-                    )
-                },
-                {
-                    "output_text": json.dumps(
-                        {
-                            "total_score": 88,
-                            "dimension_scores": {
-                                "goal_clarity": 26,
-                                "boundary_constraints": 22,
-                                "verification_design": 23,
-                                "output_format": 17,
-                            },
-                            "strengths": [
-                                "The prompt asks for a reproducible path.",
-                                "The scope is constrained to the auth redirect flow.",
-                            ],
-                            "weaknesses": [
-                                "The verification section could be more explicit.",
-                            ],
-                            "rewrite_example": "Goal: reproduce the auth redirect bug and fix it with the smallest reversible patch. Scope: only touch the redirect guard. Verification: run the auth redirect regression flow and note the expected result.",
-                            "next_difficulty_recommendation": "advanced",
-                        }
-                    )
-                },
-            ]
-        ),
+        fake_upstream,
     )
 
     generated = client.post("/api/vibe-coding/generate", json={"track": "debugging"})
@@ -202,6 +209,7 @@ def test_evaluate_persists_attempt_and_updates_profile(client: TestClient, api_m
         json={
             "challenge_id": challenge["id"],
             "user_prompt": "Please reproduce the auth redirect issue, keep the change scoped to the redirect guard, and verify the fix with a regression check before claiming success.",
+            "locale": "zh-CN",
         },
     )
     assert evaluated.status_code == 200, evaluated.text
@@ -224,3 +232,7 @@ def test_evaluate_persists_attempt_and_updates_profile(client: TestClient, api_m
     assert profile_data["recommendedDifficulty"] == "advanced"
     assert profile_data["weakestDimension"] == "output_format"
     assert profile_data["recentAverageScore"] == 88
+    assert len(captured_payloads) == 2
+    evaluation_system_text = captured_payloads[1]["input"][0]["content"][0]["text"]
+    assert "简体中文" in evaluation_system_text
+    assert "rewrite_example 必须是一段可以直接提交给 AI 的完整改写 prompt" in evaluation_system_text
