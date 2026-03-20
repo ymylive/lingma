@@ -1,6 +1,6 @@
 const express = require('express');
 const cors = require('cors');
-const { exec, execSync, spawn } = require('child_process');
+const { exec, spawn } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 const { v4: uuidv4 } = require('uuid');
@@ -9,7 +9,7 @@ const app = express();
 const PORT = 3002;  // 判题服务使用3002端口
 const HOST = process.env.JUDGE_HOST || (process.env.NODE_ENV === 'production' ? '127.0.0.1' : '0.0.0.0');
 const TEMP_DIR = '/tmp/judge';
-const JUDGE_INTERNAL_TOKEN = (process.env.JUDGE_INTERNAL_TOKEN || 'local-judge-token').trim();
+const JUDGE_INTERNAL_TOKEN = (process.env.JUDGE_INTERNAL_TOKEN || '').trim();
 const DEFAULT_ALLOWED_ORIGINS = [
   'http://localhost:5173',
   'http://localhost:3000',
@@ -414,6 +414,21 @@ function runProgram(cmd, args, input, timeout) {
   });
 }
 
+function execCommand(command, options) {
+  return new Promise((resolve, reject) => {
+    exec(command, options, (error, stdout, stderr) => {
+      if (error) {
+        error.stdout = stdout;
+        error.stderr = stderr || error.stderr;
+        reject(error);
+        return;
+      }
+
+      resolve({ stdout, stderr });
+    });
+  });
+}
+
 // 编译代码
 async function compileCode(language, code, workDir) {
   const config = LANG_CONFIG[language];
@@ -447,7 +462,7 @@ async function compileCode(language, code, workDir) {
         : config.compile(sourceFile, executablePath);
     
     try {
-      execSync(compileCmd, { timeout: 30000, maxBuffer: 1024 * 1024 });
+      await execCommand(compileCmd, { timeout: 30000, maxBuffer: 1024 * 1024 });
       return { success: true, executablePath, className, sourceFile };
     } catch (e) {
       return { success: false, error: e.stderr?.toString() || e.message, status: 'CE' };
