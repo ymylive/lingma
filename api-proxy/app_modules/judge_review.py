@@ -90,11 +90,11 @@ def normalize_judge_ai_review_payload(payload: Dict[str, Any], model: str) -> Di
 
     try:
         total_score = int(payload.get("totalScore"))
-    except Exception as exc:
-        raise JudgeAiReviewNormalizationError("totalScore is required") from exc
+    except Exception:
+        total_score = score_total
 
     if total_score != score_total:
-        raise JudgeAiReviewNormalizationError("totalScore must equal the sum of dimensionScores")
+        total_score = score_total
 
     return {
         "triggered": True,
