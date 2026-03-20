@@ -668,3 +668,20 @@ def test_decode_response_text_prefers_utf8_bytes(api_module):
     response.encoding = "latin-1"
 
     assert api_module.decode_response_text(response) == "中文输出正常"
+
+
+def test_iter_sse_events_prefers_utf8_bytes(api_module):
+    payload = 'data: {"type":"response.output_text.delta","delta":"中文"}\n\n'.encode("utf-8")
+
+    class FakeStream:
+        def iter_lines(self, decode_unicode: bool = False):
+            if decode_unicode:
+                yield payload.decode("latin-1").rstrip("\n")
+                yield ""
+                return
+            yield payload.rstrip(b"\n")
+            yield b""
+
+    events = list(api_module.iter_sse_events(FakeStream()))
+
+    assert events == ['data: {"type":"response.output_text.delta","delta":"中文"}']
