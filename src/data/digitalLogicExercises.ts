@@ -615,7 +615,7 @@ print(factorial(n))`
 // ==================== 双指针 ====================
 export const twoPointerExamExercises: Exercise[] = [
   {
-    id: 'tp-two-sum-sorted',
+    id: 'exam-two-sum-sorted',
     category: '双指针',
     title: '有序数组两数之和',
     difficulty: 'easy',

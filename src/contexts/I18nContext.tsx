@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { normalizeLocale, translateUiText, type AppLocale } from '../i18n';
+import { detectPreferredLocale, ensureLocaleResources, normalizeLocale, translateUiText, type AppLocale } from '../i18n';
 
 interface I18nContextType {
   locale: AppLocale;
@@ -14,20 +14,12 @@ const I18N_STORAGE_KEY = 'ds_locale';
 const I18nContext = createContext<I18nContextType | undefined>(undefined);
 
 function getInitialLocale(): AppLocale {
-  if (typeof window === 'undefined') {
-    return 'zh-CN';
-  }
-
-  const stored = window.localStorage.getItem(I18N_STORAGE_KEY);
-  if (stored === 'zh-CN' || stored === 'en-US') {
-    return stored;
-  }
-
-  return window.navigator.language?.toLowerCase().startsWith('zh') ? 'zh-CN' : 'en-US';
+  return detectPreferredLocale();
 }
 
 export function I18nProvider({ children }: { children: ReactNode }) {
   const [locale, setLocaleState] = useState<AppLocale>(getInitialLocale);
+  const [translationVersion, setTranslationVersion] = useState(0);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -36,11 +28,43 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     document.documentElement.lang = locale;
   }, [locale]);
 
-  const setLocale = useCallback((nextLocale: AppLocale) => {
-    setLocaleState(normalizeLocale(nextLocale));
-  }, []);
+  useEffect(() => {
+    let active = true;
 
-  const t = useCallback((input: string) => translateUiText(input, locale), [locale]);
+    if (locale !== 'en-US') {
+      return () => {
+        active = false;
+      };
+    }
+
+    void ensureLocaleResources(locale).then(() => {
+      if (active) {
+        setTranslationVersion((value) => value + 1);
+      }
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [locale]);
+
+  const setLocale = useCallback((nextLocale: AppLocale) => {
+    const normalized = normalizeLocale(nextLocale);
+    if (normalized === locale) {
+      return;
+    }
+
+    if (normalized === 'en-US') {
+      void ensureLocaleResources(normalized).then(() => {
+        setLocaleState(normalized);
+      });
+      return;
+    }
+
+    setLocaleState(normalized);
+  }, [locale]);
+
+  const t = useCallback((input: string) => translateUiText(input, locale), [locale, translationVersion]);
 
   const formatDate = useCallback((value: string | number | Date, options?: Intl.DateTimeFormatOptions) => {
     const date = value instanceof Date ? value : new Date(value);
