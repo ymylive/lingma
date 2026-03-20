@@ -77,12 +77,14 @@ AI_CONNECT_TIMEOUT_SECONDS = max(5.0, float(os.getenv("AI_CONNECT_TIMEOUT_SECOND
 AI_TRUST_ENV = env_bool("AI_TRUST_ENV", "NOFX_AI_TRUST_ENV", default=False)
 ENABLE_REMOTE_MINDMAP_SYNC = os.getenv("ENABLE_REMOTE_MINDMAP_SYNC", "false").strip().lower() in {"1", "true", "yes", "on"}
 JUDGE_BASE_URL = (os.getenv("JUDGE_BASE_URL") or "http://127.0.0.1:3002").strip().rstrip("/")
-JUDGE_INTERNAL_TOKEN = (os.getenv("JUDGE_INTERNAL_TOKEN") or "local-judge-token").strip()
+JUDGE_INTERNAL_TOKEN = (os.getenv("JUDGE_INTERNAL_TOKEN") or "").strip()
 JUDGE_REQUEST_TIMEOUT_SECONDS = max(5.0, float(os.getenv("JUDGE_REQUEST_TIMEOUT_SECONDS", "40") or "40"))
 
 JUDGE_AI_REVIEW_STATUS_GENERATED = "generated"
 JUDGE_AI_REVIEW_STATUS_SKIPPED = "skipped"
+JUDGE_AI_REVIEW_STATUS_DEFERRED = "deferred"
 JUDGE_AI_REVIEW_STATUS_UNAVAILABLE = "unavailable"
+JUDGE_AI_REVIEW_MODE = (os.getenv("JUDGE_AI_REVIEW_MODE") or "sync").strip().lower()
 JUDGE_AI_REVIEW_DIMENSION_LIMITS = {
     "correctness": 40,
     "boundaryRobustness": 20,
@@ -357,6 +359,13 @@ class JudgeAiReviewNormalizationError(ValueError):
 
 def build_judge_ai_review_skipped() -> Dict[str, Any]:
     return {"triggered": False, "status": JUDGE_AI_REVIEW_STATUS_SKIPPED}
+
+
+def build_judge_ai_review_deferred(model: Optional[str] = None) -> Dict[str, Any]:
+    payload: Dict[str, Any] = {"triggered": False, "status": JUDGE_AI_REVIEW_STATUS_DEFERRED}
+    if model:
+        payload["model"] = model
+    return payload
 
 
 def build_judge_ai_review_unavailable(model: Optional[str] = None) -> Dict[str, Any]:
@@ -985,6 +994,20 @@ def create_password_record(password: str) -> Dict[str, str]:
 
 def verify_password(password: str, password_hash: str, password_salt: str) -> bool:
     return derive_password_hash(password, password_salt) == password_hash
+
+
+AUTH_REGISTRATION_FAILURE_DETAIL = "unable to create account"
+AUTH_MISSING_USER_PASSWORD_SALT_B64 = base64.b64encode(b"lingma-missing-user").decode("ascii")
+AUTH_MISSING_USER_PASSWORD_HASH = derive_password_hash(
+    "LingMaMissingUserPassword!2026",
+    AUTH_MISSING_USER_PASSWORD_SALT_B64,
+)
+
+
+def resolve_login_password_record(row: sqlite3.Row | None) -> Tuple[str, str]:
+    if row is None:
+        return AUTH_MISSING_USER_PASSWORD_HASH, AUTH_MISSING_USER_PASSWORD_SALT_B64
+    return str(row["password_hash"]), str(row["password_salt"])
 
 
 def serialize_user(row: sqlite3.Row) -> Dict[str, str]:
@@ -2157,6 +2180,10 @@ async def judge_proxy(request: Request):
         judge_payload["aiReview"] = build_judge_ai_review_skipped()
         return JSONResponse(content=judge_payload, status_code=upstream.status_code)
 
+    if JUDGE_AI_REVIEW_MODE == JUDGE_AI_REVIEW_STATUS_DEFERRED:
+        judge_payload["aiReview"] = build_judge_ai_review_deferred(model_name)
+        return JSONResponse(content=judge_payload, status_code=upstream.status_code)
+
     if not AI_API_KEY:
         judge_payload["aiReview"] = build_judge_ai_review_unavailable(model_name)
         return JSONResponse(content=judge_payload, status_code=upstream.status_code)
@@ -2392,25 +2419,28 @@ async def auth_register(request: Request):
         try:
             existing = conn.execute("SELECT id FROM users WHERE email = ?", (email,)).fetchone()
             if existing is not None:
-                raise HTTPException(status_code=409, detail="email already registered")
+                raise HTTPException(status_code=409, detail=AUTH_REGISTRATION_FAILURE_DETAIL)
 
-            conn.execute(
-                """
-                INSERT INTO users(id, username, email, password_hash, password_salt, skill_level, target_language, created_at)
-                VALUES(?, ?, ?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    user_id,
-                    username,
-                    email,
-                    password_record["password_hash"],
-                    password_record["password_salt"],
-                    skill_level,
-                    target_language,
-                    created_at,
-                ),
-            )
-            conn.commit()
+            try:
+                conn.execute(
+                    """
+                    INSERT INTO users(id, username, email, password_hash, password_salt, skill_level, target_language, created_at)
+                    VALUES(?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        user_id,
+                        username,
+                        email,
+                        password_record["password_hash"],
+                        password_record["password_salt"],
+                        skill_level,
+                        target_language,
+                        created_at,
+                    ),
+                )
+                conn.commit()
+            except sqlite3.IntegrityError as exc:
+                raise HTTPException(status_code=409, detail=AUTH_REGISTRATION_FAILURE_DETAIL) from exc
         finally:
             conn.close()
 
@@ -2454,7 +2484,9 @@ async def auth_login(request: Request):
         finally:
             conn.close()
 
-    if row is None or not verify_password(password, row["password_hash"], row["password_salt"]):
+    password_hash, password_salt = resolve_login_password_record(row)
+    password_matches = verify_password(password, password_hash, password_salt)
+    if row is None or not password_matches:
         raise HTTPException(status_code=401, detail="invalid email or password")
 
     session_id = create_session(row["id"])

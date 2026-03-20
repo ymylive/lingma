@@ -12,19 +12,28 @@ except ImportError:
     print("ERROR: pip install paramiko")
     sys.exit(1)
 
+from runtime_config import get_docker_compose_env_updates
+
 VPS_HOST = os.getenv("LINGMA_VPS_HOST", "8.134.33.19")
 VPS_USER = os.getenv("LINGMA_VPS_USER", "root")
 VPS_PASSWORD = os.getenv("LINGMA_VPS_PASSWORD", "")
 PUBLIC_DOMAIN = os.getenv("LINGMA_PUBLIC_DOMAIN", "lingma.cornna.xyz")
 REMOTE_DIR = "/var/www/lingma"
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-DEFAULT_REMOTE_ENV = {
-    "FRONTEND_BIND_HOST": "0.0.0.0",
-    "FRONTEND_BIND_PORT": "18081",
-}
-
+# Allowlist deploy assets so local-only secrets/artifacts never get bundled.
 INCLUDE_PATHS = [
-    "deploy/",
+    "deploy/docker-compose.yml",
+    "deploy/docker-deploy.py",
+    "deploy/lingma.conf",
+    "deploy/nginx.conf",
+    "deploy/runtime_config.py",
+    "deploy/setup-env.py",
+    "deploy/setup-judge.sh",
+    "deploy/setup-service.py",
+    "deploy/setup-ssl.sh",
+    "deploy/docker/api-proxy.Dockerfile",
+    "deploy/docker/frontend.Dockerfile",
+    "deploy/docker/judge-server.Dockerfile",
     "api-proxy/main.py",
     "api-proxy/requirements.txt",
     "judge-server/server.js",
@@ -43,6 +52,7 @@ INCLUDE_PATHS = [
     "index.html",
 ]
 EXCLUDE_PATTERNS = ["__pycache__", "*.pyc", ".codex-deploy", "node_modules", "dist"]
+KNOWN_HOSTS_PATH = os.getenv("LINGMA_SSH_KNOWN_HOSTS", "").strip()
 
 
 def should_exclude(name):
@@ -87,18 +97,24 @@ def ssh_exec(ssh, cmd, check=True):
 
 
 def build_remote_env_updates():
-    updates = dict(DEFAULT_REMOTE_ENV)
+    return get_docker_compose_env_updates()
 
-    ai_key = os.getenv("LINGMA_AI_API_KEY", "").strip()
-    ai_url = os.getenv("LINGMA_AI_API_URL", "https://gmn.chuangzuoli.com/v1/responses").strip()
-    ai_model = os.getenv("LINGMA_AI_MODEL", "gpt-5.4").strip()
 
-    if ai_key:
-        updates["AI_API_KEY"] = ai_key
-        updates["AI_API_URL"] = ai_url or "https://gmn.chuangzuoli.com/v1/responses"
-        updates["AI_MODEL"] = ai_model or "gpt-5.4"
+def configure_host_key_verification(client):
+    client.load_system_host_keys()
+    if KNOWN_HOSTS_PATH:
+        if not os.path.exists(KNOWN_HOSTS_PATH):
+            raise RuntimeError(f"LINGMA_SSH_KNOWN_HOSTS does not exist: {KNOWN_HOSTS_PATH}")
+        client.load_host_keys(KNOWN_HOSTS_PATH)
+    client.set_missing_host_key_policy(paramiko.RejectPolicy())
 
-    return updates
+
+def missing_host_key_message(host):
+    source = KNOWN_HOSTS_PATH or "~/.ssh/known_hosts"
+    return (
+        f"SSH host key for {host} is not trusted. Add the server key to {source} "
+        "or set LINGMA_SSH_KNOWN_HOSTS to a known_hosts file that contains the trusted key."
+    )
 
 
 def sync_remote_env(ssh, env_updates):
@@ -129,12 +145,20 @@ def main():
     if not VPS_PASSWORD:
         print("ERROR: Set LINGMA_VPS_PASSWORD")
         sys.exit(1)
+    remote_env_updates = build_remote_env_updates()
 
     print(f"{'=' * 60}\nDeploying to {VPS_HOST}\n{'=' * 60}")
 
     ssh = paramiko.SSHClient()
-    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    ssh.connect(VPS_HOST, username=VPS_USER, password=VPS_PASSWORD, timeout=30)
+    configure_host_key_verification(ssh)
+    try:
+        ssh.connect(VPS_HOST, username=VPS_USER, password=VPS_PASSWORD, timeout=30)
+    except paramiko.BadHostKeyException as exc:
+        raise RuntimeError(f"SSH host key verification failed for {VPS_HOST}: {exc}") from exc
+    except paramiko.SSHException as exc:
+        if "not found in known_hosts" in str(exc).lower():
+            raise RuntimeError(missing_host_key_message(VPS_HOST)) from exc
+        raise
     sftp = ssh.open_sftp()
 
     print("\n[1/6] Packaging...")
@@ -156,7 +180,7 @@ def main():
     ssh_exec(ssh, f"cd {REMOTE_DIR}/deploy && docker-compose down 2>/dev/null; true", check=False)
 
     print("\n[5/6] Building Docker containers (this may take a few minutes)...")
-    sync_remote_env(ssh, build_remote_env_updates())
+    sync_remote_env(ssh, remote_env_updates)
 
     out = ssh_exec(ssh, f"cd {REMOTE_DIR}/deploy && docker-compose build --no-cache 2>&1", check=False)
     for line in out.split("\n")[-15:]:
