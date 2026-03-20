@@ -313,7 +313,7 @@ export default function VibeCodingLab({ onOpenAiGenerator, onOpenPracticeLibrary
         <motion.div variants={fadeInUp} className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:p-6">
           <div className="flex items-center gap-2 text-sm font-semibold text-slate-900 dark:text-white">
             <Workflow className="h-4 w-4 text-indigo-500" />
-            {'Today Panel'}
+            {t('训练赛道')}
           </div>
           <p className="mt-2 text-sm leading-7 text-slate-600 dark:text-slate-300">
             {t('系统会根据最近训练表现推荐赛道与难度。你也可以手动切换赛道，但难度依旧由 AI 自适应。')}
@@ -368,7 +368,7 @@ export default function VibeCodingLab({ onOpenAiGenerator, onOpenPracticeLibrary
         <motion.div variants={fadeInUp} className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:p-6">
           <div className="flex items-center gap-2 text-sm font-semibold text-slate-900 dark:text-white">
             <MessageSquareQuote className="h-4 w-4 text-indigo-500" />
-            {'Prompt Arena'}
+            {t('Prompt Arena 训练场')}
           </div>
           <p className="mt-2 text-sm leading-7 text-slate-600 dark:text-slate-300">
             {t('左边是 AI 题目，中间写 prompt，右边拿评分。首版只评 prompt 质量，不评代码结果。')}
@@ -418,13 +418,13 @@ export default function VibeCodingLab({ onOpenAiGenerator, onOpenPracticeLibrary
             </div>
             <div className="rounded-3xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
               <div className="flex items-center justify-between gap-3">
-                <div className="text-sm font-semibold text-slate-900 dark:text-white">{'Prompt Editor'}</div>
+                <div className="text-sm font-semibold text-slate-900 dark:text-white">{t('Prompt 编辑器')}</div>
                 <div className="text-xs text-slate-500 dark:text-slate-400">{draftPrompt.trim().length} {t('字符')}</div>
               </div>
               <textarea
                 value={draftPrompt}
                 onChange={(event) => setDraftPrompt(event.target.value)}
-                aria-label="Prompt Editor"
+                aria-label={t('Prompt 编辑器')}
                 placeholder={t('写出你的专业 prompt：目标、范围、验证、输出格式都要有。')}
                 className="mt-3 min-h-[220px] w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-4 text-sm leading-7 text-slate-800 transition-colors duration-200 placeholder:text-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/60 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-500"
               />
