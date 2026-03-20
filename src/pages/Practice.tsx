@@ -1,8 +1,7 @@
-import { useDeferredValue, useEffect, useMemo, useState } from 'react';
+import { lazy, startTransition, Suspense, useDeferredValue, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { AIExerciseGenerator, CodingExercise, FillInBlank } from '../components/tutorials/TutorialPanel';
-import VibeCodingLab from '../components/tutorials/VibeCodingLab';
-import { allExercises, type Exercise } from '../data/exercises';
+import { loadAllExercises, preloadAllExercises } from '../data/exercise-bank';
+import type { Exercise } from '../data/exercises';
 import { useUser } from '../contexts/UserContext';
 import { useI18n } from '../contexts/I18nContext';
 import {
@@ -21,6 +20,26 @@ import type { VibeTrack } from '../types/vibeCoding';
 
 const VALID_TABS = new Set(['preset', 'ai', 'vibe']);
 const VALID_TRACKS = new Set<VibeTrack>(['frontend', 'backend', 'debugging', 'refactoring', 'review']);
+
+const tutorialPanelImport = () => import('../components/tutorials/TutorialPanel');
+const vibeCodingLabImport = () => import('../components/tutorials/VibeCodingLab');
+
+const AIExerciseGenerator = lazy(async () => {
+  const module = await tutorialPanelImport();
+  return { default: module.AIExerciseGenerator };
+});
+
+const CodingExercise = lazy(async () => {
+  const module = await tutorialPanelImport();
+  return { default: module.CodingExercise };
+});
+
+const FillInBlank = lazy(async () => {
+  const module = await tutorialPanelImport();
+  return { default: module.FillInBlank };
+});
+
+const VibeCodingLab = lazy(vibeCodingLabImport);
 
 const LANGUAGE_SUPPORT = [
   {
@@ -102,6 +121,96 @@ function fuzzyMatch(text: string, query: string) {
   return normalized.split(/\s+/).filter(Boolean).every((word) => source.includes(word));
 }
 
+function preloadExerciseDetailPanels() {
+  void tutorialPanelImport();
+}
+
+function preloadVibeCodingLab() {
+  void vibeCodingLabImport();
+}
+
+function AsyncPanelFallback({ label }: { label: string }) {
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      className="rounded-2xl border border-slate-200 bg-white px-6 py-10 text-center text-sm text-slate-500 shadow-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
+    >
+      {label}
+    </div>
+  );
+}
+
+function PracticeCatalogLoadingState({ message }: { message: string }) {
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      className="space-y-6"
+    >
+      <div className="rounded-2xl border border-indigo-200 bg-[radial-gradient(circle_at_top_left,_rgba(79,70,229,0.16),_transparent_45%),linear-gradient(135deg,_rgba(238,242,255,0.95),_rgba(255,255,255,0.92))] p-5 shadow-sm dark:border-indigo-800 dark:bg-[radial-gradient(circle_at_top_left,_rgba(99,102,241,0.22),_transparent_42%),linear-gradient(135deg,_rgba(15,23,42,0.98),_rgba(30,41,59,0.94))]">
+        <div className="h-5 w-32 rounded-full bg-white/80 dark:bg-slate-700/80" />
+        <div className="mt-4 h-8 w-2/3 rounded-full bg-white/70 dark:bg-slate-700/70" />
+        <div className="mt-6 grid gap-3 sm:grid-cols-3">
+          {[0, 1, 2].map((item) => (
+            <div key={item} className="rounded-2xl border border-white/70 bg-white/80 p-4 dark:border-slate-700 dark:bg-slate-800/80">
+              <div className="h-4 w-16 rounded-full bg-slate-200 dark:bg-slate-700" />
+              <div className="mt-3 h-6 w-20 rounded-full bg-slate-200 dark:bg-slate-700" />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+        <div className="h-5 w-40 rounded-full bg-slate-200 dark:bg-slate-700" />
+        <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          {[0, 1, 2].map((item) => (
+            <div key={item} className="rounded-2xl border border-slate-200 bg-slate-50 p-5 dark:border-slate-700 dark:bg-slate-900">
+              <div className="flex gap-2">
+                <div className="h-6 w-16 rounded-full bg-slate-200 dark:bg-slate-700" />
+                <div className="h-6 w-20 rounded-full bg-slate-200 dark:bg-slate-700" />
+              </div>
+              <div className="mt-4 h-6 w-2/3 rounded-full bg-slate-200 dark:bg-slate-700" />
+              <div className="mt-3 space-y-2">
+                <div className="h-4 rounded-full bg-slate-100 dark:bg-slate-700/70" />
+                <div className="h-4 w-5/6 rounded-full bg-slate-100 dark:bg-slate-700/70" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <p className="text-sm text-slate-500 dark:text-slate-400">{message}</p>
+    </div>
+  );
+}
+
+function PracticeCatalogErrorState({
+  actionLabel,
+  details,
+  message,
+  onRetry,
+}: {
+  actionLabel: string;
+  details?: string | null;
+  message: string;
+  onRetry: () => void;
+}) {
+  return (
+    <div className="rounded-2xl border border-rose-200 bg-rose-50 px-6 py-10 text-center shadow-sm dark:border-rose-900/40 dark:bg-rose-950/30">
+      <h2 className="text-lg font-semibold text-rose-700 dark:text-rose-200">{message}</h2>
+      {details ? <p className="mt-3 text-sm text-rose-600 dark:text-rose-300">{details}</p> : null}
+      <button
+        type="button"
+        onClick={onRetry}
+        className="mt-5 min-h-[44px] cursor-pointer rounded-2xl bg-rose-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-rose-700"
+      >
+        {actionLabel}
+      </button>
+    </div>
+  );
+}
+
 export default function Practice() {
   const { isExerciseCompleted, progress, user } = useUser();
   const { formatDate, isEnglish, t } = useI18n();
@@ -117,10 +226,13 @@ export default function Practice() {
   const [showCompleted, setShowCompleted] = useState<'all' | 'completed' | 'incomplete'>('all');
   const [focusOnly, setFocusOnly] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [exercises, setExercises] = useState<Exercise[]>([]);
+  const [hasLoadedExercises, setHasLoadedExercises] = useState(false);
+  const [isExercisesLoading, setIsExercisesLoading] = useState(initialTab === 'preset');
+  const [exerciseLoadError, setExerciseLoadError] = useState<string | null>(null);
   const [selectedExercise, setSelectedExercise] = useState<Exercise | null>(null);
   const deferredQuery = useDeferredValue(searchQuery);
 
-  const exercises = useMemo(() => dedupeExercises(allExercises), []);
   const completedSet = useMemo(() => new Set(progress.completedExercises), [progress.completedExercises]);
   const progressionLookup = useMemo(() => buildExerciseProgressionLookup(exercises), [exercises]);
   const stageMetaLookup = useMemo(() => new Map(PRACTICE_STAGE_META.map((item) => [item.id, item])), []);
@@ -220,9 +332,71 @@ export default function Practice() {
     );
   }, [isEnglish]);
 
+  useEffect(() => {
+    if (tab !== 'preset' || hasLoadedExercises) {
+      return;
+    }
+
+    let cancelled = false;
+    setIsExercisesLoading(true);
+    setExerciseLoadError(null);
+
+    void loadAllExercises()
+      .then((loadedExercises) => {
+        if (cancelled) {
+          return;
+        }
+
+        startTransition(() => {
+          setExercises(dedupeExercises(loadedExercises));
+          setHasLoadedExercises(true);
+          setIsExercisesLoading(false);
+        });
+      })
+      .catch((error) => {
+        if (cancelled) {
+          return;
+        }
+
+        startTransition(() => {
+          setExerciseLoadError(error instanceof Error ? error.message : 'Unable to load the practice library.');
+          setIsExercisesLoading(false);
+        });
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [hasLoadedExercises, tab]);
+
   const openExercise = (exercise: Exercise) => {
+    preloadExerciseDetailPanels();
     setSelectedExercise(exercise);
     setTimeout(() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }), 120);
+  };
+
+  const retryExerciseCatalogLoad = () => {
+    if (isExercisesLoading) {
+      return;
+    }
+
+    setIsExercisesLoading(true);
+    setExerciseLoadError(null);
+
+    void loadAllExercises()
+      .then((loadedExercises) => {
+        startTransition(() => {
+          setExercises(dedupeExercises(loadedExercises));
+          setHasLoadedExercises(true);
+          setIsExercisesLoading(false);
+        });
+      })
+      .catch((error) => {
+        startTransition(() => {
+          setExerciseLoadError(error instanceof Error ? error.message : 'Unable to load the practice library.');
+          setIsExercisesLoading(false);
+        });
+      });
   };
 
   const clearFilters = () => {
@@ -250,7 +424,7 @@ export default function Practice() {
           </div>
 
           <div className="grid grid-cols-2 gap-2 sm:gap-3">
-            <div className="rounded-2xl border border-slate-200 bg-white p-3.5 shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:p-4"><div className="text-xs text-slate-500 dark:text-slate-400">{isEnglish ? 'Unique Problems' : '去重后题量'}</div><div className="mt-2 text-2xl font-bold text-slate-900 dark:text-white sm:text-3xl">{exercises.length}</div></div>
+            <div className="rounded-2xl border border-slate-200 bg-white p-3.5 shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:p-4"><div className="text-xs text-slate-500 dark:text-slate-400">{isEnglish ? 'Unique Problems' : '去重后题量'}</div><div className="mt-2 text-2xl font-bold text-slate-900 dark:text-white sm:text-3xl">{hasLoadedExercises ? exercises.length : '…'}</div></div>
             <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-3.5 shadow-sm dark:border-emerald-800 dark:bg-emerald-900/20 sm:p-4"><div className="text-xs text-emerald-700 dark:text-emerald-300">{isEnglish ? 'Completed' : '已完成'}</div><div className="mt-2 text-2xl font-bold text-emerald-700 dark:text-emerald-300 sm:text-3xl">{progress.completedExercises.length}</div></div>
             <div className="rounded-2xl border border-slate-200 bg-white p-3.5 shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:p-4"><div className="text-xs text-slate-500 dark:text-slate-400">{isEnglish ? 'Review Queue' : '待复盘'}</div><div className="mt-2 text-2xl font-bold text-slate-900 dark:text-white sm:text-3xl">{reviewQueue.length}</div></div>
             <div className="rounded-2xl border border-indigo-200 bg-indigo-50 p-3.5 shadow-sm dark:border-indigo-800 dark:bg-indigo-900/20 sm:p-4"><div className="text-xs text-indigo-700 dark:text-indigo-300">{isEnglish ? 'Recent Avg Score' : '近期平均得分'}</div><div className="mt-2 text-2xl font-bold text-indigo-700 dark:text-indigo-300 sm:text-3xl">{recentScore}</div></div>
@@ -258,23 +432,38 @@ export default function Practice() {
         </div>
 
         <div className="mb-6 grid grid-cols-1 gap-2 sm:grid-cols-3">
-          <button onClick={() => setTab('preset')} className={`min-h-[48px] cursor-pointer rounded-2xl px-6 py-3 text-sm font-semibold transition-all ${tab === 'preset' ? 'bg-klein-500 text-white shadow-sm' : 'border border-slate-200 bg-white text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200'}`}>{t('题库练习')}</button>
-          <button onClick={() => setTab('ai')} className={`min-h-[48px] cursor-pointer rounded-2xl px-6 py-3 text-sm font-semibold transition-all ${tab === 'ai' ? 'bg-klein-500 text-white shadow-sm' : 'border border-slate-200 bg-white text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200'}`}>{t('AI 智能出题')}</button>
-          <button onClick={() => setTab('vibe')} className={`min-h-[48px] cursor-pointer rounded-2xl px-6 py-3 text-sm font-semibold transition-all ${tab === 'vibe' ? 'bg-klein-500 text-white shadow-sm' : 'border border-slate-200 bg-white text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200'}`}>{isEnglish ? 'Vibe Coding Lab' : 'Vibe Coding 学习'}</button>
+          <button onClick={() => setTab('preset')} onMouseEnter={preloadAllExercises} onFocus={preloadAllExercises} className={`min-h-[48px] cursor-pointer rounded-2xl px-6 py-3 text-sm font-semibold transition-all ${tab === 'preset' ? 'bg-klein-500 text-white shadow-sm' : 'border border-slate-200 bg-white text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200'}`}>{t('题库练习')}</button>
+          <button onClick={() => setTab('ai')} onMouseEnter={preloadExerciseDetailPanels} onFocus={preloadExerciseDetailPanels} className={`min-h-[48px] cursor-pointer rounded-2xl px-6 py-3 text-sm font-semibold transition-all ${tab === 'ai' ? 'bg-klein-500 text-white shadow-sm' : 'border border-slate-200 bg-white text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200'}`}>{t('AI 智能出题')}</button>
+          <button onClick={() => setTab('vibe')} onMouseEnter={preloadVibeCodingLab} onFocus={preloadVibeCodingLab} className={`min-h-[48px] cursor-pointer rounded-2xl px-6 py-3 text-sm font-semibold transition-all ${tab === 'vibe' ? 'bg-klein-500 text-white shadow-sm' : 'border border-slate-200 bg-white text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200'}`}>{isEnglish ? 'Vibe Coding Lab' : 'Vibe Coding 学习'}</button>
         </div>
 
-        {tab === 'ai' ? <AIExerciseGenerator /> : tab === 'vibe' ? (
-          <VibeCodingLab
-            onOpenAiGenerator={() => setTab('ai')}
-            onOpenPracticeLibrary={() => {
-              setSelectedExercise(null);
-              setTab('preset');
-            }}
-            initialTrack={initialTrack}
-          />
+        {tab === 'ai' ? (
+          <Suspense fallback={<AsyncPanelFallback label={isEnglish ? 'Loading AI practice tools...' : '正在加载 AI 出题工具...'} />}>
+            <AIExerciseGenerator />
+          </Suspense>
+        ) : tab === 'vibe' ? (
+          <Suspense fallback={<AsyncPanelFallback label={isEnglish ? 'Loading Vibe Coding Lab...' : '正在加载 Vibe Coding 实验室...'} />}>
+            <VibeCodingLab
+              onOpenAiGenerator={() => setTab('ai')}
+              onOpenPracticeLibrary={() => {
+                setSelectedExercise(null);
+                setTab('preset');
+              }}
+              initialTrack={initialTrack}
+            />
+          </Suspense>
         ) : (
           <>
-            {!selectedExercise && (
+            {!selectedExercise && isExercisesLoading ? (
+              <PracticeCatalogLoadingState message={isEnglish ? 'Loading the practice library in smaller chunks...' : '正在分批加载题库与推荐内容...'} />
+            ) : !selectedExercise && exerciseLoadError ? (
+              <PracticeCatalogErrorState
+                actionLabel={isEnglish ? 'Retry' : '重新加载'}
+                details={exerciseLoadError}
+                message={isEnglish ? 'The practice library failed to load.' : '题库暂时加载失败。'}
+                onRetry={retryExerciseCatalogLoad}
+              />
+            ) : !selectedExercise && (
               <>
                 <div className="mb-6 rounded-2xl border border-indigo-200 bg-[radial-gradient(circle_at_top_left,_rgba(79,70,229,0.16),_transparent_45%),linear-gradient(135deg,_rgba(238,242,255,0.95),_rgba(255,255,255,0.92))] p-4 shadow-sm dark:border-indigo-800 dark:bg-[radial-gradient(circle_at_top_left,_rgba(99,102,241,0.22),_transparent_42%),linear-gradient(135deg,_rgba(15,23,42,0.98),_rgba(30,41,59,0.94))] sm:p-5">
                   <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
@@ -470,33 +659,35 @@ export default function Practice() {
             {selectedExercise ? (
               <div className="animate-fadeIn">
                 <button onClick={() => setSelectedExercise(null)} className="mb-4 min-h-[44px] cursor-pointer rounded-2xl bg-slate-100 px-4 py-2 text-sm font-medium text-slate-700 dark:bg-slate-700 dark:text-slate-100">{t('返回题目列表')}</button>
-                {selectedExercise.type === 'coding' && selectedExercise.templates && selectedExercise.solutions && (
-                  <CodingExercise
-                    exerciseId={selectedExercise.id}
-                    title={selectedExercise.title}
-                    description={selectedExercise.description}
-                    difficulty={selectedExercise.difficulty}
-                    category={selectedExercise.category}
-                    templates={selectedExercise.templates}
-                    solutions={selectedExercise.solutions}
-                    testCases={selectedExercise.testCases || []}
-                    hints={selectedExercise.hints}
-                    explanation={selectedExercise.explanation}
-                    commonMistakes={selectedExercise.commonMistakes}
-                  />
-                )}
-                {selectedExercise.type === 'fillblank' && selectedExercise.codeTemplate && selectedExercise.blanks && (
-                  <FillInBlank
-                    exerciseId={selectedExercise.id}
-                    title={selectedExercise.title}
-                    description={selectedExercise.description}
-                    difficulty={selectedExercise.difficulty}
-                    category={selectedExercise.category}
-                    codeTemplate={selectedExercise.codeTemplate}
-                    blanks={selectedExercise.blanks}
-                    explanation={selectedExercise.explanation}
-                  />
-                )}
+                <Suspense fallback={<AsyncPanelFallback label={isEnglish ? 'Loading the exercise workspace...' : '正在加载练习工作区...'} />}>
+                  {selectedExercise.type === 'coding' && selectedExercise.templates && selectedExercise.solutions && (
+                    <CodingExercise
+                      exerciseId={selectedExercise.id}
+                      title={selectedExercise.title}
+                      description={selectedExercise.description}
+                      difficulty={selectedExercise.difficulty}
+                      category={selectedExercise.category}
+                      templates={selectedExercise.templates}
+                      solutions={selectedExercise.solutions}
+                      testCases={selectedExercise.testCases || []}
+                      hints={selectedExercise.hints}
+                      explanation={selectedExercise.explanation}
+                      commonMistakes={selectedExercise.commonMistakes}
+                    />
+                  )}
+                  {selectedExercise.type === 'fillblank' && selectedExercise.codeTemplate && selectedExercise.blanks && (
+                    <FillInBlank
+                      exerciseId={selectedExercise.id}
+                      title={selectedExercise.title}
+                      description={selectedExercise.description}
+                      difficulty={selectedExercise.difficulty}
+                      category={selectedExercise.category}
+                      codeTemplate={selectedExercise.codeTemplate}
+                      blanks={selectedExercise.blanks}
+                      explanation={selectedExercise.explanation}
+                    />
+                  )}
+                </Suspense>
               </div>
             ) : orderedExercises.length ? (
               <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
