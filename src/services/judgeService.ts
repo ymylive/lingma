@@ -1,5 +1,6 @@
 import { getConfiguredModelOverride } from './aiService';
 import { localizeRuntimeText, pickRuntimeText } from '../utils/runtimeLocale';
+import { readStreamingSse } from './streamingSse';
 
 const DEFAULT_PROXY_ORIGIN =
   typeof window !== 'undefined' && window.location ? window.location.origin : 'https://lingma.cornna.xyz';
@@ -114,7 +115,7 @@ export interface JudgeAiReviewSkipped {
 }
 
 export interface JudgeAiReviewDeferred {
-  triggered: false;
+  triggered: boolean;
   status: 'deferred';
   model?: string;
 }
@@ -139,6 +140,14 @@ export interface JudgeResponse {
   checkpoints: JudgeCheckpointSummary[];
   aiReview?: JudgeAiReview;
   error?: string;
+  rawJudgePayload?: Record<string, unknown>;
+}
+
+export interface JudgeAiReviewStreamRequest {
+  code: string;
+  language: SupportedJudgeLanguage;
+  exerciseContext?: JudgeExerciseContext;
+  judgePayload: Record<string, unknown>;
 }
 
 export interface RunResponse {
@@ -307,7 +316,7 @@ function normalizeJudgeAiReview(payload: unknown): JudgeAiReview | undefined {
 
   if (review.status === 'deferred') {
     return {
-      triggered: false,
+      triggered: Boolean(review.triggered),
       status: 'deferred',
       model: typeof review.model === 'string' ? review.model : undefined,
     };
@@ -364,6 +373,7 @@ function normalizeJudgeResponse(payload: Partial<JudgeResponse>): JudgeResponse 
     checkpoints: Array.isArray(payload.checkpoints) ? payload.checkpoints.map(localizeCheckpointSummary) : [],
     aiReview: normalizeJudgeAiReview(payload.aiReview),
     error: localizeOptionalText(payload.error),
+    rawJudgePayload: payload as Record<string, unknown>,
   };
 }
 
@@ -382,6 +392,7 @@ export async function runTestCases(
       code,
       language,
       testCases,
+      aiReviewMode: 'stream',
       ...(exerciseContext ? { exerciseContext } : {}),
       ...(modelOverride ? { model: modelOverride } : {}),
     }),
@@ -397,6 +408,32 @@ export async function runTestCases(
   }
 
   return data;
+}
+
+export async function streamJudgeAiReview(
+  request: JudgeAiReviewStreamRequest,
+  onProgress?: (text: string) => void,
+): Promise<JudgeAiReview> {
+  const modelOverride = getConfiguredModelOverride();
+  const response = await fetch(`${API_BASE}/judge/review/stream`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      code: request.code,
+      language: request.language,
+      judgePayload: request.judgePayload,
+      ...(request.exerciseContext ? { exerciseContext: request.exerciseContext } : {}),
+      ...(modelOverride ? { model: modelOverride } : {}),
+    }),
+  });
+
+  const data = await readStreamingSse<JudgeAiReview>(response, onProgress);
+  const normalized = normalizeJudgeAiReview(data);
+  if (!normalized) {
+    throw new Error(pickRuntimeText('AI 判题分析返回格式错误', 'AI review returned malformed data'));
+  }
+  return normalized;
 }
 
 export async function quickRun(

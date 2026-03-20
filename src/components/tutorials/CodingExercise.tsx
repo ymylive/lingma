@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { quickRun, runTestCases, type JudgeResponse, type SupportedJudgeLanguage, type TestCase } from '../../services/judgeService';
+import { LoaderCircle } from 'lucide-react';
+import { quickRun, runTestCases, streamJudgeAiReview, type JudgeResponse, type SupportedJudgeLanguage, type TestCase } from '../../services/judgeService';
 import { useUser } from '../../contexts/UserContext';
 import { useI18n } from '../../contexts/I18nContext';
 import type { ExerciseDifficulty } from '../../data/exercises';
@@ -122,6 +123,8 @@ export default function CodingExercise({
   const [isRunning, setIsRunning] = useState(false);
   const [runOutput, setRunOutput] = useState<string | null>(null);
   const [judge, setJudge] = useState<JudgeResponse | null>(null);
+  const [aiReviewStreaming, setAiReviewStreaming] = useState(false);
+  const [aiReviewPreview, setAiReviewPreview] = useState('');
   const localizedTitle = tr(title) || title;
   const localizedDescription = tr(description) || description;
   const localizedCategory = tr(category) || category;
@@ -179,6 +182,8 @@ export default function CodingExercise({
     setCode(starterCode(exerciseId, title, lang, templates, solutions));
     setJudge(null);
     setRunOutput(null);
+    setAiReviewStreaming(false);
+    setAiReviewPreview('');
   }, [exerciseId, title, lang, templates, solutions]);
 
   useEffect(() => {
@@ -190,8 +195,10 @@ export default function CodingExercise({
   const showAiReview =
     aiReview?.status === 'generated'
     || aiReview?.status === 'unavailable'
-    || aiReview?.status === 'deferred';
-  const isDeferredAiReview = aiReview?.status === 'deferred';
+    || aiReview?.status === 'deferred'
+    || aiReviewStreaming
+    || Boolean(aiReviewPreview);
+  const isDeferredAiReview = aiReview?.status === 'deferred' && !aiReview.triggered && !aiReviewStreaming;
   const groupedResults = useMemo(() => {
     const groups = new Map<string, JudgeResponse['results']>();
     for (const result of judge?.results || []) {
@@ -210,20 +217,6 @@ export default function CodingExercise({
       score: aiReview.dimensionScores[item.key],
     }));
   }, [aiReview, isEnglish]);
-  const aiReviewDisplayPayload = useMemo(
-    () =>
-      aiReview?.status === 'generated'
-        ? {
-            overallDiagnosis: aiReview.overallDiagnosis,
-            errorPoints: aiReview.errorPoints,
-            fixSuggestions: aiReview.fixSuggestions,
-            optimizationSuggestions: aiReview.optimizationSuggestions,
-            nextStep: aiReview.nextStep,
-          }
-        : null,
-    [aiReview],
-  );
-  const progressiveAiReview = useProgressiveAiObject(aiReviewDisplayPayload, aiReview?.status === 'generated');
 
   const onQuickRun = async () => {
     if (!code.trim()) return alert(t('请先编写代码'));
@@ -244,6 +237,9 @@ export default function CodingExercise({
     setIsRunning(true);
     setJudge(null);
     setRunOutput(null);
+    setAiReviewStreaming(false);
+    setAiReviewPreview('');
+    let judgeResult: JudgeResponse | null = null;
     try {
       const result = await runTestCases(code, lang, testCases, {
         exerciseId,
@@ -253,6 +249,7 @@ export default function CodingExercise({
         category: localizedCategory,
         explanation: localizedExplanation,
       });
+      judgeResult = result;
       setJudge(result);
       if (exerciseId) {
         recordExerciseComplete(exerciseId, title, category || '', result.allPassed, {
@@ -269,6 +266,45 @@ export default function CodingExercise({
       alert(`${t('判题失败')}: ${error instanceof Error ? error.message : t('未知错误')}`);
     } finally {
       setIsRunning(false);
+    }
+
+    if (judgeResult?.aiReview?.status === 'deferred' && judgeResult.aiReview.triggered) {
+      setAiReviewStreaming(true);
+      try {
+        const finalReview = await streamJudgeAiReview(
+          {
+            code,
+            language: lang,
+            exerciseContext: {
+              exerciseId,
+              title: localizedTitle,
+              description: localizedDescription,
+              difficulty,
+              category: localizedCategory,
+              explanation: localizedExplanation,
+            },
+            judgePayload: judgeResult.rawJudgePayload || (judgeResult as unknown as Record<string, unknown>),
+          },
+          setAiReviewPreview,
+        );
+        setJudge((current) => (current ? { ...current, aiReview: finalReview } : current));
+        setAiReviewPreview('');
+      } catch {
+        setJudge((current) => (
+          current
+            ? {
+                ...current,
+                aiReview: {
+                  triggered: true,
+                  status: 'unavailable',
+                  model: judgeResult?.aiReview?.model,
+                },
+              }
+            : current
+        ));
+      } finally {
+        setAiReviewStreaming(false);
+      }
     }
   };
 
@@ -465,7 +501,21 @@ export default function CodingExercise({
                       )}
                     </div>
 
-                    {aiReview?.status === 'generated' ? (
+                    {aiReviewStreaming || (aiReview?.status === 'deferred' && aiReview.triggered) ? (
+                      <div
+                        aria-live="polite"
+                        role="status"
+                        className="rounded-2xl bg-white/80 p-4 text-[15px] leading-6 text-slate-700 shadow-sm dark:bg-slate-900/60 dark:text-slate-200 sm:text-sm"
+                      >
+                        <div className="mb-2 flex items-center gap-2 text-sky-700 dark:text-sky-300">
+                          <LoaderCircle className="h-4 w-4 animate-spin" />
+                          <span className="text-sm font-semibold">{judgeText('AI 正在实时分析', 'AI review is streaming')}</span>
+                        </div>
+                        <pre className="max-h-72 overflow-auto whitespace-pre-wrap break-words rounded-2xl bg-slate-50 p-3 text-[13px] leading-6 text-slate-700 dark:bg-slate-950/70 dark:text-slate-200 sm:text-sm">
+                          {aiReviewPreview || judgeText('正在等待首个流式分片...', 'Waiting for the first streamed chunk...')}
+                        </pre>
+                      </div>
+                    ) : aiReview?.status === 'generated' ? (
                       <>
                         <div>
                           <div className="text-xs uppercase tracking-[0.2em] text-sky-700 dark:text-sky-300">{judgeText('综合评分', 'Overall Score')}</div>
@@ -476,7 +526,7 @@ export default function CodingExercise({
                         </div>
                         <div className="rounded-2xl bg-white/80 p-4 text-[15px] leading-6 text-slate-700 shadow-sm dark:bg-slate-900/60 dark:text-slate-200 sm:text-sm">
                           <div className="mb-2 text-sm font-semibold text-slate-900 dark:text-white">{judgeText('总体诊断', 'Overall Diagnosis')}</div>
-                          <p className="whitespace-pre-line break-words">{progressiveAiReview?.overallDiagnosis}</p>
+                          <p className="whitespace-pre-line break-words">{aiReview.overallDiagnosis}</p>
                         </div>
                       </>
                     ) : aiReview?.status === 'deferred' ? (
@@ -530,7 +580,7 @@ export default function CodingExercise({
                       <div className="rounded-2xl border border-rose-200 bg-white p-4 dark:border-rose-900 dark:bg-slate-900/60">
                         <h4 className="text-sm font-semibold text-rose-700 dark:text-rose-300">{judgeText('错误点分析', 'Error Points')}</h4>
                         <ul className="mt-2 space-y-2 text-[15px] leading-6 text-slate-700 dark:text-slate-200 sm:text-sm">
-                          {progressiveAiReview?.errorPoints.map((item, index) => <li key={`${item}-${index}`}>- {item}</li>)}
+                          {aiReview.errorPoints.map((item, index) => <li key={`${item}-${index}`}>- {item}</li>)}
                         </ul>
                       </div>
                     )}
@@ -539,7 +589,7 @@ export default function CodingExercise({
                       <div className="rounded-2xl border border-emerald-200 bg-white p-4 dark:border-emerald-900 dark:bg-slate-900/60">
                         <h4 className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">{judgeText('修改建议', 'Fix Suggestions')}</h4>
                         <ul className="mt-2 space-y-2 text-[15px] leading-6 text-slate-700 dark:text-slate-200 sm:text-sm">
-                          {progressiveAiReview?.fixSuggestions.map((item, index) => <li key={`${item}-${index}`}>- {item}</li>)}
+                          {aiReview.fixSuggestions.map((item, index) => <li key={`${item}-${index}`}>- {item}</li>)}
                         </ul>
                       </div>
                     )}
@@ -548,14 +598,14 @@ export default function CodingExercise({
                       <div className="rounded-2xl border border-violet-200 bg-white p-4 dark:border-violet-900 dark:bg-slate-900/60">
                         <h4 className="text-sm font-semibold text-violet-700 dark:text-violet-300">{judgeText('优化建议', 'Optimization Suggestions')}</h4>
                         <ul className="mt-2 space-y-2 text-[15px] leading-6 text-slate-700 dark:text-slate-200 sm:text-sm">
-                          {progressiveAiReview?.optimizationSuggestions.map((item, index) => <li key={`${item}-${index}`}>- {item}</li>)}
+                          {aiReview.optimizationSuggestions.map((item, index) => <li key={`${item}-${index}`}>- {item}</li>)}
                         </ul>
                       </div>
                     )}
 
                     <div className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900/60">
                       <h4 className="text-sm font-semibold text-slate-900 dark:text-white">{judgeText('下一步', 'Next Step')}</h4>
-                      <p className="mt-2 text-[15px] leading-6 text-slate-700 dark:text-slate-200 sm:text-sm">{progressiveAiReview?.nextStep}</p>
+                      <p className="mt-2 text-[15px] leading-6 text-slate-700 dark:text-slate-200 sm:text-sm">{aiReview.nextStep}</p>
                     </div>
                   </div>
                 )}

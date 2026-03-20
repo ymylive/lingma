@@ -23,8 +23,8 @@ def build_judge_ai_review_skipped() -> Dict[str, Any]:
     return {"triggered": False, "status": JUDGE_AI_REVIEW_STATUS_SKIPPED}
 
 
-def build_judge_ai_review_deferred(model: Optional[str] = None) -> Dict[str, Any]:
-    payload: Dict[str, Any] = {"triggered": False, "status": JUDGE_AI_REVIEW_STATUS_DEFERRED}
+def build_judge_ai_review_deferred(model: Optional[str] = None, *, triggered: bool = False) -> Dict[str, Any]:
+    payload: Dict[str, Any] = {"triggered": triggered, "status": JUDGE_AI_REVIEW_STATUS_DEFERRED}
     if model:
         payload["model"] = model
     return payload
