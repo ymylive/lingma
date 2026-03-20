@@ -85,7 +85,7 @@ export interface JudgeExerciseContext {
   explanation?: string;
 }
 
-export type JudgeAiReviewStatus = 'generated' | 'skipped' | 'unavailable';
+export type JudgeAiReviewStatus = 'generated' | 'skipped' | 'deferred' | 'unavailable';
 
 export interface JudgeAiDimensionScores {
   correctness: number;
@@ -113,13 +113,23 @@ export interface JudgeAiReviewSkipped {
   model?: string;
 }
 
+export interface JudgeAiReviewDeferred {
+  triggered: false;
+  status: 'deferred';
+  model?: string;
+}
+
 export interface JudgeAiReviewUnavailable {
   triggered: true;
   status: 'unavailable';
   model?: string;
 }
 
-export type JudgeAiReview = JudgeAiReviewGenerated | JudgeAiReviewSkipped | JudgeAiReviewUnavailable;
+export type JudgeAiReview =
+  | JudgeAiReviewGenerated
+  | JudgeAiReviewSkipped
+  | JudgeAiReviewDeferred
+  | JudgeAiReviewUnavailable;
 
 export interface JudgeResponse {
   success: boolean;
@@ -291,6 +301,14 @@ function normalizeJudgeAiReview(payload: unknown): JudgeAiReview | undefined {
     return {
       triggered: false,
       status: 'skipped',
+      model: typeof review.model === 'string' ? review.model : undefined,
+    };
+  }
+
+  if (review.status === 'deferred') {
+    return {
+      triggered: false,
+      status: 'deferred',
       model: typeof review.model === 'string' ? review.model : undefined,
     };
   }

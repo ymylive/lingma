@@ -153,7 +153,11 @@ export default function CodingExercise({
 
   const summary = judge?.summary;
   const aiReview = judge?.aiReview;
-  const showAiReview = aiReview?.status === 'generated' || aiReview?.status === 'unavailable';
+  const showAiReview =
+    aiReview?.status === 'generated'
+    || aiReview?.status === 'unavailable'
+    || aiReview?.status === 'deferred';
+  const isDeferredAiReview = aiReview?.status === 'deferred';
   const groupedResults = useMemo(() => {
     const groups = new Map<string, JudgeResponse['results']>();
     for (const result of judge?.results || []) {
@@ -388,11 +392,24 @@ export default function CodingExercise({
             )}
 
             {showAiReview && (
-              <div className="mt-5 rounded-2xl border border-sky-200 bg-sky-50/70 p-4 dark:border-sky-800 dark:bg-sky-950/20">
+              <div
+                className={`mt-5 rounded-2xl border p-4 ${
+                  isDeferredAiReview
+                    ? 'border-amber-200 bg-amber-50/80 dark:border-amber-800 dark:bg-amber-950/20'
+                    : 'border-sky-200 bg-sky-50/70 dark:border-sky-800 dark:bg-sky-950/20'
+                }`}
+              >
                 <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                   <div className="space-y-3">
                     <div className="flex flex-wrap gap-2">
-                      <span className="rounded-full bg-sky-600 px-3 py-1 text-xs font-semibold text-white">{judgeText('AI 判题分析', 'AI Review')}</span>
+                      <span className={`rounded-full px-3 py-1 text-xs font-semibold text-white ${isDeferredAiReview ? 'bg-amber-600' : 'bg-sky-600'}`}>
+                        {judgeText('AI 判题分析', 'AI Review')}
+                      </span>
+                      {isDeferredAiReview && (
+                        <span className="rounded-full bg-white px-3 py-1 text-xs font-medium text-amber-700 dark:bg-slate-900 dark:text-amber-200">
+                          {judgeText('延后处理', 'Deferred')}
+                        </span>
+                      )}
                       {aiReview?.model && (
                         <span className="rounded-full bg-white px-3 py-1 text-xs font-medium text-slate-700 dark:bg-slate-900 dark:text-slate-200">
                           {aiReview.model}
@@ -414,8 +431,28 @@ export default function CodingExercise({
                           <p className="whitespace-pre-line break-words">{aiReview.overallDiagnosis}</p>
                         </div>
                       </>
+                    ) : aiReview?.status === 'deferred' ? (
+                      <div
+                        aria-live="polite"
+                        role="status"
+                        className="rounded-2xl bg-white/80 p-4 text-[15px] leading-6 text-slate-700 shadow-sm dark:bg-slate-900/60 dark:text-slate-200 sm:text-sm"
+                      >
+                        <div className="text-sm font-semibold text-slate-900 dark:text-white">
+                          {judgeText('AI 复盘已延后', 'AI review deferred')}
+                        </div>
+                        <p className="mt-2">
+                          {judgeText(
+                            '本次提交暂未生成 AI 复盘，请先参考上方确定性判题结果；如仍需 AI 建议，可稍后再次提交。',
+                            'AI feedback was deferred for this submission. Use the deterministic judge result above for now, and resubmit later if you still need AI feedback.',
+                          )}
+                        </p>
+                      </div>
                     ) : (
-                      <div className="rounded-2xl bg-white/80 p-4 text-[15px] leading-6 text-slate-700 shadow-sm dark:bg-slate-900/60 dark:text-slate-200 sm:text-sm">
+                      <div
+                        aria-live="polite"
+                        role="status"
+                        className="rounded-2xl bg-white/80 p-4 text-[15px] leading-6 text-slate-700 shadow-sm dark:bg-slate-900/60 dark:text-slate-200 sm:text-sm"
+                      >
                         {judgeText(
                           'AI 分析暂时不可用，上方确定性判题结果仍然有效。',
                           'AI review is temporarily unavailable. The deterministic judge result above is still valid.',

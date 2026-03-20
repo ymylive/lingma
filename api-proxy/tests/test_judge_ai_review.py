@@ -31,6 +31,7 @@ def api_module(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setenv("AUTH_DB_PATH", str(auth_db))
     monkeypatch.setenv("MINDMAP_DB_PATH", str(mindmap_db))
     monkeypatch.setenv("AI_API_KEY", "test-key")
+    monkeypatch.setenv("JUDGE_INTERNAL_TOKEN", "test-judge-token")
     monkeypatch.setenv("SESSION_COOKIE_SECURE", "false")
     module_name = f"api_proxy_main_judge_test_{auth_db.stem}_{len(sys.modules)}"
     module = load_api_module(module_name)
