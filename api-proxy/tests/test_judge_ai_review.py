@@ -659,3 +659,12 @@ def test_judge_ai_upstream_failure_degrades_to_unavailable_review(client: TestCl
         "status": "unavailable",
         "model": "judge-review-model",
     }
+
+
+def test_decode_response_text_prefers_utf8_bytes(api_module):
+    response = requests.Response()
+    response.status_code = 200
+    response._content = "中文输出正常".encode("utf-8")
+    response.encoding = "latin-1"
+
+    assert api_module.decode_response_text(response) == "中文输出正常"

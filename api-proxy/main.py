@@ -1515,8 +1515,13 @@ def prepare_upstream_request(payload: Dict[str, Any]) -> Tuple[str, Dict[str, An
 
 
 def decode_response_text(response: requests.Response) -> str:
-    response.encoding = response.encoding or "utf-8"
-    return response.text
+    raw = response.content or b""
+    if not raw:
+        return ""
+    try:
+        return raw.decode("utf-8")
+    except UnicodeDecodeError:
+        return raw.decode("utf-8", errors="replace")
 
 
 def extract_responses_sse_json(body_text: str) -> Dict[str, Any]:
