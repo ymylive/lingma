@@ -6,6 +6,7 @@ import type {
   VibeTrack,
 } from '../types/vibeCoding';
 import { getConfiguredModelOverride } from './aiService';
+import { readStreamingSse } from './streamingSse';
 
 interface CacheEntry<T> {
   data: T;
@@ -92,6 +93,24 @@ export async function generateVibeChallenge(track: VibeTrack): Promise<VibeChall
   return data;
 }
 
+export async function generateVibeChallengeStream(
+  track: VibeTrack,
+  onProgress?: (text: string) => void,
+): Promise<VibeChallenge> {
+  const modelOverride = getConfiguredModelOverride();
+  const response = await fetch('/api/vibe-coding/generate/stream', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+    body: JSON.stringify(modelOverride ? { track, model: modelOverride } : { track }),
+  });
+  const data = await readStreamingSse<VibeChallenge>(response, onProgress);
+  invalidateVibeCache();
+  return data;
+}
+
 export async function evaluateVibePrompt(challengeId: string, userPrompt: string): Promise<VibeEvaluation> {
   const modelOverride = getConfiguredModelOverride();
   const response = await fetch('/api/vibe-coding/evaluate', {
@@ -114,6 +133,36 @@ export async function evaluateVibePrompt(challengeId: string, userPrompt: string
     ),
   });
   const data = await readJson<VibeEvaluation>(response);
+  invalidateVibeCache();
+  return data;
+}
+
+export async function evaluateVibePromptStream(
+  challengeId: string,
+  userPrompt: string,
+  onProgress?: (text: string) => void,
+): Promise<VibeEvaluation> {
+  const modelOverride = getConfiguredModelOverride();
+  const response = await fetch('/api/vibe-coding/evaluate/stream', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+    body: JSON.stringify(
+      modelOverride
+        ? {
+            challenge_id: challengeId,
+            user_prompt: userPrompt,
+            model: modelOverride,
+          }
+        : {
+            challenge_id: challengeId,
+            user_prompt: userPrompt,
+          },
+    ),
+  });
+  const data = await readStreamingSse<VibeEvaluation>(response, onProgress);
   invalidateVibeCache();
   return data;
 }
