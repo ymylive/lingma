@@ -567,6 +567,7 @@ export default function AIExerciseGenerator() {
             testCases={generatedExercise.testCases}
             hints={generatedExercise.hints}
             explanation={generatedExercise.explanation}
+            progressiveAiText
           />
         </div>
       )}
@@ -584,6 +585,7 @@ export default function AIExerciseGenerator() {
             codeTemplate={generatedFillBlank.codeTemplate}
             blanks={generatedFillBlank.blanks}
             explanation={generatedFillBlank.explanation}
+            progressiveAiText
           />
         </div>
       )}

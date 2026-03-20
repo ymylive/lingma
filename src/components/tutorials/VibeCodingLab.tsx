@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { useI18n } from '../../contexts/I18nContext';
 import { methodologyUnits } from '../../data/methodologyUnits';
+import useProgressiveAiObject from '../../hooks/useProgressiveAiObject';
 import {
   evaluateVibePrompt,
   fetchVibeHistory,
@@ -169,6 +170,36 @@ export default function VibeCodingLab({ onOpenAiGenerator, onOpenPracticeLibrary
   const latestScore = history[0]?.evaluation.total_score ?? profile.recentAverageScore;
   const weakestDimensionLabel = profile.weakestDimension ? dimensionMeta[profile.weakestDimension].label : t('暂无');
   const canEvaluate = Boolean(challenge && draftPrompt.trim().length >= 24 && !evaluating);
+  const progressiveChallenge = useProgressiveAiObject(
+    useMemo(
+      () =>
+        challenge
+          ? {
+              title: challenge.title,
+              scenario: challenge.scenario,
+              requirements: challenge.requirements,
+              constraints: challenge.constraints,
+              successCriteria: challenge.successCriteria,
+            }
+          : null,
+      [challenge],
+    ),
+    Boolean(challenge),
+  );
+  const progressiveEvaluation = useProgressiveAiObject(
+    useMemo(
+      () =>
+        evaluation
+          ? {
+              strengths: evaluation.strengths,
+              weaknesses: evaluation.weaknesses,
+              rewrite_example: evaluation.rewrite_example,
+            }
+          : null,
+      [evaluation],
+    ),
+    Boolean(evaluation),
+  );
 
   const generateChallengeForTrack = async (track: VibeTrack) => {
     setGenerating(true);
@@ -368,7 +399,7 @@ export default function VibeCodingLab({ onOpenAiGenerator, onOpenPracticeLibrary
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <div className="text-sm font-semibold text-slate-900 dark:text-white">
-                    {challenge?.title || t('尚未生成题目')}
+                    {progressiveChallenge?.title || t('尚未生成题目')}
                   </div>
                   <div className="mt-1 text-xs uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">
                     {trackMeta[selectedTrack].label} · {difficultyLabel(profile.recommendedDifficulty)}
@@ -388,12 +419,12 @@ export default function VibeCodingLab({ onOpenAiGenerator, onOpenPracticeLibrary
                 <div className="mt-4 space-y-4">
                   <div>
                     <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">{t('场景')}</div>
-                    <p className="mt-2 text-sm leading-7 text-slate-700 dark:text-slate-200">{challenge.scenario}</p>
+                    <p className="mt-2 text-sm leading-7 text-slate-700 dark:text-slate-200">{progressiveChallenge?.scenario}</p>
                   </div>
                   <div className="grid gap-3 md:grid-cols-3">
-                    <BulletPanel title={t('要求')} items={challenge.requirements} />
-                    <BulletPanel title={t('限制')} items={challenge.constraints} />
-                    <BulletPanel title={t('成功标准')} items={challenge.successCriteria} />
+                    <BulletPanel title={t('要求')} items={progressiveChallenge?.requirements || []} />
+                    <BulletPanel title={t('限制')} items={progressiveChallenge?.constraints || []} />
+                    <BulletPanel title={t('成功标准')} items={progressiveChallenge?.successCriteria || []} />
                   </div>
                 </div>
               ) : (
@@ -478,12 +509,12 @@ export default function VibeCodingLab({ onOpenAiGenerator, onOpenPracticeLibrary
                 })}
               </div>
 
-              <FeedbackPanel title={t('做得好的地方')} items={evaluation.strengths} tone="emerald" />
-              <FeedbackPanel title={t('需要补强的地方')} items={evaluation.weaknesses} tone="amber" />
+              <FeedbackPanel title={t('做得好的地方')} items={progressiveEvaluation?.strengths || []} tone="emerald" />
+              <FeedbackPanel title={t('需要补强的地方')} items={progressiveEvaluation?.weaknesses || []} tone="amber" />
 
               <div className="rounded-3xl border border-slate-900 bg-slate-950 p-4 text-slate-100 shadow-[0_20px_60px_-40px_rgba(15,23,42,0.9)]">
                 <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">{t('改写示范')}</div>
-                <pre className="mt-3 whitespace-pre-wrap text-sm leading-7 text-slate-200">{evaluation.rewrite_example}</pre>
+                <pre className="mt-3 whitespace-pre-wrap text-sm leading-7 text-slate-200">{progressiveEvaluation?.rewrite_example}</pre>
                 <button
                   type="button"
                   aria-label={t('用示范重练')}
@@ -603,12 +634,13 @@ function ScoreDisplay({ score }: { score: number }) {
 }
 
 function BulletPanel({ title, items }: { title: string; items: string[] }) {
+  const visibleItems = items.filter(Boolean);
   return (
     <div className="rounded-3xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-800">
       <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">{title}</div>
       <div className="mt-3 space-y-2">
-        {items.map((item) => (
-          <div key={item} className="rounded-2xl bg-slate-50 px-3 py-3 text-sm leading-7 text-slate-700 dark:bg-slate-900 dark:text-slate-200">
+        {visibleItems.map((item, index) => (
+          <div key={`${title}-${index}`} className="rounded-2xl bg-slate-50 px-3 py-3 text-sm leading-7 text-slate-700 dark:bg-slate-900 dark:text-slate-200">
             {item}
           </div>
         ))}
@@ -630,13 +662,14 @@ function FeedbackPanel({
     tone === 'emerald'
       ? 'border-emerald-200 bg-emerald-50 text-emerald-900 dark:border-emerald-900/50 dark:bg-emerald-950/20 dark:text-emerald-100'
       : 'border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/20 dark:text-amber-100';
+  const visibleItems = items.filter(Boolean);
 
   return (
     <div className={`rounded-3xl border p-4 ${toneClasses}`}>
       <div className="text-sm font-semibold">{title}</div>
       <div className="mt-3 space-y-2">
-        {items.map((item) => (
-          <div key={item} className="rounded-2xl bg-white/70 px-4 py-3 text-sm leading-7 dark:bg-slate-900/40">
+        {visibleItems.map((item, index) => (
+          <div key={`${title}-${index}`} className="rounded-2xl bg-white/70 px-4 py-3 text-sm leading-7 dark:bg-slate-900/40">
             {item}
           </div>
         ))}
