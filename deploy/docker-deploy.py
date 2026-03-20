@@ -35,6 +35,7 @@ INCLUDE_PATHS = [
     "deploy/docker/frontend.Dockerfile",
     "deploy/docker/judge-server.Dockerfile",
     "api-proxy/main.py",
+    "api-proxy/app_modules/",
     "api-proxy/requirements.txt",
     "judge-server/server.js",
     "judge-server/package.json",
