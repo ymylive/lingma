@@ -5,6 +5,7 @@ import type {
   VibeProfile,
   VibeTrack,
 } from '../types/vibeCoding';
+import type { AppLocale } from '../i18n';
 import { getConfiguredModelOverride } from './aiService';
 import { readStreamingSse } from './streamingSse';
 
@@ -78,7 +79,7 @@ export async function fetchVibeHistory(forceRefresh?: boolean): Promise<VibeHist
   return payload.items;
 }
 
-export async function generateVibeChallenge(track: VibeTrack): Promise<VibeChallenge> {
+export async function generateVibeChallenge(track: VibeTrack, locale: AppLocale): Promise<VibeChallenge> {
   const modelOverride = getConfiguredModelOverride();
   const response = await fetch('/api/vibe-coding/generate', {
     method: 'POST',
@@ -86,7 +87,7 @@ export async function generateVibeChallenge(track: VibeTrack): Promise<VibeChall
       'Content-Type': 'application/json',
     },
     credentials: 'include',
-    body: JSON.stringify(modelOverride ? { track, model: modelOverride } : { track }),
+    body: JSON.stringify(modelOverride ? { track, locale, model: modelOverride } : { track, locale }),
   });
   const data = await readJson<VibeChallenge>(response);
   invalidateVibeCache();
@@ -95,6 +96,7 @@ export async function generateVibeChallenge(track: VibeTrack): Promise<VibeChall
 
 export async function generateVibeChallengeStream(
   track: VibeTrack,
+  locale: AppLocale,
   onProgress?: (text: string) => void,
 ): Promise<VibeChallenge> {
   const modelOverride = getConfiguredModelOverride();
@@ -104,14 +106,14 @@ export async function generateVibeChallengeStream(
       'Content-Type': 'application/json',
     },
     credentials: 'include',
-    body: JSON.stringify(modelOverride ? { track, model: modelOverride } : { track }),
+    body: JSON.stringify(modelOverride ? { track, locale, model: modelOverride } : { track, locale }),
   });
   const data = await readStreamingSse<VibeChallenge>(response, onProgress);
   invalidateVibeCache();
   return data;
 }
 
-export async function evaluateVibePrompt(challengeId: string, userPrompt: string): Promise<VibeEvaluation> {
+export async function evaluateVibePrompt(challengeId: string, userPrompt: string, locale: AppLocale): Promise<VibeEvaluation> {
   const modelOverride = getConfiguredModelOverride();
   const response = await fetch('/api/vibe-coding/evaluate', {
     method: 'POST',
@@ -124,11 +126,13 @@ export async function evaluateVibePrompt(challengeId: string, userPrompt: string
         ? {
             challenge_id: challengeId,
             user_prompt: userPrompt,
+            locale,
             model: modelOverride,
           }
         : {
             challenge_id: challengeId,
             user_prompt: userPrompt,
+            locale,
           }
     ),
   });
@@ -140,6 +144,7 @@ export async function evaluateVibePrompt(challengeId: string, userPrompt: string
 export async function evaluateVibePromptStream(
   challengeId: string,
   userPrompt: string,
+  locale: AppLocale,
   onProgress?: (text: string) => void,
 ): Promise<VibeEvaluation> {
   const modelOverride = getConfiguredModelOverride();
@@ -154,11 +159,13 @@ export async function evaluateVibePromptStream(
         ? {
             challenge_id: challengeId,
             user_prompt: userPrompt,
+            locale,
             model: modelOverride,
           }
         : {
             challenge_id: challengeId,
             user_prompt: userPrompt,
+            locale,
           },
     ),
   });
