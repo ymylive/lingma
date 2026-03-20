@@ -15,6 +15,7 @@ export const vibeCodingTranslationsEn: Record<string, string> = {
   '进阶': 'intermediate',
   '困难': 'advanced',
   '暂无记录': 'No attempts yet',
+  '训练赛道': 'Training Tracks',
   'Today Panel': 'Today Panel',
   '系统会根据最近训练表现推荐赛道与难度。你也可以手动切换赛道，但难度依旧由 AI 自适应。':
     'The system recommends a track and difficulty from recent attempts. You can switch tracks manually while difficulty remains adaptive.',
@@ -23,9 +24,14 @@ export const vibeCodingTranslationsEn: Record<string, string> = {
   '推荐赛道': 'Recommended Track',
   '薄弱维度': 'Weakest Dimension',
   '暂无': 'None yet',
+  'Prompt Arena 训练场': 'Prompt Arena',
   'Prompt Arena': 'Prompt Arena',
   '左边是 AI 题目，中间写 prompt，右边拿评分。首版只评 prompt 质量，不评代码结果。':
     'AI gives the challenge, you write the prompt, and the arena scores prompt quality only.',
+  'AI 正在生成题目...': 'AI is generating the challenge...',
+  'AI 正在实时生成题目': 'AI is streaming the challenge',
+  'AI 正在实时评分': 'AI is streaming the evaluation',
+  '正在等待首个流式分片...': 'Waiting for the first stream chunk...',
   '尚未生成题目': 'No challenge generated yet',
   '换一道题': 'Generate Challenge',
   '场景': 'Scenario',
@@ -35,8 +41,9 @@ export const vibeCodingTranslationsEn: Record<string, string> = {
   '先生成一道练习题': 'Generate your first challenge',
   '建议先使用系统推荐赛道；如果你要专项训练，也可以手动切换赛道后再生成。':
     'Start with the system recommendation or switch tracks manually for focused practice.',
+  'Prompt 编辑器': 'Prompt Editor',
   'Prompt Editor': 'Prompt Editor',
-  '字符': 'chars',
+  '字符': 'Characters',
   '写出你的专业 prompt：目标、范围、验证、输出格式都要有。':
     'Write your professional prompt here: include goal, scope, verification, and deliverable format.',
   '提交评分': 'Evaluate Prompt',
