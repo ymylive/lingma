@@ -472,8 +472,10 @@ export default function MindMap() {
   const [isNodeAiLoading, setIsNodeAiLoading] = useState(false);
   const [nodeAiError, setNodeAiError] = useState('');
   const [nodeAiWriteMode, setNodeAiWriteMode] = useState<'replace' | 'append'>('replace');
+  const [isDragOver, setIsDragOver] = useState(false);
 
   const lastSyncedMapsRef = useRef('');
+  const pendingAutoGenerateRef = useRef(false);
   const lastPersistedMapsRef = useRef('');
   const skipNextRemoteSyncRef = useRef(false);
   const mindMapPanelRef = useRef<HTMLDivElement | null>(null);
@@ -871,6 +873,49 @@ export default function MindMap() {
     reader.readAsText(file);
   };
 
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.currentTarget === e.target || !e.currentTarget.contains(e.relatedTarget as Node)) {
+      setIsDragOver(false);
+    }
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+    const file = e.dataTransfer.files[0];
+    if (!file) return;
+    const ext = file.name.split('.').pop()?.toLowerCase();
+    if (!['txt', 'md', 'markdown'].includes(ext || '')) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const text = String(reader.result || '');
+      setFileText(text);
+      setFileName(file.name);
+      setSourceTab('file');
+      setSourcePreview({ title: file.name, length: text.length });
+      pendingAutoGenerateRef.current = true;
+    };
+    reader.readAsText(file);
+  }, []);
+
+  useEffect(() => {
+    if (pendingAutoGenerateRef.current && fileText) {
+      pendingAutoGenerateRef.current = false;
+      handleGenerate('new');
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fileText]);
+
   const handleUpdateTitle = (value: string) => {
     setMapTitle(value);
     updateActiveMap((map) => ({ ...map, title: value, updatedAt: new Date().toISOString() }));
@@ -959,16 +1004,20 @@ export default function MindMap() {
     const img = new Image();
     const svgUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
     img.onload = () => {
+      const dpr = 2;
       const canvas = document.createElement('canvas');
-      canvas.width = img.width;
-      canvas.height = img.height;
+      canvas.width = img.width * dpr;
+      canvas.height = img.height * dpr;
       const ctx = canvas.getContext('2d');
       if (!ctx) return;
+      ctx.fillStyle = '#f8fafc';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.scale(dpr, dpr);
       ctx.drawImage(img, 0, 0);
       canvas.toBlob((blob) => {
         if (!blob) return;
         downloadBlob(`${activeMap.title || 'mindmap'}.png`, blob);
-      });
+      }, 'image/png');
     };
     img.src = svgUrl;
   };
@@ -1294,8 +1343,36 @@ export default function MindMap() {
   );
 
   return (
-    <div className={containerClass}>
-      <div className="mx-auto max-w-7xl px-4 pb-10 pt-20 sm:px-6 sm:pb-12 sm:pt-24">
+    <div
+      className={containerClass}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
+      <AnimatePresence>
+        {isDragOver && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-indigo-600/20 backdrop-blur-sm"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="rounded-3xl border-2 border-dashed border-indigo-400 bg-white/90 px-12 py-10 text-center shadow-2xl dark:bg-slate-900/90"
+            >
+              <FileUp className="mx-auto h-12 w-12 text-indigo-500" />
+              <div className="mt-4 text-lg font-semibold text-slate-900 dark:text-white">松开文件即可生成思维导图</div>
+              <div className="mt-2 text-sm text-slate-500">支持 .txt / .md 文件</div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      <div className="mx-auto max-w-7xl px-4 pb-12 pt-22 sm:px-6 sm:pb-14 sm:pt-26">
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
@@ -1337,9 +1414,9 @@ export default function MindMap() {
           </div>
         </motion.div>
 
-        <div className="grid gap-6 lg:grid-cols-[340px_minmax(0,1fr)] xl:grid-cols-[360px_minmax(0,1fr)]">
+        <div className="grid gap-6 lg:grid-cols-[380px_minmax(0,1fr)] xl:grid-cols-[400px_minmax(0,1fr)]">
           <aside className="space-y-6">
-            <div className="glass-card p-4 sm:p-5">
+            <div className="glass-card p-5 sm:p-6">
               <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
                 <Wand2 className="w-4 h-4 text-amber-500" /> 生成来源
               </h2>
@@ -1472,7 +1549,7 @@ export default function MindMap() {
               </div>
             </div>
 
-            <div className="glass-card p-4 sm:p-5">
+            <div className="glass-card p-5 sm:p-6">
               <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
                 <Pencil className="w-4 h-4 text-indigo-500" /> 导图库
               </h3>
@@ -1542,8 +1619,8 @@ export default function MindMap() {
           </aside>
 
           <section className="min-w-0 space-y-6">
-            <div className="glass-card p-4 sm:p-5">
-              <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div className="glass-card p-5 sm:p-6">
+              <div className="flex flex-col gap-4">
                 <div>
                   <label className="text-xs text-slate-500 dark:text-slate-400">导图标题</label>
                   <input
@@ -1604,7 +1681,7 @@ export default function MindMap() {
             </div>
             <div
               className={`grid gap-6 ${
-                isMapFullscreen ? 'grid-cols-1' : 'xl:grid-cols-[minmax(0,1fr)_320px]'
+                isMapFullscreen ? 'grid-cols-1' : 'xl:grid-cols-[minmax(0,1fr)_360px]'
               }`}
             >
               {renderMindMapPanel(isMapFullscreen)}
