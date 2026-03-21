@@ -454,7 +454,7 @@ export default function VibeCodingLab({ onOpenAiGenerator, onOpenPracticeLibrary
           </div>
         </motion.div>
 
-        <motion.div variants={fadeInUp} className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:p-7">
+        <motion.div variants={fadeInUp} className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:p-7 lg:col-span-2">
           <div className="flex items-center gap-2 text-base font-semibold text-slate-900 dark:text-white">
             <ShieldCheck className="h-4 w-4 text-indigo-500" />
             {t('评分结果')}
@@ -474,29 +474,33 @@ export default function VibeCodingLab({ onOpenAiGenerator, onOpenPracticeLibrary
                 </div>
               </div>
 
-              <div className="space-y-3">
-                {DIMENSION_ORDER.map((dimension) => {
-                  const value = evaluation.dimension_scores[dimension];
-                  const meta = dimensionMeta[dimension];
-                  return (
-                    <div key={dimension} className="rounded-3xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-900">
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="text-sm font-semibold text-slate-900 dark:text-white">{meta.label}</div>
-                        <div className="text-sm text-slate-600 dark:text-slate-300">{value}/{meta.max}</div>
+              <div className="grid gap-5 lg:grid-cols-2">
+                <div className="space-y-3">
+                  {DIMENSION_ORDER.map((dimension) => {
+                    const value = evaluation.dimension_scores[dimension];
+                    const meta = dimensionMeta[dimension];
+                    return (
+                      <div key={dimension} className="rounded-3xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-900">
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="text-sm font-semibold text-slate-900 dark:text-white">{meta.label}</div>
+                          <div className="text-sm text-slate-600 dark:text-slate-300">{value}/{meta.max}</div>
+                        </div>
+                        <div className="mt-3 h-2 rounded-full bg-slate-200 dark:bg-slate-700">
+                          <div
+                            className="h-2 rounded-full bg-emerald-500 transition-all duration-300"
+                            style={{ width: `${(value / meta.max) * 100}%` }}
+                          />
+                        </div>
                       </div>
-                      <div className="mt-3 h-2 rounded-full bg-slate-200 dark:bg-slate-700">
-                        <div
-                          className="h-2 rounded-full bg-emerald-500 transition-all duration-300"
-                          style={{ width: `${(value / meta.max) * 100}%` }}
-                        />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+                    );
+                  })}
+                </div>
 
-              <FeedbackPanel title={t('做得好的地方')} items={evaluation.strengths} tone="emerald" />
-              <FeedbackPanel title={t('需要补强的地方')} items={evaluation.weaknesses} tone="amber" />
+                <div className="space-y-4">
+                  <FeedbackPanel title={t('做得好的地方')} items={evaluation.strengths} tone="emerald" />
+                  <FeedbackPanel title={t('需要补强的地方')} items={evaluation.weaknesses} tone="amber" />
+                </div>
+              </div>
 
               <div className="rounded-3xl border border-slate-900 bg-slate-950 p-4 text-slate-100 shadow-[0_20px_60px_-40px_rgba(15,23,42,0.9)]">
                 <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">{t('改写示范')}</div>
