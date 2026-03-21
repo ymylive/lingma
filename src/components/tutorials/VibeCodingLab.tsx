@@ -226,7 +226,7 @@ export default function VibeCodingLab({ onOpenAiGenerator, onOpenPracticeLibrary
 
   return (
     <div className="space-y-6">
-      <motion.section {...fadeInUp} className="relative isolate overflow-hidden rounded-[32px] border border-slate-200/80 bg-[linear-gradient(130deg,rgba(2,6,23,0.98),rgba(15,23,42,0.97)),radial-gradient(circle_at_top_left,rgba(34,197,94,0.22),transparent_34%),radial-gradient(circle_at_bottom_right,rgba(56,189,248,0.2),transparent_32%)] p-6 text-slate-100 shadow-[0_40px_100px_-56px_rgba(15,23,42,0.9)] dark:border-slate-700/70 sm:p-7">
+      <motion.section {...fadeInUp} className="relative isolate overflow-visible rounded-[32px] border border-slate-200/80 bg-[linear-gradient(130deg,rgba(2,6,23,0.98),rgba(15,23,42,0.97)),radial-gradient(circle_at_top_left,rgba(34,197,94,0.22),transparent_34%),radial-gradient(circle_at_bottom_right,rgba(56,189,248,0.2),transparent_32%)] p-6 text-slate-100 shadow-[0_40px_100px_-56px_rgba(15,23,42,0.9)] dark:border-slate-700/70 sm:p-7">
         <div className="relative grid gap-6 xl:grid-cols-[1.12fr_0.88fr]">
           <div>
             <div className="flex flex-wrap items-center gap-2">
@@ -309,13 +309,13 @@ export default function VibeCodingLab({ onOpenAiGenerator, onOpenPracticeLibrary
       ) : null}
       </AnimatePresence>
 
-      <motion.section initial="initial" animate="animate" variants={stagger} className="grid gap-6 xl:grid-cols-[0.9fr_1fr_0.92fr]">
+      <motion.section initial="initial" animate="animate" variants={stagger} className="grid gap-6 xl:grid-cols-[1fr_1.1fr_1fr]">
         <motion.div variants={fadeInUp} className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:p-6">
           <div className="flex items-center gap-2 text-sm font-semibold text-slate-900 dark:text-white">
             <Workflow className="h-4 w-4 text-indigo-500" />
             {t('训练赛道')}
           </div>
-          <p className="mt-2 text-sm leading-7 text-slate-600 dark:text-slate-300">
+          <p className="mt-2 text-sm leading-8 text-slate-600 dark:text-slate-300">
             {t('系统会根据最近训练表现推荐赛道与难度。你也可以手动切换赛道，但难度依旧由 AI 自适应。')}
           </p>
 
@@ -350,7 +350,7 @@ export default function VibeCodingLab({ onOpenAiGenerator, onOpenPracticeLibrary
             })}
           </div>
 
-          <div className="mt-5 rounded-3xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-900/80">
+          <div className="mt-5 rounded-3xl border border-slate-200 bg-slate-50 p-5 dark:border-slate-700 dark:bg-slate-900/80">
             <div className="text-sm font-semibold text-slate-900 dark:text-white">{t('AI 推荐画像')}</div>
             <div className="mt-3 grid gap-3 sm:grid-cols-2">
               <div className="rounded-2xl bg-white px-4 py-3 dark:bg-slate-800">
@@ -370,11 +370,11 @@ export default function VibeCodingLab({ onOpenAiGenerator, onOpenPracticeLibrary
             <MessageSquareQuote className="h-4 w-4 text-indigo-500" />
             {t('Prompt Arena 训练场')}
           </div>
-          <p className="mt-2 text-sm leading-7 text-slate-600 dark:text-slate-300">
+          <p className="mt-2 text-sm leading-8 text-slate-600 dark:text-slate-300">
             {t('左边是 AI 题目，中间写 prompt，右边拿评分。首版只评 prompt 质量，不评代码结果。')}
           </p>
 
-          <div className="mt-5 space-y-5">
+          <div className="mt-4 space-y-3">
             <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-900/80">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
@@ -391,7 +391,7 @@ export default function VibeCodingLab({ onOpenAiGenerator, onOpenPracticeLibrary
                   className="inline-flex min-h-[44px] cursor-pointer items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-all duration-200 hover:border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:border-slate-500"
                 >
                   {generating ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-                  {t('换一道题')}
+                  {challenge ? t('换一道题') : t('生成第一道题')}
                 </button>
               </div>
 
@@ -401,7 +401,7 @@ export default function VibeCodingLab({ onOpenAiGenerator, onOpenPracticeLibrary
                 <div className="mt-4 space-y-4">
                   <div>
                     <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">{t('场景')}</div>
-                    <p className="mt-2 text-sm leading-7 text-slate-700 dark:text-slate-200">{challenge.scenario}</p>
+                    <p className="mt-2 text-sm leading-8 text-slate-700 dark:text-slate-200">{challenge.scenario}</p>
                   </div>
                   <div className="grid gap-3 xl:grid-cols-2">
                     <BulletPanel title={t('要求')} items={challenge.requirements} />
@@ -426,9 +426,9 @@ export default function VibeCodingLab({ onOpenAiGenerator, onOpenPracticeLibrary
                 onChange={(event) => setDraftPrompt(event.target.value)}
                 aria-label={t('Prompt 编辑器')}
                 placeholder={t('写出你的专业 prompt：目标、范围、验证、输出格式都要有。')}
-                className="mt-3 min-h-[220px] w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-4 text-sm leading-7 text-slate-800 transition-colors duration-200 placeholder:text-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/60 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-500"
+                className="mt-2 min-h-[200px] w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm leading-8 text-slate-800 transition-colors duration-200 placeholder:text-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/60 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-500"
               />
-              <div className="mt-4 flex flex-wrap gap-3">
+              <div className="mt-3 flex flex-wrap gap-3">
                 <button
                   type="button"
                   disabled={!canEvaluate}
