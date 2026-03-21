@@ -221,11 +221,11 @@ export default function AIExerciseGenerator() {
   }, [dataStructure, isEnglish, t]);
 
   const generatorSurfaceClass =
-    'relative isolate overflow-visible rounded-[28px] border border-slate-200/80 bg-[linear-gradient(135deg,rgba(255,255,255,0.97),rgba(241,245,249,0.92)),radial-gradient(circle_at_top_right,rgba(79,70,229,0.16),transparent_34%),radial-gradient(circle_at_bottom_left,rgba(16,185,129,0.12),transparent_30%)] p-5 shadow-[0_30px_80px_-48px_rgba(15,23,42,0.45)] dark:border-slate-700/80 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.96),rgba(15,23,42,0.9)),radial-gradient(circle_at_top_right,rgba(99,102,241,0.2),transparent_36%),radial-gradient(circle_at_bottom_left,rgba(16,185,129,0.15),transparent_34%)] sm:p-6';
+    'relative isolate overflow-visible rounded-[28px] border border-slate-200/80 bg-[linear-gradient(135deg,rgba(255,255,255,0.97),rgba(241,245,249,0.92)),radial-gradient(circle_at_top_right,rgba(79,70,229,0.16),transparent_34%),radial-gradient(circle_at_bottom_left,rgba(16,185,129,0.12),transparent_30%)] p-6 shadow-[0_30px_80px_-48px_rgba(15,23,42,0.45)] dark:border-slate-700/80 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.96),rgba(15,23,42,0.9)),radial-gradient(circle_at_top_right,rgba(99,102,241,0.2),transparent_36%),radial-gradient(circle_at_bottom_left,rgba(16,185,129,0.15),transparent_34%)] sm:p-7';
   const fieldPanelClass =
-    'relative rounded-2xl border border-slate-200/80 bg-white/85 p-4 shadow-sm backdrop-blur-sm focus-within:z-30 dark:border-slate-700/80 dark:bg-slate-900/70';
+    'relative rounded-2xl border border-slate-200/80 bg-white/85 p-5 shadow-sm backdrop-blur-sm focus-within:z-30 dark:border-slate-700/80 dark:bg-slate-900/70';
   const inputClass =
-    'min-h-[44px] w-full rounded-2xl border border-slate-300 bg-white px-4 py-2 text-sm text-slate-900 outline-none transition-colors focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-500';
+    'min-h-[48px] w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition-colors focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-500';
 
   useEffect(() => {
     loadAIConfig();
@@ -338,7 +338,7 @@ export default function AIExerciseGenerator() {
       )}
 
       <div className={generatorSurfaceClass}>
-        <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div className="mb-8 flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
           <div className="flex items-start gap-4">
             <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-slate-900 text-white shadow-sm dark:bg-white dark:text-slate-950">
               <Bot className="h-6 w-6" />
@@ -348,8 +348,8 @@ export default function AIExerciseGenerator() {
                 <span className="rounded-full bg-indigo-600 px-3 py-1 text-xs font-semibold text-white">{t('AI 智能出题')}</span>
                 <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-medium text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">{learningStateLabel}</span>
               </div>
-              <h2 className="mt-3 text-2xl font-bold text-slate-900 dark:text-white">{t('AI 智能出题')}</h2>
-              <p className="mt-2 max-w-2xl text-sm leading-7 text-slate-600 dark:text-slate-300">
+              <h2 className="mt-4 text-2xl font-bold text-slate-900 dark:text-white">{t('AI 智能出题')}</h2>
+              <p className="mt-3 max-w-2xl text-sm leading-8 text-slate-600 dark:text-slate-300">
                 {t('根据主题自动生成编程练习题')}
               </p>
             </div>
@@ -364,8 +364,8 @@ export default function AIExerciseGenerator() {
           </button>
         </div>
 
-        <div className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
-          <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid gap-6 xl:grid-cols-[1fr_1fr]">
+          <div className="grid gap-6 md:grid-cols-2">
             <div className={`${fieldPanelClass} z-20`}>
               <GeneratorSelect
                 label={t('知识点')}
@@ -392,11 +392,11 @@ export default function AIExerciseGenerator() {
             </div>
 
             <div className={fieldPanelClass}>
-              <div className="mb-3 flex items-center gap-2">
+              <div className="mb-4 flex items-center gap-2">
                 <Sparkles className="h-4 w-4 text-indigo-500 dark:text-indigo-300" />
                 <span className="text-sm font-medium text-slate-700 dark:text-slate-200">{t('难度')}</span>
               </div>
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                 {[
                   { id: 'easy', label: '⭐简单' },
                   { id: 'medium', label: '⭐⭐中等' },
@@ -422,11 +422,11 @@ export default function AIExerciseGenerator() {
             </div>
 
             <div className={fieldPanelClass}>
-              <div className="mb-3 flex items-center gap-2">
+              <div className="mb-4 flex items-center gap-2">
                 <WandSparkles className="h-4 w-4 text-emerald-500 dark:text-emerald-300" />
                 <span className="text-sm font-medium text-slate-700 dark:text-slate-200">{t('题型')}</span>
               </div>
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <button
                   type="button"
                   onClick={() => setExerciseType('coding')}
@@ -455,7 +455,7 @@ export default function AIExerciseGenerator() {
             </div>
           </div>
 
-          <div className="rounded-2xl border border-slate-200/80 bg-[linear-gradient(145deg,rgba(15,23,42,0.04),rgba(79,70,229,0.1))] p-5 shadow-sm dark:border-slate-700/80 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.82),rgba(30,41,59,0.72))]">
+          <div className="rounded-2xl border border-slate-200/80 bg-[linear-gradient(145deg,rgba(15,23,42,0.04),rgba(79,70,229,0.1))] p-6 shadow-sm dark:border-slate-700/80 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.82),rgba(30,41,59,0.72))]">
             <div className="flex items-center gap-2">
               <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-indigo-100 text-indigo-600 dark:bg-indigo-950/60 dark:text-indigo-200">
                 <Sparkles className="h-5 w-5" />
@@ -466,14 +466,14 @@ export default function AIExerciseGenerator() {
               </div>
             </div>
 
-            <div className="mt-4 flex flex-wrap gap-2">
+            <div className="mt-5 flex flex-wrap gap-3">
               <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-indigo-600 shadow-sm dark:bg-slate-900 dark:text-indigo-200">{t(levelMeta.label)}</span>
               <span className="rounded-full bg-slate-900 px-3 py-1 text-xs font-medium text-white dark:bg-white dark:text-slate-950">{learningStateLabel}</span>
             </div>
 
-            <p className="mt-4 text-sm leading-7 text-slate-600 dark:text-slate-300">{t(aiDefaults.message)}</p>
+            <p className="mt-5 text-sm leading-8 text-slate-600 dark:text-slate-300">{t(aiDefaults.message)}</p>
 
-            <div className="mt-4 flex flex-wrap gap-2">
+            <div className="mt-5 flex flex-wrap gap-3">
               {aiDefaults.suggestedCategories.map((item) => (
                 <button
                   key={item}
@@ -505,7 +505,7 @@ export default function AIExerciseGenerator() {
                 setHasManualCategory(false);
                 setHasManualDifficulty(false);
               }}
-              className="mt-4 inline-flex min-h-[44px] cursor-pointer items-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700 transition-colors hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-900/20 dark:text-emerald-300 dark:hover:bg-emerald-900/30"
+              className="mt-6 inline-flex min-h-[48px] cursor-pointer items-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700 transition-colors hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-900/20 dark:text-emerald-300 dark:hover:bg-emerald-900/30"
             >
               <RefreshCw className="h-4 w-4" />
               {t('恢复我的水平推荐')}
@@ -514,8 +514,8 @@ export default function AIExerciseGenerator() {
         </div>
 
         {!topic && (
-          <div className={`${fieldPanelClass} mt-4`}>
-            <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-200">
+          <div className={`${fieldPanelClass} mt-6`}>
+            <label className="mb-3 block text-sm font-medium text-slate-700 dark:text-slate-200">
               {isEnglish ? 'Custom Topic' : '自定义主题'}
             </label>
             <input
@@ -532,7 +532,7 @@ export default function AIExerciseGenerator() {
           type="button"
           onClick={handleGenerate}
           disabled={loading}
-          className="mt-4 inline-flex min-h-[52px] w-full cursor-pointer items-center justify-center gap-2 rounded-2xl bg-slate-900 px-5 py-3 text-base font-bold text-white transition-all hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-indigo-500 dark:hover:bg-indigo-400 sm:text-lg"
+          className="mt-6 inline-flex min-h-[52px] w-full cursor-pointer items-center justify-center gap-2 rounded-2xl bg-slate-900 px-5 py-3 text-base font-bold text-white transition-all hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-indigo-500 dark:hover:bg-indigo-400 sm:text-lg"
         >
           {loading ? (
             <>
@@ -548,18 +548,18 @@ export default function AIExerciseGenerator() {
         </button>
 
         {error && (
-          <div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-800 dark:bg-rose-900/20 dark:text-rose-200">
+          <div className="mt-6 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-800 dark:bg-rose-900/20 dark:text-rose-200">
             {error}
           </div>
         )}
 
         {loading && streamingPreview && (
-          <div className="mt-4 rounded-2xl border border-indigo-200 bg-indigo-50/80 p-4 shadow-sm dark:border-indigo-800 dark:bg-indigo-950/20">
-            <div className="mb-2 flex items-center gap-2 text-indigo-700 dark:text-indigo-300">
+          <div className="mt-6 rounded-2xl border border-indigo-200 bg-indigo-50/80 p-5 shadow-sm dark:border-indigo-800 dark:bg-indigo-950/20">
+            <div className="mb-3 flex items-center gap-2 text-indigo-700 dark:text-indigo-300">
               <LoaderCircle className="h-4 w-4 animate-spin" />
               <span className="text-sm font-semibold">{isEnglish ? 'Streaming AI output' : 'AI 正在实时生成内容'}</span>
             </div>
-            <pre className="max-h-80 overflow-auto whitespace-pre-wrap break-words rounded-2xl bg-white/80 p-4 text-xs leading-6 text-slate-700 dark:bg-slate-900/70 dark:text-slate-200">
+            <pre className="max-h-80 overflow-auto whitespace-pre-wrap break-words rounded-2xl bg-white/80 p-4 text-xs leading-7 text-slate-700 dark:bg-slate-900/70 dark:text-slate-200">
               {streamingPreview}
             </pre>
           </div>
