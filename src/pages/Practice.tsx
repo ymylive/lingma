@@ -409,8 +409,8 @@ export default function Practice() {
   };
 
   return (
-    <div className="min-h-screen pt-24 pb-12">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6">
+    <div className="min-h-screen py-8">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="mb-8 grid gap-4 lg:grid-cols-[1.4fr_0.9fr]">
           <div className="rounded-2xl border border-slate-200 bg-[radial-gradient(circle_at_top_left,_rgba(37,99,235,0.16),_transparent_45%),linear-gradient(135deg,_rgba(255,255,255,0.96),_rgba(241,245,249,0.86))] p-5 shadow-sm dark:border-slate-700 dark:bg-[radial-gradient(circle_at_top_left,_rgba(59,130,246,0.2),_transparent_42%),linear-gradient(135deg,_rgba(15,23,42,0.98),_rgba(30,41,59,0.94))] sm:p-6">
             <div className="flex flex-wrap items-center gap-2">
@@ -431,13 +431,14 @@ export default function Practice() {
           </div>
         </div>
 
-        <div className="mb-6 grid grid-cols-1 gap-2 sm:grid-cols-3">
+        <div className="mb-8 grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
           <button onClick={() => setTab('preset')} onMouseEnter={preloadAllExercises} onFocus={preloadAllExercises} className={`min-h-[48px] cursor-pointer rounded-2xl px-6 py-3 text-sm font-semibold transition-all ${tab === 'preset' ? 'bg-klein-500 text-white shadow-sm' : 'border border-slate-200 bg-white text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200'}`}>{t('题库练习')}</button>
           <button onClick={() => setTab('ai')} onMouseEnter={preloadExerciseDetailPanels} onFocus={preloadExerciseDetailPanels} className={`min-h-[48px] cursor-pointer rounded-2xl px-6 py-3 text-sm font-semibold transition-all ${tab === 'ai' ? 'bg-klein-500 text-white shadow-sm' : 'border border-slate-200 bg-white text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200'}`}>{t('AI 智能出题')}</button>
           <button onClick={() => setTab('vibe')} onMouseEnter={preloadVibeCodingLab} onFocus={preloadVibeCodingLab} className={`min-h-[48px] cursor-pointer rounded-2xl px-6 py-3 text-sm font-semibold transition-all ${tab === 'vibe' ? 'bg-klein-500 text-white shadow-sm' : 'border border-slate-200 bg-white text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200'}`}>{isEnglish ? 'Vibe Coding Lab' : 'Vibe Coding 学习'}</button>
         </div>
 
-        {tab === 'ai' ? (
+        <div className="space-y-6">
+          {tab === 'ai' ? (
           <Suspense fallback={<AsyncPanelFallback label={isEnglish ? 'Loading AI practice tools...' : '正在加载 AI 出题工具...'} />}>
             <AIExerciseGenerator />
           </Suspense>
@@ -728,6 +729,7 @@ export default function Practice() {
             )}
           </>
         )}
+        </div>
       </div>
     </div>
   );
