@@ -309,13 +309,13 @@ export default function VibeCodingLab({ onOpenAiGenerator, onOpenPracticeLibrary
       ) : null}
       </AnimatePresence>
 
-      <motion.section initial="initial" animate="animate" variants={stagger} className="grid gap-6 xl:grid-cols-[1fr_1.1fr_1fr]">
-        <motion.div variants={fadeInUp} className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:p-6">
-          <div className="flex items-center gap-2 text-sm font-semibold text-slate-900 dark:text-white">
+      <motion.section initial="initial" animate="animate" variants={stagger} className="grid gap-6 lg:grid-cols-2">
+        <motion.div variants={fadeInUp} className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:p-7">
+          <div className="flex items-center gap-2 text-base font-semibold text-slate-900 dark:text-white">
             <Workflow className="h-4 w-4 text-indigo-500" />
             {t('训练赛道')}
           </div>
-          <p className="mt-2 text-sm leading-8 text-slate-600 dark:text-slate-300">
+          <p className="mt-3 text-base leading-8 text-slate-600 dark:text-slate-300">
             {t('系统会根据最近训练表现推荐赛道与难度。你也可以手动切换赛道，但难度依旧由 AI 自适应。')}
           </p>
 
@@ -365,17 +365,17 @@ export default function VibeCodingLab({ onOpenAiGenerator, onOpenPracticeLibrary
           </div>
         </motion.div>
 
-        <motion.div variants={fadeInUp} className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:p-6">
-          <div className="flex items-center gap-2 text-sm font-semibold text-slate-900 dark:text-white">
+        <motion.div variants={fadeInUp} className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:p-7">
+          <div className="flex items-center gap-2 text-base font-semibold text-slate-900 dark:text-white">
             <MessageSquareQuote className="h-4 w-4 text-indigo-500" />
             {t('Prompt Arena 训练场')}
           </div>
-          <p className="mt-2 text-sm leading-8 text-slate-600 dark:text-slate-300">
+          <p className="mt-3 text-base leading-8 text-slate-600 dark:text-slate-300">
             {t('左边是 AI 题目，中间写 prompt，右边拿评分。首版只评 prompt 质量，不评代码结果。')}
           </p>
 
-          <div className="mt-4 space-y-3">
-            <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-900/80">
+          <div className="mt-5 space-y-4">
+            <div className="rounded-3xl border border-slate-200 bg-slate-50 p-5 dark:border-slate-700 dark:bg-slate-900/80">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <div className="text-sm font-semibold text-slate-900 dark:text-white">
@@ -454,19 +454,19 @@ export default function VibeCodingLab({ onOpenAiGenerator, onOpenPracticeLibrary
           </div>
         </motion.div>
 
-        <motion.div variants={fadeInUp} className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:p-6">
-          <div className="flex items-center gap-2 text-sm font-semibold text-slate-900 dark:text-white">
+        <motion.div variants={fadeInUp} className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:p-7">
+          <div className="flex items-center gap-2 text-base font-semibold text-slate-900 dark:text-white">
             <ShieldCheck className="h-4 w-4 text-indigo-500" />
             {t('评分结果')}
           </div>
           <AnimatePresence mode="wait">
           {evaluating ? (
-            <motion.div key="streaming-eval" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }} className="mt-4">
+            <motion.div key="streaming-eval" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }} className="mt-5">
               <LiveStreamingPanel title={t('AI 正在实时评分')} text={streamingEvaluationPreview || t('正在等待首个流式分片...')} />
             </motion.div>
           ) : evaluation ? (
-            <motion.div key="eval" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }} className="mt-4 space-y-4">
-              <div role="status" aria-live="polite" className="rounded-3xl border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-900/50 dark:bg-emerald-950/20">
+            <motion.div key="eval" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }} className="mt-5 space-y-5">
+              <div role="status" aria-live="polite" className="rounded-3xl border border-emerald-200 bg-emerald-50 p-5 dark:border-emerald-900/50 dark:bg-emerald-950/20">
                 <div className="text-xs uppercase tracking-[0.16em] text-emerald-700 dark:text-emerald-300">{t('总分')}</div>
                 <ScoreDisplay score={evaluation.total_score} />
                 <div className="mt-2 text-sm text-emerald-900 dark:text-emerald-100">

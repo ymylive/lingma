@@ -221,9 +221,9 @@ export default function AIExerciseGenerator() {
   }, [dataStructure, isEnglish, t]);
 
   const generatorSurfaceClass =
-    'relative isolate overflow-visible rounded-[28px] border border-slate-200/80 bg-[linear-gradient(135deg,rgba(255,255,255,0.97),rgba(241,245,249,0.92)),radial-gradient(circle_at_top_right,rgba(79,70,229,0.16),transparent_34%),radial-gradient(circle_at_bottom_left,rgba(16,185,129,0.12),transparent_30%)] p-6 shadow-[0_30px_80px_-48px_rgba(15,23,42,0.45)] dark:border-slate-700/80 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.96),rgba(15,23,42,0.9)),radial-gradient(circle_at_top_right,rgba(99,102,241,0.2),transparent_36%),radial-gradient(circle_at_bottom_left,rgba(16,185,129,0.15),transparent_34%)] sm:p-7';
+    'relative isolate overflow-visible rounded-[28px] border border-slate-200/80 bg-[linear-gradient(135deg,rgba(255,255,255,0.97),rgba(241,245,249,0.92)),radial-gradient(circle_at_top_right,rgba(79,70,229,0.16),transparent_34%),radial-gradient(circle_at_bottom_left,rgba(16,185,129,0.12),transparent_30%)] p-7 shadow-[0_30px_80px_-48px_rgba(15,23,42,0.45)] dark:border-slate-700/80 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.96),rgba(15,23,42,0.9)),radial-gradient(circle_at_top_right,rgba(99,102,241,0.2),transparent_36%),radial-gradient(circle_at_bottom_left,rgba(16,185,129,0.15),transparent_34%)] sm:p-8';
   const fieldPanelClass =
-    'relative rounded-2xl border border-slate-200/80 bg-white/85 p-5 shadow-sm backdrop-blur-sm focus-within:z-30 dark:border-slate-700/80 dark:bg-slate-900/70';
+    'relative rounded-2xl border border-slate-200/80 bg-white/85 p-6 shadow-sm backdrop-blur-sm focus-within:z-30 dark:border-slate-700/80 dark:bg-slate-900/70';
   const inputClass =
     'min-h-[48px] w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition-colors focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-500';
 
@@ -348,8 +348,8 @@ export default function AIExerciseGenerator() {
                 <span className="rounded-full bg-indigo-600 px-3 py-1 text-xs font-semibold text-white">{t('AI 智能出题')}</span>
                 <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-medium text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">{learningStateLabel}</span>
               </div>
-              <h2 className="mt-4 text-2xl font-bold text-slate-900 dark:text-white">{t('AI 智能出题')}</h2>
-              <p className="mt-3 max-w-2xl text-sm leading-8 text-slate-600 dark:text-slate-300">
+              <h2 className="mt-5 text-3xl font-bold text-slate-900 dark:text-white">{t('AI 智能出题')}</h2>
+              <p className="mt-4 max-w-2xl text-base leading-8 text-slate-600 dark:text-slate-300">
                 {t('根据主题自动生成编程练习题')}
               </p>
             </div>
@@ -364,7 +364,7 @@ export default function AIExerciseGenerator() {
           </button>
         </div>
 
-        <div className="grid gap-6 xl:grid-cols-[1fr_1fr]">
+        <div className="grid gap-6 lg:grid-cols-[1fr_1fr]">
           <div className="grid gap-6 md:grid-cols-2">
             <div className={`${fieldPanelClass} z-20`}>
               <GeneratorSelect
