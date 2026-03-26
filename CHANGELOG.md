@@ -8,6 +8,7 @@
 
 - 修复 Vibe Coding 方法论卡片在中文模式下仍显示 `Skills`、`Define -> Gather -> Implement -> Verify -> Deliver` 等英文残留的问题
 - 统一方法论 `Skills` 单元的中文源文案，补齐标题、摘要、概览、练习与误区的英文映射，保证中英文切换一致
+- 调整 Frontend Live Build 的实时预览布局：预览区改为独立全宽卡片，并显著放大 iframe 画布，避免窄列压缩导致排版错乱
 
 ## 2026-03-20
 
