@@ -38,7 +38,7 @@ export const methodologyUnits: MethodologyUnit[] = [
     icon: BrainCircuit,
     title: '专业闭环',
     relatedTrack: 'frontend',
-    summary: 'Define -> Gather -> Implement -> Verify -> Deliver。',
+    summary: '定义目标、收集证据、小步实现、验证结果、完成交付。',
     overview:
       '专业闭环是 Vibe Coding 的核心工作流。每次任务都必须经过五个阶段，确保交付可验证、改动可回滚。跳过任何一步都会导致返工或质量下降。',
     points: [
@@ -105,16 +105,16 @@ export const methodologyUnits: MethodologyUnit[] = [
   {
     id: 'skills',
     icon: Sparkles,
-    title: 'Skills',
+    title: '技能模块',
     relatedTrack: 'frontend',
-    summary: '先流程型，再领域型；组合最小化。',
+    summary: '先选流程技能，再补领域技能；组合保持最小。',
     overview:
-      'Skills 是 AI 编码助手的能力模块，分为流程型（控制工作流程）和领域型（提供专业知识）。正确组合 skills 能大幅提升效率，但过度叠加反而增加复杂度和 token 消耗。',
+      '技能模块是 AI 编码助手的能力集合，分为流程型（控制工作流程）和领域型（提供专业知识）。正确组合技能能大幅提升效率，但过度叠加反而增加复杂度和 token 消耗。',
     points: [
       {
-        title: '流程型 vs 领域型 Skill',
+        title: '流程型与领域型技能',
         detail:
-          '流程型 skill 控制"怎么做"（如 professional-delivery、test-driven-development），领域型 skill 提供"做什么的知识"（如 ui-ux-pro-max、systematic-debugging）。先选流程型确定工作节奏，再按需加领域型。',
+          '流程型技能控制"怎么做"（如 professional-delivery、test-driven-development），领域型技能提供"做什么的知识"（如 ui-ux-pro-max、systematic-debugging）。先选流程型确定工作节奏，再按需补充领域型。',
         example: '多模块开发 → professional-delivery（流程）+ ui-ux-pro-max（领域）\n调试 → systematic-debugging（流程+领域合一）',
       },
       {
@@ -124,9 +124,9 @@ export const methodologyUnits: MethodologyUnit[] = [
         tips: '如果你发现自己在一个任务中启用了 3 个以上 skill，停下来重新评估——大概率是任务本身需要拆分。',
       },
       {
-        title: '何时用 Skill vs 直接编码',
+        title: '何时用技能，何时直接编码',
         detail:
-          '简单的单文件修改、明确的 bug 修复不需要 skill。当任务涉及多步骤流程、需要特定领域知识、或需要质量保证时才启用 skill。',
+          '简单的单文件修改、明确的 bug 修复不需要额外技能。当任务涉及多步骤流程、需要特定领域知识、或需要质量保证时才启用技能。',
         example: '修一个 typo → 直接改\n新增完整功能模块 → professional-delivery\n排查诡异 bug → systematic-debugging',
       },
       {
@@ -137,12 +137,12 @@ export const methodologyUnits: MethodologyUnit[] = [
       },
     ],
     practice:
-      '练习：列出你最近一个项目中使用的所有 skills/工具。哪些是必要的？哪些可以去掉？尝试用最小组合重新规划。',
+      '练习：列出你最近一个项目中使用的所有技能和工具。哪些是必要的？哪些可以去掉？尝试用最小组合重新规划。',
     pitfalls: [
-      '叠加过多 skill 导致 token 消耗暴增，响应变慢。',
-      '对简单任务使用重型流程 skill，杀鸡用牛刀。',
+      '叠加过多技能导致 token 消耗暴增，响应变慢。',
+      '对简单任务使用重型流程技能，杀鸡用牛刀。',
       '忽略已有的 scripts 和模板，重复实现相同功能。',
-      '混淆流程型和领域型，选错 skill 类型。',
+      '混淆流程型和领域型，选错技能类型。',
     ],
   },
   {
