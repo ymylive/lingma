@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Code2, Download, LoaderCircle, MessageSquare, Plus, RefreshCw, Wand2 } from 'lucide-react';
+import { Code2, Download, LoaderCircle, Maximize2, MessageSquare, Plus, RefreshCw, Wand2, X } from 'lucide-react';
 import { useI18n } from '../../contexts/I18nContext';
 import {
   appendFrontendBuildTurn,
@@ -20,6 +20,7 @@ export default function VibeFrontendLiveBuild() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [isFullscreenOpen, setIsFullscreenOpen] = useState(false);
 
   const loadSessions = async () => {
     setLoading(true);
@@ -45,6 +46,27 @@ export default function VibeFrontendLiveBuild() {
     // Initial load only.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (!isFullscreenOpen) {
+      return undefined;
+    }
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsFullscreenOpen(false);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isFullscreenOpen]);
 
   const selectSession = async (sessionId: string) => {
     setLoading(true);
@@ -213,6 +235,16 @@ export default function VibeFrontendLiveBuild() {
               </div>
             )}
           </div>
+          <div className="mt-4 flex justify-end">
+            <button
+              type="button"
+              onClick={() => setIsFullscreenOpen(true)}
+              className="inline-flex min-h-[44px] cursor-pointer items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-colors duration-200 hover:border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:border-slate-500"
+            >
+              <Maximize2 className="h-4 w-4" />
+              {t('全屏预览')}
+            </button>
+          </div>
           <div className="mt-4 overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_18px_40px_rgba(15,23,42,0.08)] dark:border-slate-700 dark:shadow-none">
             <iframe
               title={artifact?.title || t('页面预览')}
@@ -265,6 +297,46 @@ export default function VibeFrontendLiveBuild() {
           </div>
         </div>
       </div>
+
+      {isFullscreenOpen ? (
+        <div
+          className="fixed inset-0 z-[80] bg-slate-950/70 p-3 backdrop-blur-sm sm:p-5"
+          onClick={() => setIsFullscreenOpen(false)}
+        >
+          <div
+            className="flex h-full w-full flex-col overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex items-center justify-between gap-3 border-b border-slate-200 px-4 py-3 dark:border-slate-700 sm:px-5">
+              <div>
+                <div className="text-sm font-semibold text-slate-900 dark:text-white">
+                  {artifact?.title || t('实时预览')}
+                </div>
+                <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                  {t('按 Esc 或点击右上角关闭全屏预览。')}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsFullscreenOpen(false)}
+                className="inline-flex min-h-[44px] min-w-[44px] cursor-pointer items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-700 transition-colors duration-200 hover:border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:border-slate-500"
+                aria-label={t('关闭全屏预览')}
+                title={t('关闭全屏预览')}
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="flex-1 bg-white p-2 dark:bg-slate-950 sm:p-4">
+              <iframe
+                title={t('全屏页面预览')}
+                srcDoc={artifact?.mergedHtml || EMPTY_PREVIEW}
+                sandbox="allow-scripts"
+                className="h-full w-full rounded-[24px] border-0 bg-white"
+              />
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
