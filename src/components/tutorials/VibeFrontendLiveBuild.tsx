@@ -2,13 +2,14 @@ import { useEffect, useState } from 'react';
 import { Code2, Download, ExternalLink, LoaderCircle, Maximize2, MessageSquare, Plus, RefreshCw, Wand2, X } from 'lucide-react';
 import { useI18n } from '../../contexts/I18nContext';
 import {
-  appendFrontendBuildTurn,
-  createFrontendBuildSession,
+  appendFrontendBuildTurnStream,
+  createFrontendBuildSessionStream,
   fetchFrontendBuildSessionDetail,
   fetchFrontendBuildSessions,
   getFrontendBuildDownloadUrl,
 } from '../../services/vibeCodingService';
 import type { VibeFrontendBuildSession, VibeFrontendBuildSessionDetail } from '../../types/vibeCoding';
+import useStreamingTypewriterText from '../../hooks/useStreamingTypewriterText';
 
 const EMPTY_PREVIEW = `<!DOCTYPE html><html><body style="font-family:system-ui,sans-serif;padding:24px;color:#334155;background:#f8fafc"><h2 style="margin:0 0 12px">Live Build</h2><p style="margin:0">Start with a detailed frontend request to generate a preview.</p></body></html>`;
 
@@ -21,6 +22,8 @@ export default function VibeFrontendLiveBuild() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [isFullscreenOpen, setIsFullscreenOpen] = useState(false);
+  const [streamingBuildPreview, setStreamingBuildPreview] = useState('');
+  const typedStreamingBuildPreview = useStreamingTypewriterText(streamingBuildPreview, submitting);
 
   const loadSessions = async () => {
     setLoading(true);
@@ -71,6 +74,7 @@ export default function VibeFrontendLiveBuild() {
   const selectSession = async (sessionId: string) => {
     setLoading(true);
     setError('');
+    setStreamingBuildPreview('');
     try {
       const detail = await fetchFrontendBuildSessionDetail(sessionId);
       setActiveSession(detail);
@@ -90,12 +94,14 @@ export default function VibeFrontendLiveBuild() {
 
     setSubmitting(true);
     setError('');
+    setStreamingBuildPreview('');
     try {
       const detail = activeSession
-        ? await appendFrontendBuildTurn(activeSession.id, draftPrompt, locale)
-        : await createFrontendBuildSession(draftPrompt, locale);
+        ? await appendFrontendBuildTurnStream(activeSession.id, draftPrompt, locale, setStreamingBuildPreview)
+        : await createFrontendBuildSessionStream(draftPrompt, locale, setStreamingBuildPreview);
       setActiveSession(detail);
       setDraftPrompt('');
+      setStreamingBuildPreview('');
       const items = await fetchFrontendBuildSessions();
       setSessions(items);
     } catch (submitError) {
@@ -109,6 +115,7 @@ export default function VibeFrontendLiveBuild() {
     setActiveSession(null);
     setDraftPrompt('');
     setError('');
+    setStreamingBuildPreview('');
   };
 
   const artifact = activeSession?.latestArtifact ?? null;
@@ -201,6 +208,29 @@ export default function VibeFrontendLiveBuild() {
                 {activeSession ? t('继续优化当前页面') : t('开始生成页面')}
               </button>
             </div>
+
+            {submitting ? (
+              <div className="overflow-hidden rounded-3xl border border-emerald-500/20 bg-[linear-gradient(145deg,#0f172a,#111827)] p-4 shadow-[0_20px_60px_-36px_rgba(15,23,42,0.9)] dark:border-emerald-500/30">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <div className="flex items-center gap-2 text-sm font-semibold text-emerald-300">
+                      <LoaderCircle className="h-4 w-4 animate-spin" />
+                      {t('AI 正在实时生成页面代码')}
+                    </div>
+                    <p className="mt-2 text-xs leading-6 text-slate-300">
+                      {t('生成中的源码草稿会在这里逐字展开，完成后自动落到正式预览。')}
+                    </p>
+                  </div>
+                  <div className="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-[11px] font-medium uppercase tracking-[0.14em] text-emerald-200">
+                    Stream
+                  </div>
+                </div>
+                <pre className="mt-4 max-h-[420px] overflow-auto rounded-[24px] border border-white/5 bg-slate-950/80 p-4 text-xs leading-6 text-emerald-100">
+                  {typedStreamingBuildPreview || t('正在等待首个流式分片...')}
+                  <span aria-hidden className="ml-0.5 inline-block h-4 w-2 animate-pulse rounded-sm bg-emerald-300/70 align-[-2px]" />
+                </pre>
+              </div>
+            ) : null}
           </div>
 
           <div className="rounded-3xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
