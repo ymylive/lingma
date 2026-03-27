@@ -24,6 +24,7 @@ import {
 } from '../../services/aiService';
 import { useI18n } from '../../contexts/I18nContext';
 import { useUser } from '../../contexts/UserContext';
+import useStreamingTypewriterText from '../../hooks/useStreamingTypewriterText';
 import CodingExercise, { FillInBlank } from './CodingExercise';
 import { buildAiDefaults, getSkillLevelMeta } from '../../utils/userPersonalization';
 import { getTargetLanguageMeta } from '../../utils/targetLanguages';
@@ -194,6 +195,7 @@ export default function AIExerciseGenerator() {
   const levelMeta = getSkillLevelMeta(aiDefaults.effectiveLevel);
   const targetLanguageMeta = getTargetLanguageMeta(user?.targetLanguage);
   const learningStateLabel = t(LEARNING_STATE_LABELS[aiDefaults.learningState]);
+  const typedStreamingPreview = useStreamingTypewriterText(streamingPreview, loading);
   const categoryLabel = (value: string) => t(CATEGORIES.find((item) => item.id === value)?.name || value);
   const profileHint = [
     isEnglish ? `Current effective level: ${t(levelMeta.label)}` : `用户当前有效水平：${t(levelMeta.label)}`,
@@ -560,7 +562,7 @@ export default function AIExerciseGenerator() {
               <span className="text-sm font-semibold">{isEnglish ? 'Streaming AI output' : 'AI 正在实时生成内容'}</span>
             </div>
             <pre className="max-h-80 overflow-auto whitespace-pre-wrap break-words rounded-2xl bg-white/80 p-4 text-xs leading-7 text-slate-700 dark:bg-slate-900/70 dark:text-slate-200">
-              {streamingPreview}
+              {typedStreamingPreview}
             </pre>
           </div>
         )}
@@ -581,6 +583,7 @@ export default function AIExerciseGenerator() {
             testCases={generatedExercise.testCases}
             hints={generatedExercise.hints}
             explanation={generatedExercise.explanation}
+            progressiveAiText
           />
         </div>
       )}
@@ -598,6 +601,7 @@ export default function AIExerciseGenerator() {
             codeTemplate={generatedFillBlank.codeTemplate}
             blanks={generatedFillBlank.blanks}
             explanation={generatedFillBlank.explanation}
+            progressiveAiText
           />
         </div>
       )}
