@@ -2,6 +2,12 @@
 
 本文件记录项目的重要变更。
 
+## 2026-03-27
+
+### 修复
+
+- 为前端静态 HTML 响应增加 `Cache-Control: public, no-transform`，阻止 Cloudflare 自动注入 Web Analytics `beacon.min.js`，修复浏览器控制台里的证书报错与额外脚本注入问题
+
 ## 2026-03-26
 
 ### 修复
