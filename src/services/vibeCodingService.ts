@@ -1,6 +1,8 @@
 import type {
   VibeChallenge,
   VibeEvaluation,
+  VibeFrontendBuildSession,
+  VibeFrontendBuildSessionDetail,
   VibeHistoryItem,
   VibeProfile,
   VibeTrack,
@@ -172,4 +174,88 @@ export async function evaluateVibePromptStream(
   const data = await readStreamingSse<VibeEvaluation>(response, onProgress);
   invalidateVibeCache();
   return data;
+}
+
+export async function createFrontendBuildSession(prompt: string, locale: AppLocale): Promise<VibeFrontendBuildSessionDetail> {
+  const modelOverride = getConfiguredModelOverride();
+  const response = await fetch('/api/vibe-coding/frontend/session', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+    body: JSON.stringify(modelOverride ? { prompt, locale, model: modelOverride } : { prompt, locale }),
+  });
+  return readJson<VibeFrontendBuildSessionDetail>(response);
+}
+
+export async function createFrontendBuildSessionStream(
+  prompt: string,
+  locale: AppLocale,
+  onProgress?: (text: string) => void,
+): Promise<VibeFrontendBuildSessionDetail> {
+  const modelOverride = getConfiguredModelOverride();
+  const response = await fetch('/api/vibe-coding/frontend/session/stream', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+    body: JSON.stringify(modelOverride ? { prompt, locale, model: modelOverride } : { prompt, locale }),
+  });
+  return readStreamingSse<VibeFrontendBuildSessionDetail>(response, onProgress);
+}
+
+export async function appendFrontendBuildTurn(
+  sessionId: string,
+  prompt: string,
+  locale: AppLocale,
+): Promise<VibeFrontendBuildSessionDetail> {
+  const modelOverride = getConfiguredModelOverride();
+  const response = await fetch(`/api/vibe-coding/frontend/session/${sessionId}/turns`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+    body: JSON.stringify(modelOverride ? { prompt, locale, model: modelOverride } : { prompt, locale }),
+  });
+  return readJson<VibeFrontendBuildSessionDetail>(response);
+}
+
+export async function appendFrontendBuildTurnStream(
+  sessionId: string,
+  prompt: string,
+  locale: AppLocale,
+  onProgress?: (text: string) => void,
+): Promise<VibeFrontendBuildSessionDetail> {
+  const modelOverride = getConfiguredModelOverride();
+  const response = await fetch(`/api/vibe-coding/frontend/session/${sessionId}/turns/stream`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+    body: JSON.stringify(modelOverride ? { prompt, locale, model: modelOverride } : { prompt, locale }),
+  });
+  return readStreamingSse<VibeFrontendBuildSessionDetail>(response, onProgress);
+}
+
+export async function fetchFrontendBuildSessions(): Promise<VibeFrontendBuildSession[]> {
+  const response = await fetch('/api/vibe-coding/frontend/sessions', {
+    credentials: 'include',
+  });
+  const payload = await readJson<{ items: VibeFrontendBuildSession[] }>(response);
+  return payload.items;
+}
+
+export async function fetchFrontendBuildSessionDetail(sessionId: string): Promise<VibeFrontendBuildSessionDetail> {
+  const response = await fetch(`/api/vibe-coding/frontend/session/${sessionId}`, {
+    credentials: 'include',
+  });
+  return readJson<VibeFrontendBuildSessionDetail>(response);
+}
+
+export function getFrontendBuildDownloadUrl(sessionId: string): string {
+  return `/api/vibe-coding/frontend/session/${sessionId}/download`;
 }

@@ -993,6 +993,101 @@ def build_vibe_frontend_build_session_payload(
     return payload
 
 
+def persist_new_frontend_build_session(
+    user_id: str,
+    session_id: str,
+    prompt_text: str,
+    artifact: Dict[str, Any],
+) -> Dict[str, Any]:
+    created_at = now_iso()
+    user_turn = {
+        "id": f"frontend_turn_{secrets.token_urlsafe(12)}",
+        "sessionId": session_id,
+        "role": "user",
+        "promptText": prompt_text,
+        "summary": prompt_text[:400],
+        "createdAt": created_at,
+    }
+    assistant_turn = {
+        "id": artifact["turnId"],
+        "sessionId": session_id,
+        "role": "assistant",
+        "promptText": artifact["summary"],
+        "summary": artifact["summary"],
+        "createdAt": artifact["createdAt"],
+    }
+    session = {
+        "id": session_id,
+        "userId": user_id,
+        "title": artifact["title"],
+        "summary": artifact["summary"],
+        "status": "active",
+        "latestArtifactId": artifact["id"],
+        "createdAt": created_at,
+        "updatedAt": created_at,
+    }
+
+    with db_lock:
+        conn = get_db_connection(AUTH_DB_PATH)
+        try:
+            insert_vibe_frontend_build_session(conn, session)
+            insert_vibe_frontend_build_turn(conn, user_turn)
+            insert_vibe_frontend_build_turn(conn, assistant_turn)
+            insert_vibe_frontend_build_artifact(conn, artifact)
+            conn.commit()
+            session_row = get_vibe_frontend_build_session(conn, session_id, user_id)
+            turn_rows = list_vibe_frontend_build_turn_rows(conn, session_id)
+            artifact_row = get_vibe_frontend_build_latest_artifact_row(conn, session_id)
+        finally:
+            conn.close()
+
+    if session_row is None or artifact_row is None:
+        raise HTTPException(status_code=500, detail="failed to persist frontend build session")
+    return build_vibe_frontend_build_session_payload(session_row, turn_rows, artifact_row)
+
+
+def persist_frontend_build_follow_up(
+    user_id: str,
+    session_id: str,
+    prompt_text: str,
+    artifact: Dict[str, Any],
+) -> Dict[str, Any]:
+    user_turn = {
+        "id": f"frontend_turn_{secrets.token_urlsafe(12)}",
+        "sessionId": session_id,
+        "role": "user",
+        "promptText": prompt_text,
+        "summary": prompt_text[:400],
+        "createdAt": now_iso(),
+    }
+    assistant_turn = {
+        "id": artifact["turnId"],
+        "sessionId": session_id,
+        "role": "assistant",
+        "promptText": artifact["summary"],
+        "summary": artifact["summary"],
+        "createdAt": artifact["createdAt"],
+    }
+
+    with db_lock:
+        conn = get_db_connection(AUTH_DB_PATH)
+        try:
+            insert_vibe_frontend_build_turn(conn, user_turn)
+            insert_vibe_frontend_build_turn(conn, assistant_turn)
+            insert_vibe_frontend_build_artifact(conn, artifact)
+            update_vibe_frontend_build_session_latest_artifact(conn, session_id, artifact["id"], artifact["title"], artifact["summary"])
+            conn.commit()
+            session_row = get_vibe_frontend_build_session(conn, session_id, user_id)
+            turn_rows = list_vibe_frontend_build_turn_rows(conn, session_id)
+            artifact_row = get_vibe_frontend_build_latest_artifact_row(conn, session_id)
+        finally:
+            conn.close()
+
+    if session_row is None or artifact_row is None:
+        raise HTTPException(status_code=500, detail="failed to update frontend build session")
+    return build_vibe_frontend_build_session_payload(session_row, turn_rows, artifact_row)
+
+
 def build_vibe_frontend_live_build_prompt(
     user_prompt: str,
     model: str,
@@ -2874,57 +2969,11 @@ async def vibe_frontend_build_create_session(request: Request):
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     session_id = f"frontend_session_{secrets.token_urlsafe(12)}"
-    user_turn_id = f"frontend_turn_{secrets.token_urlsafe(12)}"
     assistant_turn_id = f"frontend_turn_{secrets.token_urlsafe(12)}"
     payload = build_vibe_frontend_live_build_prompt(prompt_text, model_name, locale)
     data = await run_in_threadpool(read_upstream_responses_json, payload)
     artifact = normalize_frontend_build_payload(parse_upstream_json_object(data), session_id, assistant_turn_id)
-    created_at = now_iso()
-    session = {
-        "id": session_id,
-        "userId": user["id"],
-        "title": artifact["title"],
-        "summary": artifact["summary"],
-        "status": "active",
-        "latestArtifactId": artifact["id"],
-        "createdAt": created_at,
-        "updatedAt": created_at,
-    }
-    user_turn = {
-        "id": user_turn_id,
-        "sessionId": session_id,
-        "role": "user",
-        "promptText": prompt_text,
-        "summary": prompt_text[:400],
-        "createdAt": created_at,
-    }
-    assistant_turn = {
-        "id": assistant_turn_id,
-        "sessionId": session_id,
-        "role": "assistant",
-        "promptText": artifact["summary"],
-        "summary": artifact["summary"],
-        "createdAt": artifact["createdAt"],
-    }
-
-    with db_lock:
-        conn = get_db_connection(AUTH_DB_PATH)
-        try:
-            insert_vibe_frontend_build_session(conn, session)
-            insert_vibe_frontend_build_turn(conn, user_turn)
-            insert_vibe_frontend_build_turn(conn, assistant_turn)
-            insert_vibe_frontend_build_artifact(conn, artifact)
-            conn.commit()
-            session_row = get_vibe_frontend_build_session(conn, session_id, user["id"])
-            turn_rows = list_vibe_frontend_build_turn_rows(conn, session_id)
-            artifact_row = get_vibe_frontend_build_latest_artifact_row(conn, session_id)
-        finally:
-            conn.close()
-
-    if session_row is None or artifact_row is None:
-        raise HTTPException(status_code=500, detail="failed to persist frontend build session")
-
-    return JSONResponse(content=build_vibe_frontend_build_session_payload(session_row, turn_rows, artifact_row))
+    return JSONResponse(content=persist_new_frontend_build_session(user["id"], session_id, prompt_text, artifact))
 
 
 @app.post("/api/vibe-coding/frontend/session/{session_id}/turns")
@@ -2953,7 +3002,6 @@ async def vibe_frontend_build_append_turn(session_id: str, request: Request):
     if session_row is None:
         raise HTTPException(status_code=404, detail="frontend build session not found")
 
-    user_turn_id = f"frontend_turn_{secrets.token_urlsafe(12)}"
     assistant_turn_id = f"frontend_turn_{secrets.token_urlsafe(12)}"
     payload = build_vibe_frontend_live_build_prompt(
         prompt_text,
@@ -2965,41 +3013,109 @@ async def vibe_frontend_build_append_turn(session_id: str, request: Request):
     )
     data = await run_in_threadpool(read_upstream_responses_json, payload)
     artifact = normalize_frontend_build_payload(parse_upstream_json_object(data), session_id, assistant_turn_id)
-    user_turn = {
-        "id": user_turn_id,
-        "sessionId": session_id,
-        "role": "user",
-        "promptText": prompt_text,
-        "summary": prompt_text[:400],
-        "createdAt": now_iso(),
-    }
-    assistant_turn = {
-        "id": assistant_turn_id,
-        "sessionId": session_id,
-        "role": "assistant",
-        "promptText": artifact["summary"],
-        "summary": artifact["summary"],
-        "createdAt": artifact["createdAt"],
-    }
+    return JSONResponse(content=persist_frontend_build_follow_up(user["id"], session_id, prompt_text, artifact))
+
+
+@app.post("/api/vibe-coding/frontend/session/stream")
+async def vibe_frontend_build_create_session_stream(request: Request):
+    user = require_authenticated_user(request)
+    if not AI_API_KEY:
+        raise HTTPException(status_code=500, detail="AI_API_KEY is not configured")
+
+    body = await request.json()
+    model_name = resolve_requested_model(body.get("model"))
+    locale = sanitize_app_locale(body.get("locale"))
+    try:
+        prompt_text = sanitize_vibe_prompt(body.get("prompt"))
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    session_id = f"frontend_session_{secrets.token_urlsafe(12)}"
+    assistant_turn_id = f"frontend_turn_{secrets.token_urlsafe(12)}"
+    payload = build_vibe_frontend_live_build_prompt(prompt_text, model_name, locale)
+
+    def event_stream() -> Iterator[str]:
+        try:
+            for phase, text, response_obj in iter_upstream_text_stream(payload):
+                if phase == "preview":
+                    if text:
+                        yield build_sse_data({"type": "preview", "text": text})
+                    continue
+
+                parsed = parse_streamed_json_object(text, response_obj)
+                artifact = normalize_frontend_build_payload(parsed, session_id, assistant_turn_id)
+                final_payload = persist_new_frontend_build_session(user["id"], session_id, prompt_text, artifact)
+                yield build_sse_data({"type": "final", "payload": final_payload})
+                yield build_sse_done()
+                return
+        except HTTPException as exc:
+            yield build_sse_data({"type": "error", "message": str(exc.detail)})
+            yield build_sse_done()
+        except Exception as exc:
+            yield build_sse_data({"type": "error", "message": str(exc)})
+            yield build_sse_done()
+
+    return StreamingResponse(event_stream(), media_type="text/event-stream", headers=build_standard_streaming_headers())
+
+
+@app.post("/api/vibe-coding/frontend/session/{session_id}/turns/stream")
+async def vibe_frontend_build_append_turn_stream(session_id: str, request: Request):
+    user = require_authenticated_user(request)
+    if not AI_API_KEY:
+        raise HTTPException(status_code=500, detail="AI_API_KEY is not configured")
+
+    body = await request.json()
+    model_name = resolve_requested_model(body.get("model"))
+    locale = sanitize_app_locale(body.get("locale"))
+    try:
+        prompt_text = sanitize_vibe_prompt(body.get("prompt"))
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     with db_lock:
         conn = get_db_connection(AUTH_DB_PATH)
         try:
-            insert_vibe_frontend_build_turn(conn, user_turn)
-            insert_vibe_frontend_build_turn(conn, assistant_turn)
-            insert_vibe_frontend_build_artifact(conn, artifact)
-            update_vibe_frontend_build_session_latest_artifact(conn, session_id, artifact["id"], artifact["title"], artifact["summary"])
-            conn.commit()
-            updated_session_row = get_vibe_frontend_build_session(conn, session_id, user["id"])
-            updated_turn_rows = list_vibe_frontend_build_turn_rows(conn, session_id)
-            updated_artifact_row = get_vibe_frontend_build_latest_artifact_row(conn, session_id)
+            session_row = get_vibe_frontend_build_session(conn, session_id, user["id"])
+            turn_rows = list_vibe_frontend_build_turn_rows(conn, session_id) if session_row is not None else []
+            latest_artifact_row = get_vibe_frontend_build_latest_artifact_row(conn, session_id) if session_row is not None else None
         finally:
             conn.close()
 
-    if updated_session_row is None or updated_artifact_row is None:
-        raise HTTPException(status_code=500, detail="failed to update frontend build session")
+    if session_row is None:
+        raise HTTPException(status_code=404, detail="frontend build session not found")
 
-    return JSONResponse(content=build_vibe_frontend_build_session_payload(updated_session_row, updated_turn_rows, updated_artifact_row))
+    assistant_turn_id = f"frontend_turn_{secrets.token_urlsafe(12)}"
+    payload = build_vibe_frontend_live_build_prompt(
+        prompt_text,
+        model_name,
+        locale,
+        session_summary=str(session_row["summary"] or ""),
+        recent_turns=turn_rows,
+        latest_artifact=latest_artifact_row,
+    )
+
+    def event_stream() -> Iterator[str]:
+        try:
+            for phase, text, response_obj in iter_upstream_text_stream(payload):
+                if phase == "preview":
+                    if text:
+                        yield build_sse_data({"type": "preview", "text": text})
+                    continue
+
+                parsed = parse_streamed_json_object(text, response_obj)
+                artifact = normalize_frontend_build_payload(parsed, session_id, assistant_turn_id)
+                final_payload = persist_frontend_build_follow_up(user["id"], session_id, prompt_text, artifact)
+                yield build_sse_data({"type": "final", "payload": final_payload})
+                yield build_sse_done()
+                return
+        except HTTPException as exc:
+            yield build_sse_data({"type": "error", "message": str(exc.detail)})
+            yield build_sse_done()
+        except Exception as exc:
+            yield build_sse_data({"type": "error", "message": str(exc)})
+            yield build_sse_done()
+
+    return StreamingResponse(event_stream(), media_type="text/event-stream", headers=build_standard_streaming_headers())
 
 
 @app.get("/api/vibe-coding/frontend/sessions")

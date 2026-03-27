@@ -1,5 +1,6 @@
 export type VibeTrack = 'frontend' | 'backend' | 'debugging' | 'refactoring' | 'review';
 export type VibeDifficulty = 'beginner' | 'intermediate' | 'advanced';
+export type VibeFrontendMode = 'prompt-scoring' | 'live-build';
 export type VibeDimensionKey =
   | 'goal_clarity'
   | 'boundary_constraints'
@@ -49,4 +50,43 @@ export interface VibeProfile {
   weakestDimension: VibeDimensionKey | null;
   recentAverageScore: number | null;
   trackScores: Record<VibeTrack, number | null>;
+}
+
+export interface VibeFrontendBuildTurn {
+  id: string;
+  sessionId: string;
+  role: 'user' | 'assistant';
+  promptText: string;
+  summary: string;
+  createdAt: string;
+}
+
+export interface VibeFrontendBuildArtifact {
+  id: string;
+  sessionId: string;
+  turnId: string;
+  title: string;
+  summary: string;
+  html: string;
+  css: string;
+  js: string;
+  mergedHtml: string;
+  nextSuggestions: string[];
+  createdAt: string;
+}
+
+export interface VibeFrontendBuildSession {
+  id: string;
+  userId: string;
+  title: string;
+  summary: string;
+  status: string;
+  latestArtifactId: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface VibeFrontendBuildSessionDetail extends VibeFrontendBuildSession {
+  turns: VibeFrontendBuildTurn[];
+  latestArtifact: VibeFrontendBuildArtifact | null;
 }
