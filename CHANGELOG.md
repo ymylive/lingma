@@ -7,6 +7,9 @@
 ### 修复
 
 - 为前端静态 HTML 响应增加 `Cache-Control: public, no-transform`，阻止 Cloudflare 自动注入 Web Analytics `beacon.min.js`，修复浏览器控制台里的证书报错与额外脚本注入问题
+- Frontend Live Build 新增真实流式生成接口，页面生成过程中会持续返回增量 `preview` 事件，而不是等待完整 JSON 后一次性返回
+- Frontend Live Build 生成面板新增独立的源码流预览卡片，代码草稿会以逐字打字机效果展开，完成后自动切换到正式预览
+- nginx 为 `/api/vibe-coding/*/stream` 关闭代理缓冲，修复生产环境中 SSE 被缓冲导致“看起来像假流式”的问题
 
 ## 2026-03-26
 

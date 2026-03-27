@@ -125,6 +125,9 @@ export const vibeCodingTranslationsEn: Record<string, string> = {
   '建议明确目标、风格、组件和交互。': 'Be explicit about goals, style, components, and interactions.',
   '继续优化当前页面': 'Continue Refining This Page',
   '开始生成页面': 'Generate Page',
+  'AI 正在实时生成页面代码': 'AI is streaming the page code',
+  '生成中的源码草稿会在这里逐字展开，完成后自动落到正式预览。':
+    'The in-progress code draft reveals here character by character, then lands in the formal preview when complete.',
   '最近会话': 'Recent Sessions',
   '还没有 Live Build 会话，先生成一个页面。': 'No Live Build sessions yet. Generate a page first.',
   '实时预览': 'Live Preview',
