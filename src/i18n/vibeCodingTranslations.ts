@@ -118,6 +118,7 @@ export const vibeCodingTranslationsEn: Record<string, string> = {
   '提示词至少需要 24 个字符，才能生成稳定结果。':
     'Prompt must be at least 24 characters for stable generation.',
   '生成页面失败': 'Failed to generate the page',
+  '浏览器拦截了新窗口，请允许弹窗后重试。': 'The browser blocked the new window. Allow pop-ups and try again.',
   '需求与续写': 'Request & Iteration',
   '例如：生成一个 SaaS 定价页 hero，强调主 CTA、社会证明和浅色玻璃拟态卡片风格。':
     'Example: Build a SaaS pricing hero with a strong primary CTA, social proof, and a light glassmorphism card style.',
@@ -127,6 +128,7 @@ export const vibeCodingTranslationsEn: Record<string, string> = {
   '最近会话': 'Recent Sessions',
   '还没有 Live Build 会话，先生成一个页面。': 'No Live Build sessions yet. Generate a page first.',
   '实时预览': 'Live Preview',
+  '新标签页打开': 'Open in New Tab',
   '全屏预览': 'Fullscreen Preview',
   '生成完成后会在这里显示页面预览与版本摘要。':
     'The generated page preview and version summary will appear here.',
