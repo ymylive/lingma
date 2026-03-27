@@ -265,6 +265,47 @@ def init_auth_db() -> None:
                     updated_at TEXT NOT NULL,
                     FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
                 );
+                CREATE TABLE IF NOT EXISTS vibe_frontend_build_sessions (
+                    id TEXT PRIMARY KEY,
+                    user_id TEXT NOT NULL,
+                    title TEXT NOT NULL,
+                    summary TEXT NOT NULL,
+                    status TEXT NOT NULL,
+                    latest_artifact_id TEXT,
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL,
+                    FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+                );
+                CREATE INDEX IF NOT EXISTS idx_vibe_frontend_build_sessions_user_id ON vibe_frontend_build_sessions(user_id);
+                CREATE INDEX IF NOT EXISTS idx_vibe_frontend_build_sessions_updated_at ON vibe_frontend_build_sessions(updated_at);
+                CREATE TABLE IF NOT EXISTS vibe_frontend_build_turns (
+                    id TEXT PRIMARY KEY,
+                    session_id TEXT NOT NULL,
+                    role TEXT NOT NULL,
+                    prompt_text TEXT NOT NULL,
+                    summary TEXT NOT NULL,
+                    created_at TEXT NOT NULL,
+                    FOREIGN KEY(session_id) REFERENCES vibe_frontend_build_sessions(id) ON DELETE CASCADE
+                );
+                CREATE INDEX IF NOT EXISTS idx_vibe_frontend_build_turns_session_id ON vibe_frontend_build_turns(session_id);
+                CREATE INDEX IF NOT EXISTS idx_vibe_frontend_build_turns_created_at ON vibe_frontend_build_turns(created_at);
+                CREATE TABLE IF NOT EXISTS vibe_frontend_build_artifacts (
+                    id TEXT PRIMARY KEY,
+                    session_id TEXT NOT NULL,
+                    turn_id TEXT NOT NULL,
+                    title TEXT NOT NULL,
+                    summary TEXT NOT NULL,
+                    html TEXT NOT NULL,
+                    css TEXT NOT NULL,
+                    js TEXT NOT NULL,
+                    merged_html TEXT NOT NULL,
+                    next_suggestions_json TEXT NOT NULL,
+                    created_at TEXT NOT NULL,
+                    FOREIGN KEY(session_id) REFERENCES vibe_frontend_build_sessions(id) ON DELETE CASCADE,
+                    FOREIGN KEY(turn_id) REFERENCES vibe_frontend_build_turns(id) ON DELETE CASCADE
+                );
+                CREATE INDEX IF NOT EXISTS idx_vibe_frontend_build_artifacts_session_id ON vibe_frontend_build_artifacts(session_id);
+                CREATE INDEX IF NOT EXISTS idx_vibe_frontend_build_artifacts_created_at ON vibe_frontend_build_artifacts(created_at);
                 """
             )
             columns = {row["name"] for row in conn.execute("PRAGMA table_info(users)")}
@@ -450,6 +491,57 @@ def normalize_evaluation_payload(payload: Dict[str, Any], challenge_id: str) -> 
     }
 
 
+def merge_frontend_build_html(title: str, html_content: str, css: str, js: str) -> str:
+    safe_title = html.escape(title or "Frontend Build")
+    return (
+        "<!DOCTYPE html>\n"
+        "<html>\n"
+        "<head>\n"
+        '  <meta charset="utf-8" />\n'
+        '  <meta name="viewport" content="width=device-width, initial-scale=1" />\n'
+        f"  <title>{safe_title}</title>\n"
+        f"  <style>\n{css}\n  </style>\n"
+        "</head>\n"
+        "<body>\n"
+        f"{html_content}\n"
+        f"  <script>\n{js}\n  </script>\n"
+        "</body>\n"
+        "</html>"
+    )
+
+
+def normalize_frontend_build_payload(payload: Dict[str, Any], session_id: str, turn_id: str) -> Dict[str, Any]:
+    try:
+        title = str(payload.get("title") or "").strip()
+        summary = str(payload.get("summary") or "").strip()
+        html_content = str(payload.get("html") or "").strip()
+        css = str(payload.get("css") or "")
+        js = str(payload.get("js") or "")
+        if not title:
+            raise ValueError("title is required")
+        if not summary:
+            raise ValueError("summary is required")
+        if not html_content:
+            raise ValueError("html is required")
+        next_suggestions = sanitize_string_list(payload.get("nextSuggestions"), "nextSuggestions", min_items=1, max_items=6)
+    except ValueError as exc:
+        raise HTTPException(status_code=502, detail=f"invalid frontend build payload: {exc}") from exc
+
+    return {
+        "id": f"artifact_{secrets.token_urlsafe(12)}",
+        "sessionId": session_id,
+        "turnId": turn_id,
+        "title": title[:200],
+        "summary": summary[:4000],
+        "html": html_content[:120000],
+        "css": css[:120000],
+        "js": js[:120000],
+        "mergedHtml": merge_frontend_build_html(title, html_content, css, js)[:240000],
+        "nextSuggestions": next_suggestions,
+        "createdAt": now_iso(),
+    }
+
+
 def serialize_vibe_challenge_row(row: sqlite3.Row) -> Dict[str, Any]:
     return {
         "id": row["id"],
@@ -483,6 +575,35 @@ def serialize_vibe_evaluation_row(row: sqlite3.Row) -> Dict[str, Any]:
         "rewrite_example": row["rewrite_example"],
         "next_difficulty_recommendation": row["next_difficulty_recommendation"],
         "createdAt": row["created_at"],
+    }
+
+
+def serialize_vibe_frontend_build_artifact_row(row: sqlite3.Row) -> Dict[str, Any]:
+    return {
+        "id": row["id"],
+        "sessionId": row["session_id"],
+        "turnId": row["turn_id"],
+        "title": row["title"],
+        "summary": row["summary"],
+        "html": row["html"],
+        "css": row["css"],
+        "js": row["js"],
+        "mergedHtml": row["merged_html"],
+        "nextSuggestions": json.loads(row["next_suggestions_json"]),
+        "createdAt": row["created_at"],
+    }
+
+
+def serialize_vibe_frontend_build_session_row(row: sqlite3.Row) -> Dict[str, Any]:
+    return {
+        "id": row["id"],
+        "userId": row["user_id"],
+        "title": row["title"],
+        "summary": row["summary"],
+        "status": row["status"],
+        "latestArtifactId": row["latest_artifact_id"],
+        "createdAt": row["created_at"],
+        "updatedAt": row["updated_at"],
     }
 
 
@@ -552,6 +673,134 @@ def insert_vibe_attempt(conn: sqlite3.Connection, attempt_id: str, user_id: str,
             evaluation["createdAt"],
         ),
     )
+
+
+def insert_vibe_frontend_build_session(conn: sqlite3.Connection, session: Dict[str, Any]) -> None:
+    conn.execute(
+        """
+        INSERT INTO vibe_frontend_build_sessions(
+            id, user_id, title, summary, status, latest_artifact_id, created_at, updated_at
+        )
+        VALUES(?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            session["id"],
+            session["userId"],
+            session["title"],
+            session["summary"],
+            session["status"],
+            session.get("latestArtifactId"),
+            session["createdAt"],
+            session["updatedAt"],
+        ),
+    )
+
+
+def insert_vibe_frontend_build_turn(conn: sqlite3.Connection, turn: Dict[str, Any]) -> None:
+    conn.execute(
+        """
+        INSERT INTO vibe_frontend_build_turns(id, session_id, role, prompt_text, summary, created_at)
+        VALUES(?, ?, ?, ?, ?, ?)
+        """,
+        (
+            turn["id"],
+            turn["sessionId"],
+            turn["role"],
+            turn["promptText"],
+            turn["summary"],
+            turn["createdAt"],
+        ),
+    )
+
+
+def insert_vibe_frontend_build_artifact(conn: sqlite3.Connection, artifact: Dict[str, Any]) -> None:
+    conn.execute(
+        """
+        INSERT INTO vibe_frontend_build_artifacts(
+            id, session_id, turn_id, title, summary, html, css, js, merged_html, next_suggestions_json, created_at
+        )
+        VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            artifact["id"],
+            artifact["sessionId"],
+            artifact["turnId"],
+            artifact["title"],
+            artifact["summary"],
+            artifact["html"],
+            artifact["css"],
+            artifact["js"],
+            artifact["mergedHtml"],
+            json.dumps(artifact["nextSuggestions"], ensure_ascii=False),
+            artifact["createdAt"],
+        ),
+    )
+
+
+def update_vibe_frontend_build_session_latest_artifact(
+    conn: sqlite3.Connection,
+    session_id: str,
+    artifact_id: str,
+    title: str,
+    summary: str,
+) -> None:
+    conn.execute(
+        """
+        UPDATE vibe_frontend_build_sessions
+        SET latest_artifact_id = ?, title = ?, summary = ?, updated_at = ?
+        WHERE id = ?
+        """,
+        (artifact_id, title, summary, now_iso(), session_id),
+    )
+
+
+def get_vibe_frontend_build_session(conn: sqlite3.Connection, session_id: str, user_id: str) -> Optional[sqlite3.Row]:
+    return conn.execute(
+        """
+        SELECT *
+        FROM vibe_frontend_build_sessions
+        WHERE id = ? AND user_id = ?
+        """,
+        (session_id, user_id),
+    ).fetchone()
+
+
+def list_vibe_frontend_build_sessions(conn: sqlite3.Connection, user_id: str, limit: int = 12) -> List[sqlite3.Row]:
+    return conn.execute(
+        """
+        SELECT *
+        FROM vibe_frontend_build_sessions
+        WHERE user_id = ?
+        ORDER BY updated_at DESC
+        LIMIT ?
+        """,
+        (user_id, limit),
+    ).fetchall()
+
+
+def list_vibe_frontend_build_turn_rows(conn: sqlite3.Connection, session_id: str) -> List[sqlite3.Row]:
+    return conn.execute(
+        """
+        SELECT *
+        FROM vibe_frontend_build_turns
+        WHERE session_id = ?
+        ORDER BY created_at ASC
+        """,
+        (session_id,),
+    ).fetchall()
+
+
+def get_vibe_frontend_build_latest_artifact_row(conn: sqlite3.Connection, session_id: str) -> Optional[sqlite3.Row]:
+    return conn.execute(
+        """
+        SELECT *
+        FROM vibe_frontend_build_artifacts
+        WHERE session_id = ?
+        ORDER BY created_at DESC
+        LIMIT 1
+        """,
+        (session_id,),
+    ).fetchone()
 
 
 def get_recent_vibe_attempt_rows(conn: sqlite3.Connection, user_id: str, limit: int = VIBE_PROFILE_WINDOW) -> List[sqlite3.Row]:
@@ -717,6 +966,92 @@ def serialize_vibe_profile_row(row: Optional[sqlite3.Row], fallback_track: str, 
             "refactoring": row["refactoring_score"],
             "review": row["review_score"],
         },
+    }
+
+
+def serialize_vibe_frontend_build_turn_row(row: sqlite3.Row) -> Dict[str, Any]:
+    return {
+        "id": row["id"],
+        "sessionId": row["session_id"],
+        "role": row["role"],
+        "promptText": row["prompt_text"],
+        "summary": row["summary"],
+        "createdAt": row["created_at"],
+    }
+
+
+def build_vibe_frontend_build_session_payload(
+    session_row: sqlite3.Row,
+    turn_rows: Optional[List[sqlite3.Row]] = None,
+    artifact_row: Optional[sqlite3.Row] = None,
+) -> Dict[str, Any]:
+    payload = serialize_vibe_frontend_build_session_row(session_row)
+    if turn_rows is not None:
+        payload["turns"] = [serialize_vibe_frontend_build_turn_row(row) for row in turn_rows]
+    if artifact_row is not None:
+        payload["latestArtifact"] = serialize_vibe_frontend_build_artifact_row(artifact_row)
+    return payload
+
+
+def build_vibe_frontend_live_build_prompt(
+    user_prompt: str,
+    model: str,
+    locale: str,
+    *,
+    session_summary: str = "",
+    recent_turns: Optional[List[sqlite3.Row]] = None,
+    latest_artifact: Optional[sqlite3.Row] = None,
+) -> Dict[str, Any]:
+    normalized_locale = sanitize_app_locale(locale)
+    context_rows = (recent_turns or [])[-6:]
+    if normalized_locale == "en-US":
+        instructions = (
+            "You are a senior frontend engineer building a real single-page HTML prototype from product requests. "
+            "Return JSON only with keys: title, summary, html, css, js, nextSuggestions. "
+            "All user-facing text must be natural American English. Do not output markdown, code fences, or commentary. "
+            "html must contain body markup only. css must contain stylesheet rules only. js must contain browser-side JavaScript only. "
+            "summary must briefly explain what changed in this version. nextSuggestions must be 1-4 concrete follow-up improvements."
+        )
+    else:
+        instructions = (
+            "你是资深前端工程师，需要根据产品需求构建一个真实的单页面 HTML 原型。 "
+            "只返回 JSON，字段必须且只能是：title, summary, html, css, js, nextSuggestions。 "
+            "所有面向用户的文案必须使用自然、专业的简体中文；不要输出 markdown、代码块或解释性前后缀。 "
+            "html 只包含 body 内部结构；css 只包含样式规则；js 只包含浏览器侧脚本。 "
+            "summary 用简短文字说明这一版完成了什么；nextSuggestions 给出 1-4 条可继续优化的具体建议。"
+        )
+
+    recent_turn_text = "\n".join(
+        f"- {row['role']}: {str(row['summary'] or row['prompt_text'] or '').strip()[:400]}"
+        for row in context_rows
+    )
+    latest_artifact_text = ""
+    if latest_artifact is not None:
+        latest_artifact_text = (
+            f"\n[Latest Artifact Title]\n{latest_artifact['title']}\n"
+            f"[Latest Artifact Summary]\n{latest_artifact['summary']}\n"
+            f"[Latest mergedHtml]\n{latest_artifact['merged_html'][:12000]}\n"
+        )
+
+    user_text = (
+        f"[Session Summary]\n{session_summary[:1200]}\n"
+        f"[Recent Turns]\n{recent_turn_text or 'none'}\n"
+        f"{latest_artifact_text}"
+        f"[Current User Request]\n{user_prompt}"
+    )
+    return {
+        "model": model,
+        "input": [
+            {
+                "role": "system",
+                "content": [{"type": "input_text", "text": instructions}],
+            },
+            {
+                "role": "user",
+                "content": [{"type": "input_text", "text": user_text}],
+            },
+        ],
+        "max_output_tokens": 1800,
     }
 
 
@@ -2522,6 +2857,201 @@ async def vibe_coding_profile(request: Request):
             conn.close()
 
     return JSONResponse(content=serialize_vibe_profile_row(row, fallback_track, fallback_difficulty))
+
+
+@app.post("/api/vibe-coding/frontend/session")
+async def vibe_frontend_build_create_session(request: Request):
+    user = require_authenticated_user(request)
+    if not AI_API_KEY:
+        raise HTTPException(status_code=500, detail="AI_API_KEY is not configured")
+
+    body = await request.json()
+    model_name = resolve_requested_model(body.get("model"))
+    locale = sanitize_app_locale(body.get("locale"))
+    try:
+        prompt_text = sanitize_vibe_prompt(body.get("prompt"))
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    session_id = f"frontend_session_{secrets.token_urlsafe(12)}"
+    user_turn_id = f"frontend_turn_{secrets.token_urlsafe(12)}"
+    assistant_turn_id = f"frontend_turn_{secrets.token_urlsafe(12)}"
+    payload = build_vibe_frontend_live_build_prompt(prompt_text, model_name, locale)
+    data = await run_in_threadpool(read_upstream_responses_json, payload)
+    artifact = normalize_frontend_build_payload(parse_upstream_json_object(data), session_id, assistant_turn_id)
+    created_at = now_iso()
+    session = {
+        "id": session_id,
+        "userId": user["id"],
+        "title": artifact["title"],
+        "summary": artifact["summary"],
+        "status": "active",
+        "latestArtifactId": artifact["id"],
+        "createdAt": created_at,
+        "updatedAt": created_at,
+    }
+    user_turn = {
+        "id": user_turn_id,
+        "sessionId": session_id,
+        "role": "user",
+        "promptText": prompt_text,
+        "summary": prompt_text[:400],
+        "createdAt": created_at,
+    }
+    assistant_turn = {
+        "id": assistant_turn_id,
+        "sessionId": session_id,
+        "role": "assistant",
+        "promptText": artifact["summary"],
+        "summary": artifact["summary"],
+        "createdAt": artifact["createdAt"],
+    }
+
+    with db_lock:
+        conn = get_db_connection(AUTH_DB_PATH)
+        try:
+            insert_vibe_frontend_build_session(conn, session)
+            insert_vibe_frontend_build_turn(conn, user_turn)
+            insert_vibe_frontend_build_turn(conn, assistant_turn)
+            insert_vibe_frontend_build_artifact(conn, artifact)
+            conn.commit()
+            session_row = get_vibe_frontend_build_session(conn, session_id, user["id"])
+            turn_rows = list_vibe_frontend_build_turn_rows(conn, session_id)
+            artifact_row = get_vibe_frontend_build_latest_artifact_row(conn, session_id)
+        finally:
+            conn.close()
+
+    if session_row is None or artifact_row is None:
+        raise HTTPException(status_code=500, detail="failed to persist frontend build session")
+
+    return JSONResponse(content=build_vibe_frontend_build_session_payload(session_row, turn_rows, artifact_row))
+
+
+@app.post("/api/vibe-coding/frontend/session/{session_id}/turns")
+async def vibe_frontend_build_append_turn(session_id: str, request: Request):
+    user = require_authenticated_user(request)
+    if not AI_API_KEY:
+        raise HTTPException(status_code=500, detail="AI_API_KEY is not configured")
+
+    body = await request.json()
+    model_name = resolve_requested_model(body.get("model"))
+    locale = sanitize_app_locale(body.get("locale"))
+    try:
+        prompt_text = sanitize_vibe_prompt(body.get("prompt"))
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    with db_lock:
+        conn = get_db_connection(AUTH_DB_PATH)
+        try:
+            session_row = get_vibe_frontend_build_session(conn, session_id, user["id"])
+            turn_rows = list_vibe_frontend_build_turn_rows(conn, session_id) if session_row is not None else []
+            latest_artifact_row = get_vibe_frontend_build_latest_artifact_row(conn, session_id) if session_row is not None else None
+        finally:
+            conn.close()
+
+    if session_row is None:
+        raise HTTPException(status_code=404, detail="frontend build session not found")
+
+    user_turn_id = f"frontend_turn_{secrets.token_urlsafe(12)}"
+    assistant_turn_id = f"frontend_turn_{secrets.token_urlsafe(12)}"
+    payload = build_vibe_frontend_live_build_prompt(
+        prompt_text,
+        model_name,
+        locale,
+        session_summary=str(session_row["summary"] or ""),
+        recent_turns=turn_rows,
+        latest_artifact=latest_artifact_row,
+    )
+    data = await run_in_threadpool(read_upstream_responses_json, payload)
+    artifact = normalize_frontend_build_payload(parse_upstream_json_object(data), session_id, assistant_turn_id)
+    user_turn = {
+        "id": user_turn_id,
+        "sessionId": session_id,
+        "role": "user",
+        "promptText": prompt_text,
+        "summary": prompt_text[:400],
+        "createdAt": now_iso(),
+    }
+    assistant_turn = {
+        "id": assistant_turn_id,
+        "sessionId": session_id,
+        "role": "assistant",
+        "promptText": artifact["summary"],
+        "summary": artifact["summary"],
+        "createdAt": artifact["createdAt"],
+    }
+
+    with db_lock:
+        conn = get_db_connection(AUTH_DB_PATH)
+        try:
+            insert_vibe_frontend_build_turn(conn, user_turn)
+            insert_vibe_frontend_build_turn(conn, assistant_turn)
+            insert_vibe_frontend_build_artifact(conn, artifact)
+            update_vibe_frontend_build_session_latest_artifact(conn, session_id, artifact["id"], artifact["title"], artifact["summary"])
+            conn.commit()
+            updated_session_row = get_vibe_frontend_build_session(conn, session_id, user["id"])
+            updated_turn_rows = list_vibe_frontend_build_turn_rows(conn, session_id)
+            updated_artifact_row = get_vibe_frontend_build_latest_artifact_row(conn, session_id)
+        finally:
+            conn.close()
+
+    if updated_session_row is None or updated_artifact_row is None:
+        raise HTTPException(status_code=500, detail="failed to update frontend build session")
+
+    return JSONResponse(content=build_vibe_frontend_build_session_payload(updated_session_row, updated_turn_rows, updated_artifact_row))
+
+
+@app.get("/api/vibe-coding/frontend/sessions")
+async def vibe_frontend_build_list_sessions(request: Request):
+    user = require_authenticated_user(request)
+    with db_lock:
+        conn = get_db_connection(AUTH_DB_PATH)
+        try:
+            rows = list_vibe_frontend_build_sessions(conn, user["id"])
+        finally:
+            conn.close()
+    return JSONResponse(content={"items": [serialize_vibe_frontend_build_session_row(row) for row in rows]})
+
+
+@app.get("/api/vibe-coding/frontend/session/{session_id}")
+async def vibe_frontend_build_get_session(session_id: str, request: Request):
+    user = require_authenticated_user(request)
+    with db_lock:
+        conn = get_db_connection(AUTH_DB_PATH)
+        try:
+            session_row = get_vibe_frontend_build_session(conn, session_id, user["id"])
+            if session_row is None:
+                raise HTTPException(status_code=404, detail="frontend build session not found")
+            turn_rows = list_vibe_frontend_build_turn_rows(conn, session_id)
+            artifact_row = get_vibe_frontend_build_latest_artifact_row(conn, session_id)
+        finally:
+            conn.close()
+    return JSONResponse(content=build_vibe_frontend_build_session_payload(session_row, turn_rows, artifact_row))
+
+
+@app.get("/api/vibe-coding/frontend/session/{session_id}/download")
+async def vibe_frontend_build_download(session_id: str, request: Request):
+    user = require_authenticated_user(request)
+    with db_lock:
+        conn = get_db_connection(AUTH_DB_PATH)
+        try:
+            session_row = get_vibe_frontend_build_session(conn, session_id, user["id"])
+            if session_row is None:
+                raise HTTPException(status_code=404, detail="frontend build session not found")
+            artifact_row = get_vibe_frontend_build_latest_artifact_row(conn, session_id)
+        finally:
+            conn.close()
+
+    if artifact_row is None:
+        raise HTTPException(status_code=404, detail="frontend build artifact not found")
+
+    filename = f"{str(artifact_row['title'] or 'frontend-build').strip() or 'frontend-build'}.html"
+    return Response(
+        content=artifact_row["merged_html"],
+        media_type="text/html; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 @app.get("/api/auth/session")

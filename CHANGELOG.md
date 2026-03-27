@@ -10,6 +10,7 @@
 - 统一方法论 `Skills` 单元的中文源文案，补齐标题、摘要、概览、练习与误区的英文映射，保证中英文切换一致
 - 调整 Frontend Live Build 的实时预览布局：预览区改为独立全宽卡片，并显著放大 iframe 画布，避免窄列压缩导致排版错乱
 - 为 Frontend Live Build 增加“全屏预览”按钮，支持遮罩全屏查看、`Esc` 关闭和右上角关闭操作
+- 补齐 Frontend Live Build 的 `api-proxy` 会话接口与下载接口，修复线上 `/api/vibe-coding/frontend/sessions` 返回 `404` 的问题
 
 ## 2026-03-20
 
