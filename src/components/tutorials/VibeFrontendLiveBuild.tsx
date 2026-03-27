@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Code2, Download, LoaderCircle, Maximize2, MessageSquare, Plus, RefreshCw, Wand2, X } from 'lucide-react';
+import { Code2, Download, ExternalLink, LoaderCircle, Maximize2, MessageSquare, Plus, RefreshCw, Wand2, X } from 'lucide-react';
 import { useI18n } from '../../contexts/I18nContext';
 import {
   appendFrontendBuildTurn,
@@ -112,6 +112,19 @@ export default function VibeFrontendLiveBuild() {
   };
 
   const artifact = activeSession?.latestArtifact ?? null;
+  const previewHtml = artifact?.mergedHtml || EMPTY_PREVIEW;
+
+  const openPreviewInNewTab = () => {
+    const previewWindow = window.open('', '_blank', 'noopener,noreferrer');
+    if (!previewWindow) {
+      setError(t('浏览器拦截了新窗口，请允许弹窗后重试。'));
+      return;
+    }
+
+    previewWindow.document.open();
+    previewWindow.document.write(previewHtml);
+    previewWindow.document.close();
+  };
 
   return (
     <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:p-6">
@@ -235,7 +248,15 @@ export default function VibeFrontendLiveBuild() {
               </div>
             )}
           </div>
-          <div className="mt-4 flex justify-end">
+          <div className="mt-4 flex flex-wrap justify-end gap-3">
+            <button
+              type="button"
+              onClick={openPreviewInNewTab}
+              className="inline-flex min-h-[44px] cursor-pointer items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-colors duration-200 hover:border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:border-slate-500"
+            >
+              <ExternalLink className="h-4 w-4" />
+              {t('新标签页打开')}
+            </button>
             <button
               type="button"
               onClick={() => setIsFullscreenOpen(true)}
@@ -248,7 +269,7 @@ export default function VibeFrontendLiveBuild() {
           <div className="mt-4 overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_18px_40px_rgba(15,23,42,0.08)] dark:border-slate-700 dark:shadow-none">
             <iframe
               title={artifact?.title || t('页面预览')}
-              srcDoc={artifact?.mergedHtml || EMPTY_PREVIEW}
+              srcDoc={previewHtml}
               sandbox="allow-scripts"
               className="h-[460px] w-full border-0 bg-white sm:h-[560px] lg:h-[680px] xl:h-[760px]"
             />
@@ -316,20 +337,30 @@ export default function VibeFrontendLiveBuild() {
                   {t('按 Esc 或点击右上角关闭全屏预览。')}
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={() => setIsFullscreenOpen(false)}
-                className="inline-flex min-h-[44px] min-w-[44px] cursor-pointer items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-700 transition-colors duration-200 hover:border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:border-slate-500"
-                aria-label={t('关闭全屏预览')}
-                title={t('关闭全屏预览')}
-              >
-                <X className="h-4 w-4" />
-              </button>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={openPreviewInNewTab}
+                  className="inline-flex min-h-[44px] cursor-pointer items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-colors duration-200 hover:border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:border-slate-500"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                  {t('新标签页打开')}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsFullscreenOpen(false)}
+                  className="inline-flex min-h-[44px] min-w-[44px] cursor-pointer items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-700 transition-colors duration-200 hover:border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:border-slate-500"
+                  aria-label={t('关闭全屏预览')}
+                  title={t('关闭全屏预览')}
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
             </div>
             <div className="flex-1 bg-white p-2 dark:bg-slate-950 sm:p-4">
               <iframe
                 title={t('全屏页面预览')}
-                srcDoc={artifact?.mergedHtml || EMPTY_PREVIEW}
+                srcDoc={previewHtml}
                 sandbox="allow-scripts"
                 className="h-full w-full rounded-[24px] border-0 bg-white"
               />
