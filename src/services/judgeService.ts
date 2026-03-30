@@ -296,10 +296,6 @@ function localizeCheckpointSummary(item: JudgeCheckpointSummary): JudgeCheckpoin
   };
 }
 
-function localizeTextList(values: string[]): string[] {
-  return values.map((value) => localizeRuntimeText(value));
-}
-
 function normalizeJudgeAiReview(payload: unknown): JudgeAiReview | undefined {
   if (!payload || typeof payload !== 'object') {
     return undefined;
@@ -349,11 +345,11 @@ function normalizeJudgeAiReview(payload: unknown): JudgeAiReview | undefined {
       complexityAndPerformance: typeof scores.complexityAndPerformance === 'number' ? scores.complexityAndPerformance : 0,
       codeQualityAndReadability: typeof scores.codeQualityAndReadability === 'number' ? scores.codeQualityAndReadability : 0,
     },
-    overallDiagnosis: localizeRuntimeText(typeof review.overallDiagnosis === 'string' ? review.overallDiagnosis : ''),
-    errorPoints: localizeTextList(requiredLists(review.errorPoints)),
-    fixSuggestions: localizeTextList(requiredLists(review.fixSuggestions)),
-    optimizationSuggestions: localizeTextList(requiredLists(review.optimizationSuggestions)),
-    nextStep: localizeRuntimeText(typeof review.nextStep === 'string' ? review.nextStep : ''),
+    overallDiagnosis: typeof review.overallDiagnosis === 'string' ? review.overallDiagnosis : '',
+    errorPoints: requiredLists(review.errorPoints),
+    fixSuggestions: requiredLists(review.fixSuggestions),
+    optimizationSuggestions: requiredLists(review.optimizationSuggestions),
+    nextStep: typeof review.nextStep === 'string' ? review.nextStep : '',
   };
 }
 

@@ -1318,6 +1318,20 @@ def build_vibe_evaluation_prompt(challenge: Dict[str, Any], prompt_text: str, mo
 def normalize_node(node: Any) -> Dict[str, Any]:
     if not isinstance(node, dict):
         raise ValueError("Invalid node")
+
+    def parse_collapsed(value: Any) -> bool:
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, str):
+            normalized = value.strip().lower()
+            if normalized in {"true", "1", "yes", "on"}:
+                return True
+            if normalized in {"false", "0", "no", "off", ""}:
+                return False
+        if isinstance(value, (int, float)):
+            return value != 0
+        return False
+
     title = str(node.get("title", "")).strip() or "Untitled Node"
     note = str(node.get("note", ""))[:8000]
     children_raw = node.get("children", [])
@@ -1327,7 +1341,7 @@ def normalize_node(node: Any) -> Dict[str, Any]:
         "id": node_id,
         "title": title,
         "note": note,
-        "collapsed": bool(node.get("collapsed", False)),
+        "collapsed": parse_collapsed(node.get("collapsed", False)),
         "children": children,
     }
 

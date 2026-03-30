@@ -193,17 +193,38 @@ function buildUserPrompt(input: MindMapPromptInput) {
 const createNodeId = () =>
   `${Math.random().toString(36).slice(2, 8)}${Date.now().toString(36).slice(-4)}`;
 
+function parseCollapsedValue(value: unknown): boolean {
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase();
+    if (['true', '1', 'yes', 'on'].includes(normalized)) return true;
+    if (['false', '0', 'no', 'off', ''].includes(normalized)) return false;
+  }
+  if (typeof value === 'number') {
+    return value !== 0;
+  }
+  return false;
+}
+
 const sanitizeMindMapNodes = (
   nodes: unknown,
-  generationMode: MindMapGenerateMode
+  generationMode: MindMapGenerateMode,
+  usedIds: Set<string>,
+  path = 'nodes',
 ): MindMapNode[] => {
-  if (!Array.isArray(nodes)) return [];
+  if (!Array.isArray(nodes)) {
+    throw new Error(pickRuntimeText(`AI 返回的导图结构无效：${path} 必须是数组`, `AI map payload is invalid: ${path} must be an array`));
+  }
 
   return nodes.map((node, index) => {
     const raw = (node || {}) as Partial<MindMapNode>;
     const title = String(raw.title || '').trim() || pickRuntimeText(`节点 ${index + 1}`, `Node ${index + 1}`);
-    const id = String(raw.id || '').trim() || createNodeId();
-    const children = sanitizeMindMapNodes(raw.children, generationMode);
+    let id = String(raw.id || '').trim() || createNodeId();
+    if (usedIds.has(id)) {
+      id = createNodeId();
+    }
+    usedIds.add(id);
+    const children = sanitizeMindMapNodes(raw.children ?? [], generationMode, usedIds, `${path}[${index}].children`);
     const note =
       generationMode === 'explore'
         ? ''
@@ -215,7 +236,7 @@ const sanitizeMindMapNodes = (
       id,
       title,
       note,
-      collapsed: Boolean(raw.collapsed),
+      collapsed: parseCollapsedValue(raw.collapsed),
       children,
     };
   });
@@ -253,7 +274,10 @@ export async function generateMindMap(input: MindMapPromptInput) {
   const content = await callAI(messages);
   const parsed = extractJson(content) as { title?: string; nodes?: unknown };
   const title = String(parsed?.title || input.title || input.sourceTitle || getMindMapDefaultTitle()).trim() || getMindMapDefaultTitle();
-  const nodes = sanitizeMindMapNodes(parsed?.nodes, generationMode);
+  const nodes = sanitizeMindMapNodes(parsed?.nodes, generationMode, new Set());
+  if (!nodes.length) {
+    throw new Error(pickRuntimeText('AI 返回的导图节点为空', 'AI map payload returned no nodes'));
+  }
   return { title, nodes };
 }
 
