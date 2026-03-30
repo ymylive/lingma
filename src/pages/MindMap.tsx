@@ -177,7 +177,10 @@ const nodesToMarkdown = (nodes: MindMapNode[], depth = 0): string[] => {
     const prefix = '  '.repeat(depth);
     lines.push(`${prefix}- ${node.title}`);
     if (node.note) {
-      lines.push(`${prefix}  > ${node.note}`);
+      const noteLines = node.note.split('\n').map((line) => line.trimEnd()).filter(Boolean);
+      noteLines.forEach((line) => {
+        lines.push(`${prefix}  > ${line}`);
+      });
     }
     if (node.children.length) {
       lines.push(...nodesToMarkdown(node.children, depth + 1));
@@ -1867,7 +1870,7 @@ function TreeNode({
       style={depthStyle}
     >
       <div className="font-medium text-slate-900 dark:text-white text-sm">{node.title}</div>
-      {node.note && <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">{node.note}</div>}
+      {node.note && <div className="mt-1 whitespace-pre-line text-xs text-slate-500 dark:text-slate-400">{node.note}</div>}
     </button>
   );
 

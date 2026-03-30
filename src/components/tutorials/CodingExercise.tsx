@@ -121,6 +121,10 @@ export default function CodingExercise({
   const { isEnglish, t } = useI18n();
   const judgeText = (zh: string, en: string) => (isEnglish ? en : zh);
   const tr = useCallback((value?: string) => (value ? t(value) : value), [t]);
+  const contentText = useCallback((value?: string) => {
+    if (!value) return value;
+    return progressiveAiText ? value : (tr(value) || value);
+  }, [progressiveAiText, tr]);
   const [lang, setLang] = useState<Lang>('cpp');
   const [code, setCode] = useState('');
   const [showHints, setShowHints] = useState(false);
@@ -130,24 +134,24 @@ export default function CodingExercise({
   const [judge, setJudge] = useState<JudgeResponse | null>(null);
   const [aiReviewStreaming, setAiReviewStreaming] = useState(false);
   const [aiReviewPreview, setAiReviewPreview] = useState('');
-  const localizedTitle = tr(title) || title;
-  const localizedDescription = tr(description) || description;
-  const localizedCategory = tr(category) || category;
-  const localizedHints = useMemo(() => hints.map((hint) => tr(hint) || hint), [hints, tr]);
-  const localizedExplanation = tr(explanation) || explanation;
-  const localizedCommonMistakes = useMemo(() => commonMistakes.map((item) => tr(item) || item), [commonMistakes, tr]);
+  const localizedTitle = contentText(title) || title;
+  const localizedDescription = contentText(description) || description;
+  const localizedCategory = contentText(category) || category;
+  const localizedHints = useMemo(() => hints.map((hint) => contentText(hint) || hint), [contentText, hints]);
+  const localizedExplanation = contentText(explanation) || explanation;
+  const localizedCommonMistakes = useMemo(() => commonMistakes.map((item) => contentText(item) || item), [commonMistakes, contentText]);
   const displayTestCases = useMemo(
     () =>
       testCases.map((item) => ({
         ...item,
-        description: tr(item.description) || item.description,
-        checkpoint: tr(item.checkpoint) || item.checkpoint,
-        group: tr(item.group) || item.group,
-        feedbackHint: tr(item.feedbackHint) || item.feedbackHint,
+        description: contentText(item.description) || item.description,
+        checkpoint: contentText(item.checkpoint) || item.checkpoint,
+        group: contentText(item.group) || item.group,
+        feedbackHint: contentText(item.feedbackHint) || item.feedbackHint,
       })),
-    [testCases, tr],
+    [contentText, testCases],
   );
-  const localizedSolution = tr(solutions[lang]) || solutions[lang];
+  const localizedSolution = contentText(solutions[lang]) || solutions[lang];
   const exerciseDisplayPayload = useMemo(
     () => ({
       title: localizedTitle,
@@ -174,6 +178,16 @@ export default function CodingExercise({
     ],
   );
   const progressiveExerciseText = useProgressiveAiObject(exerciseDisplayPayload, progressiveAiText);
+  const displayHints = useMemo(
+    () => progressiveExerciseText.hints.map((hint, index) => hint || localizedHints[index] || '').filter(Boolean),
+    [localizedHints, progressiveExerciseText.hints],
+  );
+  const displayExplanation = progressiveExerciseText.explanation || localizedExplanation || '';
+  const displayCommonMistakes = useMemo(
+    () => progressiveExerciseText.commonMistakes.map((item, index) => item || localizedCommonMistakes[index] || '').filter(Boolean),
+    [localizedCommonMistakes, progressiveExerciseText.commonMistakes],
+  );
+  const displaySolution = progressiveExerciseText.solution || localizedSolution || '';
 
   useEffect(() => {
     const preferredTarget = user?.targetLanguage;
@@ -340,8 +354,8 @@ export default function CodingExercise({
               <span className="rounded-full bg-indigo-100 px-3 py-1 text-xs font-medium text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300">{t('专业判题')}</span>
             </div>
             <div>
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white sm:text-xl">{progressiveExerciseText.title}</h3>
-              <p className="mt-2 whitespace-pre-line text-[15px] leading-6 text-slate-600 dark:text-slate-300 sm:text-sm sm:leading-7">{progressiveExerciseText.description}</p>
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white sm:text-xl">{localizedTitle}</h3>
+              <p className="mt-2 whitespace-pre-line text-[15px] leading-6 text-slate-600 dark:text-slate-300 sm:text-sm sm:leading-7">{localizedDescription}</p>
             </div>
           </div>
           <div className="grid w-full grid-cols-2 gap-2 sm:w-auto sm:grid-cols-3">
@@ -362,7 +376,7 @@ export default function CodingExercise({
         <div className="grid gap-4 lg:grid-cols-[1.3fr_1fr]">
           <div className="space-y-3">
             <MobileScrollHint isEnglish={isEnglish} className="mb-1" />
-            {progressiveExerciseText.testCases.slice(0, 2).map((item, index) => (
+            {displayTestCases.slice(0, 2).map((item, index) => (
               <div key={`${item.description || item.checkpoint || 'sample'}-${index}`} className="rounded-2xl border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-800">
                 <div className="mb-2 text-[13px] font-medium text-slate-500 dark:text-slate-400 sm:text-xs">{item.checkpoint || item.description || `${t('样例')} ${index + 1}`}</div>
                 <div className="grid gap-2 text-[13px] sm:grid-cols-2 sm:text-xs">
@@ -384,7 +398,7 @@ export default function CodingExercise({
                   <h4 className="text-sm font-semibold text-amber-800 dark:text-amber-200">{t('解题提示')}</h4>
                   <button onClick={() => setShowHints((value) => !value)} className="min-h-[40px] rounded-full bg-white px-3 py-2 text-sm font-medium text-amber-700 dark:bg-amber-950/60 dark:text-amber-200 sm:min-h-0 sm:py-1 sm:text-xs">{showHints ? t('收起') : t('展开')}</button>
                 </div>
-                {showHints && <ul className="space-y-1 text-[15px] text-amber-700 dark:text-amber-200 sm:text-sm">{progressiveExerciseText.hints.map((hint, index) => <li key={`${hint}-${index}`}>- {hint}</li>)}</ul>}
+                {showHints && <ul className="space-y-1 text-[15px] text-amber-700 dark:text-amber-200 sm:text-sm">{displayHints.map((hint, index) => <li key={`${hint}-${index}`}>- {hint}</li>)}</ul>}
               </div>
             )}
           </div>
@@ -491,8 +505,8 @@ export default function CodingExercise({
 
             {judge?.allPassed === false && commonMistakes.length > 0 && (
               <div className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-900/20">
-                <h4 className="mb-2 text-sm font-semibold text-amber-800 dark:text-amber-200">{t('常见错误')}</h4>
-                <ul className="space-y-1 text-[15px] text-amber-700 dark:text-amber-200 sm:text-sm">{progressiveExerciseText.commonMistakes.map((item, index) => <li key={`${item}-${index}`}>- {item}</li>)}</ul>
+              <h4 className="mb-2 text-sm font-semibold text-amber-800 dark:text-amber-200">{t('常见错误')}</h4>
+              <ul className="space-y-1 text-[15px] text-amber-700 dark:text-amber-200 sm:text-sm">{displayCommonMistakes.map((item, index) => <li key={`${item}-${index}`}>- {item}</li>)}</ul>
               </div>
             )}
 
@@ -644,7 +658,7 @@ export default function CodingExercise({
             {solutions[lang] ? (
               <>
                 <MobileScrollHint isEnglish={isEnglish} className="mb-3" />
-                <pre className="overflow-x-auto rounded-3xl border border-slate-800 bg-slate-950 p-3 text-[13px] leading-6 text-slate-100 sm:p-4 sm:text-sm">{progressiveExerciseText.solution}</pre>
+                <pre className="overflow-x-auto rounded-3xl border border-slate-800 bg-slate-950 p-3 text-[13px] leading-6 text-slate-100 sm:p-4 sm:text-sm">{displaySolution}</pre>
               </>
             ) : (
               <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-[15px] leading-6 text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 sm:text-sm">{t('当前语言暂无预置参考答案，可以继续使用模板自行完成。')}</div>
@@ -652,7 +666,7 @@ export default function CodingExercise({
             {localizedExplanation && (
               <div className="mt-4 rounded-2xl border border-indigo-200 bg-indigo-50 p-4 dark:border-indigo-800 dark:bg-indigo-900/20">
                 <h5 className="mb-2 text-sm font-semibold text-indigo-800 dark:text-indigo-200">{t('题解思路')}</h5>
-                <p className="whitespace-pre-line text-[15px] leading-6 text-indigo-700 dark:text-indigo-200 sm:text-sm">{progressiveExerciseText.explanation}</p>
+                <p className="whitespace-pre-line text-[15px] leading-6 text-indigo-700 dark:text-indigo-200 sm:text-sm">{displayExplanation}</p>
               </div>
             )}
           </div>
@@ -666,6 +680,10 @@ export function FillInBlank({ exerciseId, title, description, difficulty, catego
   const { recordExerciseComplete, user } = useUser();
   const { isEnglish, t } = useI18n();
   const tr = useCallback((value?: string) => (value ? t(value) : value), [t]);
+  const contentText = useCallback((value?: string) => {
+    if (!value) return value;
+    return progressiveAiText ? value : (tr(value) || value);
+  }, [progressiveAiText, tr]);
   const availableLangs = useMemo(() => SUPPORTED_LANGS.filter((item) => codeTemplate[item]), [codeTemplate]);
   const preferredLang = (user?.targetLanguage && availableLangs.includes(user.targetLanguage) ? user.targetLanguage : availableLangs[0]) || 'cpp';
   const [lang, setLang] = useState<Lang>(
@@ -675,19 +693,19 @@ export function FillInBlank({ exerciseId, title, description, difficulty, catego
   const [submitted, setSubmitted] = useState(false);
   const [results, setResults] = useState<Record<string, boolean>>({});
   const activeLang = availableLangs.includes(lang) ? lang : preferredLang;
-  const localizedTitle = tr(title) || title;
-  const localizedDescription = tr(description) || description;
-  const localizedExplanation = tr(explanation) || explanation;
+  const localizedTitle = contentText(title) || title;
+  const localizedDescription = contentText(description) || description;
+  const localizedExplanation = contentText(explanation) || explanation;
   const localizedBlanks = useMemo(
-    () => blanks.map((blank) => ({ ...blank, hint: tr(blank.hint) || blank.hint })),
-    [blanks, tr],
+    () => blanks.map((blank) => ({ ...blank, hint: contentText(blank.hint) || blank.hint })),
+    [blanks, contentText],
   );
   const localizedCodeTemplate = useMemo(
     () =>
       Object.fromEntries(
-        availableLangs.map((item) => [item, tr(codeTemplate[item]) || codeTemplate[item] || '']),
+        availableLangs.map((item) => [item, contentText(codeTemplate[item]) || codeTemplate[item] || '']),
       ) as LangTemplates,
-    [availableLangs, codeTemplate, tr],
+    [availableLangs, codeTemplate, contentText],
   );
   const fillBlankDisplayPayload = useMemo(
     () => ({
@@ -703,6 +721,8 @@ export function FillInBlank({ exerciseId, title, description, difficulty, catego
     [activeLang, localizedBlanks, localizedCodeTemplate, localizedDescription, localizedExplanation, localizedTitle],
   );
   const progressiveFillBlankText = useProgressiveAiObject(fillBlankDisplayPayload, progressiveAiText);
+  const displayFillBlankExplanation = progressiveFillBlankText.explanation || localizedExplanation || '';
+  const displayFillBlankCodeTemplate = progressiveFillBlankText.codeTemplate || localizedCodeTemplate[activeLang] || '';
 
   const checkAnswers = () => {
     const next: Record<string, boolean> = {};
@@ -718,7 +738,7 @@ export function FillInBlank({ exerciseId, title, description, difficulty, catego
     if (exerciseId) recordExerciseComplete(exerciseId, title, category || '', allCorrect, { score: blanks.length ? Math.round((correctCount / blanks.length) * 100) : 0, passRate: blanks.length ? Math.round((correctCount / blanks.length) * 100) : 0, verdict: allCorrect ? 'Accepted' : 'Review', feedbackLevel: allCorrect ? 'excellent' : 'review' });
   };
 
-  const renderCode = () => (progressiveFillBlankText.codeTemplate || '').split('\n').map((line, lineIndex) => {
+  const renderCode = () => displayFillBlankCodeTemplate.split('\n').map((line, lineIndex) => {
     const parts: ReactNode[] = [];
     let lastIndex = 0;
     const regex = /___(\w+)___/g;
@@ -727,7 +747,7 @@ export function FillInBlank({ exerciseId, title, description, difficulty, catego
       if (match.index > lastIndex) parts.push(<span key={`text-${lineIndex}-${lastIndex}`} className="text-slate-300">{line.slice(lastIndex, match.index)}</span>);
       const blankId = match[1];
       const ok = results[blankId];
-      parts.push(<input key={`blank-${lineIndex}-${blankId}`} type="text" value={answers[blankId] || ''} onChange={(event) => { setAnswers((prev) => ({ ...prev, [blankId]: event.target.value })); setSubmitted(false); }} placeholder={progressiveFillBlankText.blanks.find((item) => item.id === blankId)?.hint || t('填写代码')} disabled={submitted && Boolean(ok)} className={`mx-1 my-1 min-h-[44px] min-w-[8rem] rounded-xl border px-3 py-2.5 font-mono text-[15px] sm:text-sm ${submitted ? ok ? 'border-emerald-500 bg-emerald-900/50 text-emerald-200' : 'border-rose-500 bg-rose-900/50 text-rose-200' : 'border-slate-500 bg-slate-700 text-white focus:border-indigo-400 focus:outline-none'}`} />);
+      parts.push(<input key={`blank-${lineIndex}-${blankId}`} type="text" value={answers[blankId] || ''} onChange={(event) => { setAnswers((prev) => ({ ...prev, [blankId]: event.target.value })); setSubmitted(false); }} placeholder={progressiveFillBlankText.blanks.find((item) => item.id === blankId)?.hint || localizedBlanks.find((item) => item.id === blankId)?.hint || t('填写代码')} disabled={submitted && Boolean(ok)} className={`mx-1 my-1 min-h-[44px] min-w-[8rem] rounded-xl border px-3 py-2.5 font-mono text-[15px] sm:text-sm ${submitted ? ok ? 'border-emerald-500 bg-emerald-900/50 text-emerald-200' : 'border-rose-500 bg-rose-900/50 text-rose-200' : 'border-slate-500 bg-slate-700 text-white focus:border-indigo-400 focus:outline-none'}`} />);
       lastIndex = match.index + match[0].length;
     }
     if (lastIndex < line.length) parts.push(<span key={`tail-${lineIndex}`} className="text-slate-300">{line.slice(lastIndex)}</span>);
@@ -747,8 +767,8 @@ export function FillInBlank({ exerciseId, title, description, difficulty, catego
               <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-medium text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">{t('填空练习')}</span>
             </div>
             <div>
-              <h3 className="text-xl font-bold text-slate-900 dark:text-white">{progressiveFillBlankText.title}</h3>
-              <p className="mt-2 whitespace-pre-line text-[15px] leading-6 text-slate-600 dark:text-slate-300 sm:text-sm sm:leading-7">{progressiveFillBlankText.description}</p>
+              <h3 className="text-xl font-bold text-slate-900 dark:text-white">{localizedTitle}</h3>
+              <p className="mt-2 whitespace-pre-line text-[15px] leading-6 text-slate-600 dark:text-slate-300 sm:text-sm sm:leading-7">{localizedDescription}</p>
             </div>
           </div>
           <div className="grid w-full grid-cols-2 gap-2 sm:w-auto sm:grid-cols-4">
@@ -773,7 +793,7 @@ export function FillInBlank({ exerciseId, title, description, difficulty, catego
         {submitted && localizedExplanation && (
           <div className="mt-5 rounded-3xl border border-indigo-200 bg-indigo-50 p-4 dark:border-indigo-800 dark:bg-indigo-900/20">
             <h4 className="mb-2 text-sm font-semibold text-indigo-800 dark:text-indigo-200">{t('解析')}</h4>
-            <p className="whitespace-pre-line text-[15px] leading-6 text-indigo-700 dark:text-indigo-200 sm:text-sm">{progressiveFillBlankText.explanation}</p>
+                <p className="whitespace-pre-line text-[15px] leading-6 text-indigo-700 dark:text-indigo-200 sm:text-sm">{displayFillBlankExplanation}</p>
           </div>
         )}
       </div>

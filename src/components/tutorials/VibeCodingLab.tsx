@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -148,28 +148,52 @@ export default function VibeCodingLab({ onOpenAiGenerator, onOpenPracticeLibrary
   const [streamingChallengePreview, setStreamingChallengePreview] = useState('');
   const [streamingEvaluationPreview, setStreamingEvaluationPreview] = useState('');
   const [frontendMode, setFrontendMode] = useState<VibeFrontendMode>('prompt-scoring');
-  const progressiveChallengeText = useProgressiveAiObject(
-    challenge
-      ? {
-          title: challenge.title,
-          scenario: challenge.scenario,
-          requirements: challenge.requirements,
-          constraints: challenge.constraints,
-          successCriteria: challenge.successCriteria,
-        }
-      : null,
-    Boolean(challenge),
+  const progressiveChallengeSource = useMemo(
+    () =>
+      challenge
+        ? {
+            title: challenge.title,
+            scenario: challenge.scenario,
+            requirements: challenge.requirements,
+            constraints: challenge.constraints,
+            successCriteria: challenge.successCriteria,
+          }
+        : null,
+    [challenge],
   );
-  const progressiveEvaluationText = useProgressiveAiObject(
-    evaluation
-      ? {
-          strengths: evaluation.strengths,
-          weaknesses: evaluation.weaknesses,
-          rewriteExample: evaluation.rewrite_example,
-        }
-      : null,
-    Boolean(evaluation),
+  const progressiveEvaluationSource = useMemo(
+    () =>
+      evaluation
+        ? {
+            strengths: evaluation.strengths,
+            weaknesses: evaluation.weaknesses,
+            rewriteExample: evaluation.rewrite_example,
+          }
+        : null,
+    [evaluation],
   );
+  const progressiveChallengeText = useProgressiveAiObject(progressiveChallengeSource, Boolean(challenge));
+  const progressiveEvaluationText = useProgressiveAiObject(progressiveEvaluationSource, Boolean(evaluation));
+  const challengeTrack = challenge?.track || selectedTrack;
+  const challengeDifficulty = challenge?.difficulty || profile.recommendedDifficulty;
+  const displayChallengeTitle = progressiveChallengeText?.title || challenge?.title || '';
+  const displayChallengeScenario = progressiveChallengeText?.scenario || challenge?.scenario || '';
+  const displayChallengeRequirements = progressiveChallengeText?.requirements?.filter(Boolean).length
+    ? progressiveChallengeText.requirements.filter(Boolean)
+    : (challenge?.requirements || []);
+  const displayChallengeConstraints = progressiveChallengeText?.constraints?.filter(Boolean).length
+    ? progressiveChallengeText.constraints.filter(Boolean)
+    : (challenge?.constraints || []);
+  const displayChallengeSuccessCriteria = progressiveChallengeText?.successCriteria?.filter(Boolean).length
+    ? progressiveChallengeText.successCriteria.filter(Boolean)
+    : (challenge?.successCriteria || []);
+  const displayEvaluationStrengths = progressiveEvaluationText?.strengths?.filter(Boolean).length
+    ? progressiveEvaluationText.strengths.filter(Boolean)
+    : (evaluation?.strengths || []);
+  const displayEvaluationWeaknesses = progressiveEvaluationText?.weaknesses?.filter(Boolean).length
+    ? progressiveEvaluationText.weaknesses.filter(Boolean)
+    : (evaluation?.weaknesses || []);
+  const displayEvaluationRewriteExample = progressiveEvaluationText?.rewriteExample || evaluation?.rewrite_example || '';
 
   const loadArenaData = async () => {
     setLoading(true);
@@ -227,15 +251,17 @@ export default function VibeCodingLab({ onOpenAiGenerator, onOpenPracticeLibrary
     try {
       const nextEvaluation = await evaluateVibePromptStream(challenge.id, draftPrompt, locale, setStreamingEvaluationPreview);
       setEvaluation(nextEvaluation);
+      setEvaluating(false);
       setStreamingEvaluationPreview('');
-      const [profileData, historyData] = await Promise.all([fetchVibeProfile(), fetchVibeHistory()]);
-      setProfile(profileData);
-      setHistory(historyData);
-      setSelectedTrack(profileData.recommendedTrack);
+      void Promise.all([fetchVibeProfile(), fetchVibeHistory()]).then(([profileData, historyData]) => {
+        setProfile(profileData);
+        setHistory(historyData);
+      }).catch(() => {
+        // Keep the successful evaluation visible even if background refresh fails.
+      });
     } catch (evaluationError) {
       const message = evaluationError instanceof Error ? evaluationError.message : t('评分失败');
       setError(message);
-    } finally {
       setEvaluating(false);
     }
   };
@@ -428,7 +454,7 @@ export default function VibeCodingLab({ onOpenAiGenerator, onOpenPracticeLibrary
             </div>
           )}
 
-          {selectedTrack === 'frontend' && frontendMode === 'live-build' ? (
+          {challengeTrack === 'frontend' && frontendMode === 'live-build' ? (
             <VibeFrontendLiveBuild />
           ) : (
             <>
@@ -446,11 +472,11 @@ export default function VibeCodingLab({ onOpenAiGenerator, onOpenPracticeLibrary
                 <div>
                   <div className="text-sm font-semibold text-slate-900 dark:text-white">
                     {challenge
-                      ? (progressiveChallengeText?.title ?? challenge.title)
+                      ? displayChallengeTitle
                       : (generating ? t('AI 正在生成题目...') : t('尚未生成题目'))}
                   </div>
                   <div className="mt-1 text-xs uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">
-                    {trackMeta[selectedTrack].label} · {difficultyLabel(profile.recommendedDifficulty)}
+                    {trackMeta[challengeTrack].label} · {difficultyLabel(challengeDifficulty)}
                   </div>
                 </div>
                 <button
@@ -469,12 +495,12 @@ export default function VibeCodingLab({ onOpenAiGenerator, onOpenPracticeLibrary
                 <div className="mt-4 space-y-4">
                   <div>
                     <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">{t('场景')}</div>
-                    <p className="mt-2 text-sm leading-8 text-slate-700 dark:text-slate-200">{progressiveChallengeText?.scenario}</p>
+                    <p className="mt-2 text-sm leading-8 text-slate-700 dark:text-slate-200">{displayChallengeScenario}</p>
                   </div>
                   <div className="grid gap-3 xl:grid-cols-2">
-                    <BulletPanel title={t('要求')} items={progressiveChallengeText?.requirements || challenge.requirements} />
-                    <BulletPanel title={t('限制')} items={progressiveChallengeText?.constraints || challenge.constraints} />
-                    <BulletPanel title={t('成功标准')} items={progressiveChallengeText?.successCriteria || challenge.successCriteria} className="xl:col-span-2" />
+                    <BulletPanel title={t('要求')} items={displayChallengeRequirements} />
+                    <BulletPanel title={t('限制')} items={displayChallengeConstraints} />
+                    <BulletPanel title={t('成功标准')} items={displayChallengeSuccessCriteria} className="xl:col-span-2" />
                   </div>
                 </div>
               ) : (
@@ -566,14 +592,14 @@ export default function VibeCodingLab({ onOpenAiGenerator, onOpenPracticeLibrary
                 </div>
 
                 <div className="space-y-4">
-                  <FeedbackPanel title={t('做得好的地方')} items={progressiveEvaluationText?.strengths || evaluation.strengths} tone="emerald" />
-                  <FeedbackPanel title={t('需要补强的地方')} items={progressiveEvaluationText?.weaknesses || evaluation.weaknesses} tone="amber" />
+                  <FeedbackPanel title={t('做得好的地方')} items={displayEvaluationStrengths} tone="emerald" />
+                  <FeedbackPanel title={t('需要补强的地方')} items={displayEvaluationWeaknesses} tone="amber" />
                 </div>
               </div>
 
               <div className="rounded-3xl border border-slate-900 bg-slate-950 p-4 text-slate-100 shadow-[0_20px_60px_-40px_rgba(15,23,42,0.9)]">
                 <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">{t('改写示范')}</div>
-                <pre className="mt-3 whitespace-pre-wrap text-sm leading-7 text-slate-200">{progressiveEvaluationText?.rewriteExample ?? evaluation.rewrite_example}</pre>
+                <pre className="mt-3 whitespace-pre-wrap text-sm leading-7 text-slate-200">{displayEvaluationRewriteExample}</pre>
                 <button
                   type="button"
                   aria-label={t('用示范重练')}

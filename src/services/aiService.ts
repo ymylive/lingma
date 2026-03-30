@@ -10,12 +10,14 @@ export interface GeneratedExercise {
     c?: string;
     cpp: string;
     java: string;
+    csharp?: string;
     python: string;
   };
   solutions: {
     c?: string;
     cpp: string;
     java: string;
+    csharp?: string;
     python: string;
   };
   testCases: {
@@ -35,6 +37,7 @@ export interface GeneratedFillBlank {
     c?: string;
     cpp: string;
     java: string;
+    csharp?: string;
     python: string;
   };
   blanks: {
@@ -44,6 +47,23 @@ export interface GeneratedFillBlank {
   }[];
   explanation: string;
 }
+
+type ExerciseTestCase = GeneratedExercise['testCases'][number];
+type FillBlankItem = GeneratedFillBlank['blanks'][number];
+type GeneratedLanguageKey = keyof GeneratedExercise['templates'] | keyof GeneratedFillBlank['codeTemplate'];
+
+const LANGUAGE_KEY_ALIASES: Record<string, GeneratedLanguageKey> = {
+  c: 'c',
+  cpp: 'cpp',
+  'c++': 'cpp',
+  java: 'java',
+  python: 'python',
+  python3: 'python',
+  py: 'python',
+  csharp: 'csharp',
+  'c#': 'csharp',
+  cs: 'csharp',
+};
 
 export interface AIConfig {
   provider: 'gmn' | 'openai' | 'deepseek' | 'zhipu' | 'modelscope' | 'custom';
@@ -128,6 +148,208 @@ export const getConfiguredModelOverride = (): string | undefined => {
   const model = readStoredModelOverride();
   return model || undefined;
 };
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+function firstNonEmptyString(...values: unknown[]): string {
+  for (const value of values) {
+    if (typeof value === 'string') {
+      const trimmed = value.trim();
+      if (trimmed) return trimmed;
+    }
+  }
+  return '';
+}
+
+function normalizeLanguageKey(key: string): GeneratedLanguageKey | null {
+  return LANGUAGE_KEY_ALIASES[key.trim().toLowerCase()] || null;
+}
+
+function toStringMap(value: unknown): Partial<Record<GeneratedLanguageKey, string>> {
+  if (!isRecord(value)) return {};
+  const normalized: Partial<Record<GeneratedLanguageKey, string>> = {};
+  for (const [key, item] of Object.entries(value)) {
+    if (typeof item !== 'string' || !item.trim()) continue;
+    const normalizedKey = normalizeLanguageKey(key);
+    if (!normalizedKey) continue;
+    normalized[normalizedKey] = String(item);
+  }
+  return normalized;
+}
+
+function toStringList(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item) => (typeof item === 'string' ? item.trim() : ''))
+    .filter(Boolean);
+}
+
+function buildExerciseDescription(payload: Record<string, unknown>): string {
+  const direct = firstNonEmptyString(
+    payload.description,
+    payload.problem_description,
+    payload.problemDescription,
+    payload.statement,
+    payload.problem_statement,
+  );
+  if (direct) return direct;
+
+  const sections: string[] = [];
+  const problemDescription = firstNonEmptyString(
+    payload.problem_description,
+    payload.problemDescription,
+    payload.statement,
+    payload.problem_statement,
+  );
+  const inputFormat = firstNonEmptyString(payload.input_format, payload.inputFormat);
+  const outputFormat = firstNonEmptyString(payload.output_format, payload.outputFormat);
+  const dataRange = firstNonEmptyString(payload.data_range, payload.dataRange, payload.constraints_text);
+  const sampleExplanation = firstNonEmptyString(payload.sample_explanation, payload.sampleExplanation);
+
+  if (problemDescription) sections.push(`${pickRuntimeText('【题目描述】', '[Problem Description]')}\n${problemDescription}`);
+  if (inputFormat) sections.push(`${pickRuntimeText('【输入格式】', '[Input Format]')}\n${inputFormat}`);
+  if (outputFormat) sections.push(`${pickRuntimeText('【输出格式】', '[Output Format]')}\n${outputFormat}`);
+  if (dataRange) sections.push(`${pickRuntimeText('【数据范围】', '[Data Range]')}\n${dataRange}`);
+  if (sampleExplanation) sections.push(`${pickRuntimeText('【样例说明】', '[Sample Explanation]')}\n${sampleExplanation}`);
+
+  return sections.join('\n\n').trim();
+}
+
+function normalizeExerciseTestCases(payload: Record<string, unknown>): ExerciseTestCase[] {
+  const rawCases = payload.testCases ?? payload.test_cases ?? payload.examples ?? payload.samples;
+  if (!Array.isArray(rawCases)) return [];
+
+  return rawCases
+    .map((item) => {
+      if (!isRecord(item)) return null;
+      const input = firstNonEmptyString(item.input, item.stdin, item.sampleInput, item.sample_input);
+      const expectedOutput = firstNonEmptyString(
+        item.expectedOutput,
+        item.expected_output,
+        item.output,
+        item.stdout,
+        item.sampleOutput,
+        item.sample_output,
+      );
+      const description = firstNonEmptyString(item.description, item.label, item.name, item.title);
+      if (!input || !expectedOutput) return null;
+      return {
+        input,
+        expectedOutput,
+        description: description || pickRuntimeText('样例', 'Sample'),
+      };
+    })
+    .filter((item): item is ExerciseTestCase => Boolean(item));
+}
+
+function normalizeDifficulty(value: unknown): GeneratedExercise['difficulty'] {
+  return value === 'easy' || value === 'medium' || value === 'hard' ? value : 'medium';
+}
+
+export function normalizeGeneratedExercisePayload(payload: unknown): GeneratedExercise {
+  if (!isRecord(payload)) {
+    throw new Error(pickRuntimeText('AI 返回的题目数据不是对象', 'AI exercise payload must be an object'));
+  }
+
+  const title = firstNonEmptyString(payload.title, payload.problem_title, payload.problemTitle, payload.name);
+  const description = buildExerciseDescription(payload);
+  const templates = toStringMap(payload.templates ?? payload.template ?? payload.starterCode ?? payload.starter_code);
+  const solutions = toStringMap(payload.solutions ?? payload.solution ?? payload.referenceSolutions ?? payload.reference_solutions);
+  const testCases = normalizeExerciseTestCases(payload);
+  const hints = toStringList(payload.hints ?? payload.tips ?? payload.clues);
+  const explanation = firstNonEmptyString(
+    payload.explanation,
+    payload.analysis,
+    payload.solutionExplanation,
+    payload.solution_explanation,
+  );
+
+  if (!title) {
+    throw new Error(pickRuntimeText('AI 返回缺少题目标题', 'AI exercise payload is missing title'));
+  }
+  if (!description) {
+    throw new Error(pickRuntimeText('AI 返回缺少题面描述', 'AI exercise payload is missing description'));
+  }
+  if (!testCases.length) {
+    throw new Error(pickRuntimeText('AI 返回缺少测试用例', 'AI exercise payload is missing test cases'));
+  }
+  if (!Object.keys(templates).length) {
+    throw new Error(pickRuntimeText('AI 返回缺少代码模板', 'AI exercise payload is missing templates'));
+  }
+
+  return {
+    title,
+    description,
+    difficulty: normalizeDifficulty(payload.difficulty),
+    templates: templates as GeneratedExercise['templates'],
+    solutions: solutions as GeneratedExercise['solutions'],
+    testCases,
+    hints,
+    explanation,
+  };
+}
+
+function normalizeFillBlankItems(payload: Record<string, unknown>): FillBlankItem[] {
+  const rawBlanks = payload.blanks ?? payload.blank_items ?? payload.blankItems;
+  if (!Array.isArray(rawBlanks)) return [];
+
+  return rawBlanks
+    .map((item, index) => {
+      if (!isRecord(item)) return null;
+      const id = firstNonEmptyString(item.id, item.key, item.name) || `BLANK_${index + 1}`;
+      const answer = firstNonEmptyString(item.answer, item.expected, item.expectedAnswer, item.expected_answer);
+      const hint = firstNonEmptyString(item.hint, item.description, item.label);
+      if (!answer) return null;
+      return { id, answer, hint };
+    })
+    .filter((item): item is FillBlankItem => Boolean(item));
+}
+
+export function normalizeGeneratedFillBlankPayload(payload: unknown): GeneratedFillBlank {
+  if (!isRecord(payload)) {
+    throw new Error(pickRuntimeText('AI 返回的填空题数据不是对象', 'AI fill-blank payload must be an object'));
+  }
+
+  const title = firstNonEmptyString(payload.title, payload.problem_title, payload.problemTitle, payload.name);
+  const description = firstNonEmptyString(
+    payload.description,
+    payload.problem_description,
+    payload.problemDescription,
+    payload.statement,
+  );
+  const codeTemplate = toStringMap(payload.codeTemplate ?? payload.code_template ?? payload.templates);
+  const blanks = normalizeFillBlankItems(payload);
+  const explanation = firstNonEmptyString(
+    payload.explanation,
+    payload.analysis,
+    payload.solutionExplanation,
+    payload.solution_explanation,
+  );
+
+  if (!title) {
+    throw new Error(pickRuntimeText('AI 返回缺少填空题标题', 'AI fill-blank payload is missing title'));
+  }
+  if (!description) {
+    throw new Error(pickRuntimeText('AI 返回缺少填空题描述', 'AI fill-blank payload is missing description'));
+  }
+  if (!Object.keys(codeTemplate).length) {
+    throw new Error(pickRuntimeText('AI 返回缺少填空代码模板', 'AI fill-blank payload is missing code template'));
+  }
+  if (!blanks.length) {
+    throw new Error(pickRuntimeText('AI 返回缺少填空项', 'AI fill-blank payload is missing blanks'));
+  }
+
+  return {
+    title,
+    description,
+    difficulty: normalizeDifficulty(payload.difficulty),
+    codeTemplate: codeTemplate as GeneratedFillBlank['codeTemplate'],
+    blanks,
+    explanation,
+  };
+}
 
 function getUiLanguageLabel() {
   return isEnglishRuntimeLocale() ? 'English' : '中文';
@@ -628,7 +850,7 @@ export async function generateCodingExercise(
   const prompt = buildCodingPrompt(topic, difficulty, dataStructure, profileHint);
 
   const response = await callAI(prompt, onProgress);
-  return parseAIJsonResponse<GeneratedExercise>(response, 'coding exercise');
+  return normalizeGeneratedExercisePayload(parseAIJsonResponse<unknown>(response, 'coding exercise'));
 }
 
 // 生成填空题 (支持流式输出)
@@ -642,7 +864,7 @@ export async function generateFillBlank(
   const prompt = buildFillBlankPrompt(topic, difficulty, dataStructure, profileHint);
 
   const response = await callAI(prompt, onProgress);
-  return parseAIJsonResponse<GeneratedFillBlank>(response, 'fill blank exercise');
+  return normalizeGeneratedFillBlankPayload(parseAIJsonResponse<unknown>(response, 'fill blank exercise'));
 }
 
 // 通用JSON解析函数 - 处理AI返回中的换行问题

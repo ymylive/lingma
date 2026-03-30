@@ -101,12 +101,15 @@ export default function VibeFrontendLiveBuild() {
         : await createFrontendBuildSessionStream(draftPrompt, locale, setStreamingBuildPreview);
       setActiveSession(detail);
       setDraftPrompt('');
+      setSubmitting(false);
       setStreamingBuildPreview('');
-      const items = await fetchFrontendBuildSessions();
-      setSessions(items);
+      void fetchFrontendBuildSessions().then((items) => {
+        setSessions(items);
+      }).catch(() => {
+        // Preserve the finished artifact even if the session list refresh fails.
+      });
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : t('生成页面失败'));
-    } finally {
       setSubmitting(false);
     }
   };

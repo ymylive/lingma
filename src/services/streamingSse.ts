@@ -26,10 +26,21 @@ export async function readStreamingSse<T>(
     }
     try {
       const payload = JSON.parse(rawText) as { detail?: string; error?: string };
-      throw new Error(payload.detail || payload.error || rawText);
+      const detail = payload.detail || payload.error;
+      if (detail) {
+        throw new Error(detail);
+      }
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+    }
+    try {
+      JSON.parse(rawText);
     } catch {
       throw new Error(rawText);
     }
+    throw new Error(rawText);
   }
 
   if (!response.body) {
