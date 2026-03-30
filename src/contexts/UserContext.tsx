@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { normalizeSkillLevel, type UserSkillLevel } from '../utils/userPersonalization';
 import { normalizeTargetLanguage, type TargetLanguage } from '../utils/targetLanguages';
+import { clearVibeCache } from '../services/vibeCodingService';
 
 export interface User {
   id: string;
@@ -354,6 +355,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
         if (cancelled) return;
 
         clearLegacyAuthStorage();
+        clearVibeCache();
 
         if (!sessionUser) {
           setUser(null);
@@ -368,6 +370,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
       } catch (error) {
         console.error('Failed to restore auth session', error);
         if (!cancelled) {
+          clearVibeCache();
           setUser(null);
           setProgress({ ...defaultProgress });
         }
@@ -400,6 +403,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     }
 
     clearLegacyAuthStorage();
+    clearVibeCache();
     const nextProgress = applyDailyStreak(syncProgressSkillLevel(loadProgressForUser(nextUser.id), nextUser.skillLevel));
     setUser(nextUser);
     setProgress(nextProgress);
@@ -420,6 +424,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     }
 
     clearLegacyAuthStorage();
+    clearVibeCache();
     const nextProgress = applyDailyStreak(syncProgressSkillLevel({ ...defaultProgress }, nextUser.skillLevel));
     setUser(nextUser);
     setProgress(nextProgress);
@@ -444,6 +449,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
       persistProgress(currentUser.id, progress);
     }
 
+    clearVibeCache();
     setUser(null);
     setProgress({ ...defaultProgress });
     clearLegacyAuthStorage();

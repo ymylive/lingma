@@ -28,7 +28,7 @@ function createMockExpress() {
 }
 
 function loadServerModule({ exec, execSync, spawn: spawnMock } = {}) {
-  const source = `${fs.readFileSync(SERVER_PATH, 'utf8')}\nmodule.exports = { compileCode };`;
+  const source = `${fs.readFileSync(SERVER_PATH, 'utf8')}\nmodule.exports = { compileCode, runProgram };`;
   const mockFs = {
     ...fs,
     existsSync: () => true,
@@ -177,6 +177,92 @@ test('compileCode keeps CE status when compiler reports an error', async () => {
   assert.equal(result.success, false);
   assert.equal(result.status, 'CE');
   assert.match(result.error, /syntax error/);
+});
+
+test('compileCode passes a scrubbed env to the compiler process', async () => {
+  const originalToken = process.env.JUDGE_INTERNAL_TOKEN;
+  const originalSecret = process.env.UNTRUSTED_JUDGE_SECRET;
+  process.env.JUDGE_INTERNAL_TOKEN = 'supersecret';
+  process.env.UNTRUSTED_JUDGE_SECRET = 'another-secret';
+
+  let capturedOptions;
+  const { compileCode } = loadServerModule({
+    exec: (_command, options, callback) => {
+      capturedOptions = options;
+      callback(null, '', '');
+    }
+  });
+
+  try {
+    const result = await compileCode('c', '#include <stdio.h>\nint main(void) { return 0; }\n', path.join(__dirname, 'tmp-c-env'));
+
+    assert.equal(result.success, true);
+    assert.ok(capturedOptions);
+    assert.equal(capturedOptions.env.PATH, process.env.PATH);
+    assert.equal(Object.hasOwn(capturedOptions.env, 'JUDGE_INTERNAL_TOKEN'), false);
+    assert.equal(Object.hasOwn(capturedOptions.env, 'UNTRUSTED_JUDGE_SECRET'), false);
+  } finally {
+    if (originalToken === undefined) {
+      delete process.env.JUDGE_INTERNAL_TOKEN;
+    } else {
+      process.env.JUDGE_INTERNAL_TOKEN = originalToken;
+    }
+
+    if (originalSecret === undefined) {
+      delete process.env.UNTRUSTED_JUDGE_SECRET;
+    } else {
+      process.env.UNTRUSTED_JUDGE_SECRET = originalSecret;
+    }
+  }
+});
+
+test('runProgram passes a scrubbed env to the executed program', async () => {
+  const originalToken = process.env.JUDGE_INTERNAL_TOKEN;
+  const originalSecret = process.env.UNTRUSTED_JUDGE_SECRET;
+  process.env.JUDGE_INTERNAL_TOKEN = 'supersecret';
+  process.env.UNTRUSTED_JUDGE_SECRET = 'another-secret';
+
+  let capturedOptions;
+  const { runProgram } = loadServerModule({
+    spawn: (_cmd, _args, options) => {
+      capturedOptions = options;
+      const proc = {
+        stdout: { on() {} },
+        stderr: { on() {} },
+        stdin: { write() {}, end() {} },
+        on(event, handler) {
+          if (event === 'close') {
+            setImmediate(() => handler(0));
+          }
+          return proc;
+        },
+        kill() {}
+      };
+      return proc;
+    }
+  });
+
+  try {
+    const result = await runProgram('python3', ['-u', 'main.py'], '', 1000);
+
+    assert.equal(result.success, true);
+    assert.ok(capturedOptions);
+    assert.equal(capturedOptions.env.PATH, process.env.PATH);
+    assert.equal(Object.hasOwn(capturedOptions.env, 'JUDGE_INTERNAL_TOKEN'), false);
+    assert.equal(Object.hasOwn(capturedOptions.env, 'UNTRUSTED_JUDGE_SECRET'), false);
+  } finally {
+    if (originalToken === undefined) {
+      delete process.env.JUDGE_INTERNAL_TOKEN;
+    } else {
+      process.env.JUDGE_INTERNAL_TOKEN = originalToken;
+    }
+
+    if (originalSecret === undefined) {
+      delete process.env.UNTRUSTED_JUDGE_SECRET;
+    } else {
+      process.env.UNTRUSTED_JUDGE_SECRET = originalSecret;
+    }
+  }
 });
 
 test('judge endpoints reject requests without the internal token', async (t) => {
