@@ -1375,7 +1375,7 @@ export default function MindMap() {
           </motion.div>
         )}
       </AnimatePresence>
-      <div className="mx-auto max-w-7xl px-4 pb-12 pt-22 sm:px-6 sm:pb-14 sm:pt-26">
+      <div className="page-safe-top mx-auto max-w-7xl px-4 pb-12 sm:px-6 sm:pb-14">
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
