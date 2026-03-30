@@ -96,7 +96,7 @@ export default function Book() {
   };
 
   return (
-    <div className="min-h-screen transition-colors duration-300 pt-24 pb-12">
+    <div className="page-safe-top min-h-screen pb-12 transition-colors duration-300">
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
         {/* 页面标题 */}
         <motion.div
