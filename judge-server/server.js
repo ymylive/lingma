@@ -164,6 +164,32 @@ function truncateText(value = '') {
   return value.length > 200 ? `${value.substring(0, 200)}...` : value;
 }
 
+function buildChildEnv() {
+  const safeKeys = [
+    'PATH',
+    'HOME',
+    'USERPROFILE',
+    'TMPDIR',
+    'TEMP',
+    'TMP',
+    'LANG',
+    'LC_ALL',
+    'LC_CTYPE',
+    'SystemRoot',
+    'SYSTEMROOT',
+    'COMSPEC',
+    'PATHEXT',
+    'DOTNET_ROOT'
+  ];
+
+  return safeKeys.reduce((env, key) => {
+    if (Object.prototype.hasOwnProperty.call(process.env, key)) {
+      env[key] = process.env[key];
+    }
+    return env;
+  }, {});
+}
+
 function inferCaseKind(index, total) {
   if (total <= 1) return 'sample';
   if (index === 0) return 'sample';
@@ -365,7 +391,8 @@ function runProgram(cmd, args, input, timeout) {
     
     const proc = spawn(cmd, args, {
       stdio: ['pipe', 'pipe', 'pipe'],
-      timeout: timeout
+      timeout: timeout,
+      env: buildChildEnv()
     });
     
     // 设置超时
@@ -416,7 +443,7 @@ function runProgram(cmd, args, input, timeout) {
 
 function execCommand(command, options) {
   return new Promise((resolve, reject) => {
-    exec(command, options, (error, stdout, stderr) => {
+    exec(command, { ...options, env: buildChildEnv() }, (error, stdout, stderr) => {
       if (error) {
         error.stdout = stdout;
         error.stderr = stderr || error.stderr;
