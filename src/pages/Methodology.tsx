@@ -175,7 +175,7 @@ export default function Methodology() {
   }, []);
 
   return (
-    <div className="min-h-screen pt-20 pb-24">
+    <div className="page-safe-top min-h-screen pb-24">
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
         {/* Hero */}
         <div className="mb-12">

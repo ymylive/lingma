@@ -150,7 +150,7 @@ export default function Home() {
   return (
     <div className={containerClass}>
       {/* Hero */}
-      <section className="relative px-4 pb-16 pt-24 sm:px-6 sm:pb-20 sm:pt-28">
+      <section className="page-safe-top relative px-4 pb-16 sm:px-6 sm:pb-20">
         <motion.div 
           className="max-w-6xl mx-auto text-center relative z-10"
           initial="hidden"

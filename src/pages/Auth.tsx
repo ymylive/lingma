@@ -111,7 +111,7 @@ export default function Auth() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white px-4 pb-12 pt-20 transition-colors duration-300 dark:from-slate-900 dark:to-slate-800 sm:px-6">
+    <div className="page-safe-top min-h-screen bg-gradient-to-b from-slate-50 to-white px-4 pb-12 transition-colors duration-300 dark:from-slate-900 dark:to-slate-800 sm:px-6">
       <div className="mx-auto max-w-lg">
         <div className="mb-8 text-center">
           <Link to="/" className="inline-flex items-center gap-2">

@@ -97,7 +97,7 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen pb-12 pt-24 transition-colors duration-300">
+    <div className="page-safe-top min-h-screen pb-12 transition-colors duration-300">
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
         <motion.div
           initial={{ opacity: 0, y: 20 }}

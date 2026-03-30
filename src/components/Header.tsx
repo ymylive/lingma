@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useUser } from '../contexts/UserContext';
@@ -13,6 +13,7 @@ export default function Header() {
   const [showDropdown, setShowDropdown] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const headerRef = useRef<HTMLElement | null>(null);
 
   const navItems = useMemo(() => [
     { path: '/algorithms', label: isEnglish ? 'Algorithms' : '算法演示', icon: '🎬' },
@@ -35,8 +36,34 @@ export default function Header() {
     setShowDropdown(false);
   }, [location.pathname]);
 
+  useEffect(() => {
+    const target = headerRef.current;
+    if (!target || typeof document === 'undefined') {
+      return undefined;
+    }
+
+    const applyHeight = () => {
+      const measured = target.offsetHeight || 64;
+      document.documentElement.style.setProperty('--app-header-height', `${measured}px`);
+    };
+
+    applyHeight();
+
+    if (typeof ResizeObserver !== 'undefined') {
+      const observer = new ResizeObserver(() => {
+        applyHeight();
+      });
+      observer.observe(target);
+      return () => observer.disconnect();
+    }
+
+    window.addEventListener('resize', applyHeight);
+    return () => window.removeEventListener('resize', applyHeight);
+  }, [isEnglish, locale, isLoggedIn, isAuthLoading, mobileMenuOpen, showDropdown]);
+
   return (
     <header
+      ref={headerRef}
       className={`fixed inset-x-0 top-0 z-50 transition-all duration-300 ${
         scrolled
           ? 'border-b border-slate-200/50 bg-white/70 shadow-sm backdrop-blur-xl dark:border-white/5 dark:bg-slate-950/70'
