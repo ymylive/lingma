@@ -484,6 +484,7 @@ export default function MindMap() {
   const mindMapPanelRef = useRef<HTMLDivElement | null>(null);
   const [pan, setPan] = useState({ x: 24, y: 24 });
   const [isPanning, setIsPanning] = useState(false);
+  const [isWheelPanning, setIsWheelPanning] = useState(false);
   const [isSpacePressed, setIsSpacePressed] = useState(false);
   const isSpacePressedRef = useRef(false);
   const scaleRef = useRef(1);
@@ -495,6 +496,7 @@ export default function MindMap() {
     originX: 24,
     originY: 24,
   });
+  const wheelPanTimeoutRef = useRef<number | null>(null);
 
   const containerClass =
     theme === 'dark'
@@ -1181,6 +1183,14 @@ export default function MindMap() {
   const handleCanvasWheel = (event: ReactWheelEvent<HTMLDivElement>) => {
     if (!activeMap) return;
     event.preventDefault();
+    if (wheelPanTimeoutRef.current !== null) {
+      window.clearTimeout(wheelPanTimeoutRef.current);
+    }
+    setIsWheelPanning(true);
+    wheelPanTimeoutRef.current = window.setTimeout(() => {
+      setIsWheelPanning(false);
+      wheelPanTimeoutRef.current = null;
+    }, 120);
 
     if (event.ctrlKey || event.metaKey) {
       const currentScale = scaleRef.current;
@@ -1224,7 +1234,7 @@ export default function MindMap() {
   const treeScaleStyle = {
     transform: `translate3d(${pan.x}px, ${pan.y}px, 0) scale(${scale})`,
     transformOrigin: 'top left',
-    transition: isPanning ? 'none' : 'transform 120ms ease-out',
+    transition: isPanning || isWheelPanning ? 'none' : 'transform 120ms ease-out',
   } as const;
 
   const renderMindMapPanel = (fullscreen: boolean) => (
