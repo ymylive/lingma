@@ -45,10 +45,13 @@ from app_modules.judge_review import (
 )
 from app_modules.auth_recovery import (
     PASSWORD_RESET_CODE_TTL_SECONDS,
+    PASSWORD_RESET_MAX_ATTEMPTS,
     PASSWORD_RESET_REQUEST_COOLDOWN_SECONDS,
     create_password_reset_code_record,
     generate_password_reset_code,
     send_password_reset_email,
+    sanitize_password_reset_code,
+    verify_password_reset_code,
 )
 
 DEFAULT_ALLOWED_ORIGINS = [
@@ -3385,6 +3388,65 @@ async def auth_password_reset_request(request: Request):
         expires_in_minutes=PASSWORD_RESET_CODE_TTL_SECONDS // 60,
     )
     return JSONResponse(content={"ok": True})
+
+
+@app.post("/api/auth/password-reset/confirm")
+async def auth_password_reset_confirm(request: Request):
+    body = await request.json()
+    try:
+        email = sanitize_email(body.get("email"))
+        code = sanitize_password_reset_code(body.get("code"))
+        new_password = sanitize_password(body.get("newPassword"))
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    with db_lock:
+        conn = get_db_connection(AUTH_DB_PATH)
+        try:
+            now_value = now_iso()
+            conn.execute("DELETE FROM password_reset_codes WHERE expires_at <= ?", (now_value,))
+            row = conn.execute(
+                """
+                SELECT id, user_id, code_hash, code_salt, expires_at, attempt_count
+                FROM password_reset_codes
+                WHERE email = ? AND consumed_at IS NULL
+                ORDER BY created_at DESC
+                LIMIT 1
+                """,
+                (email,),
+            ).fetchone()
+            if row is None or int(row["attempt_count"]) >= PASSWORD_RESET_MAX_ATTEMPTS:
+                raise HTTPException(status_code=400, detail="invalid or expired verification code")
+
+            if not verify_password_reset_code(code, str(row["code_hash"]), str(row["code_salt"])):
+                conn.execute(
+                    "UPDATE password_reset_codes SET attempt_count = attempt_count + 1 WHERE id = ?",
+                    (row["id"],),
+                )
+                conn.commit()
+                raise HTTPException(status_code=400, detail="invalid or expired verification code")
+
+            password_record = create_password_record(new_password)
+            conn.execute(
+                """
+                UPDATE users
+                SET password_hash = ?, password_salt = ?
+                WHERE id = ?
+                """,
+                (password_record["password_hash"], password_record["password_salt"], row["user_id"]),
+            )
+            conn.execute(
+                "UPDATE password_reset_codes SET consumed_at = ? WHERE id = ?",
+                (now_value, row["id"]),
+            )
+            conn.execute("DELETE FROM user_sessions WHERE user_id = ?", (row["user_id"],))
+            conn.commit()
+        finally:
+            conn.close()
+
+    response = JSONResponse(content={"ok": True})
+    clear_session_cookie(response, request)
+    return response
 
 
 @app.post("/api/auth/profile")

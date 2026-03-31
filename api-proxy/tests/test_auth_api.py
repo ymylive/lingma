@@ -206,6 +206,98 @@ def test_password_reset_request_stores_only_hashed_code_and_respects_cooldown(
     assert rows[0]["consumed_at"] is None
 
 
+def test_password_reset_confirm_replaces_password_and_invalidates_sessions(
+    api_module,
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    monkeypatch.setattr(api_module, "generate_password_reset_code", lambda: "123456")
+    monkeypatch.setattr(api_module, "send_password_reset_email", lambda **_: None)
+
+    register_user(client, email="reset-success@example.com")
+    request_response = client.post("/api/auth/password-reset/request", json={"email": "reset-success@example.com"})
+    assert request_response.status_code == 200, request_response.text
+
+    confirm_response = client.post(
+        "/api/auth/password-reset/confirm",
+        json={
+            "email": "reset-success@example.com",
+            "code": "123456",
+            "newPassword": "UpdatedPassword123",
+        },
+    )
+    assert confirm_response.status_code == 200, confirm_response.text
+    assert confirm_response.json() == {"ok": True}
+
+    stale_session = client.get("/api/auth/session")
+    assert stale_session.status_code == 401
+
+    old_login = client.post(
+        "/api/auth/login",
+        json={"email": "reset-success@example.com", "password": "Password123"},
+    )
+    assert old_login.status_code == 401
+
+    new_login = client.post(
+        "/api/auth/login",
+        json={"email": "reset-success@example.com", "password": "UpdatedPassword123"},
+    )
+    assert new_login.status_code == 200, new_login.text
+
+
+def test_password_reset_confirm_rejects_wrong_expired_and_exhausted_codes(
+    api_module,
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    monkeypatch.setattr(api_module, "generate_password_reset_code", lambda: "123456")
+    monkeypatch.setattr(api_module, "send_password_reset_email", lambda **_: None)
+    register_user(client, email="reset-fail@example.com")
+    request_response = client.post("/api/auth/password-reset/request", json={"email": "reset-fail@example.com"})
+    assert request_response.status_code == 200, request_response.text
+
+    wrong = client.post(
+        "/api/auth/password-reset/confirm",
+        json={"email": "reset-fail@example.com", "code": "000000", "newPassword": "UpdatedPassword123"},
+    )
+    assert wrong.status_code == 400
+    assert wrong.json()["detail"] == "invalid or expired verification code"
+
+    conn = sqlite3.connect(api_module.AUTH_DB_PATH)
+    try:
+        conn.execute(
+            "UPDATE password_reset_codes SET expires_at = ? WHERE email = ?",
+            ((datetime.now(timezone.utc) - timedelta(minutes=11)).isoformat(), "reset-fail@example.com"),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+    expired = client.post(
+        "/api/auth/password-reset/confirm",
+        json={"email": "reset-fail@example.com", "code": "123456", "newPassword": "UpdatedPassword123"},
+    )
+    assert expired.status_code == 400
+    assert expired.json()["detail"] == "invalid or expired verification code"
+
+    second_request = client.post("/api/auth/password-reset/request", json={"email": "reset-fail@example.com"})
+    assert second_request.status_code == 200, second_request.text
+
+    for _ in range(api_module.PASSWORD_RESET_MAX_ATTEMPTS):
+        response = client.post(
+            "/api/auth/password-reset/confirm",
+            json={"email": "reset-fail@example.com", "code": "000000", "newPassword": "UpdatedPassword123"},
+        )
+        assert response.status_code == 400
+
+    exhausted = client.post(
+        "/api/auth/password-reset/confirm",
+        json={"email": "reset-fail@example.com", "code": "123456", "newPassword": "UpdatedPassword123"},
+    )
+    assert exhausted.status_code == 400
+    assert exhausted.json()["detail"] == "invalid or expired verification code"
+
+
 def test_expired_session_is_rejected(api_module, client: TestClient):
     register_user(client, email="expired@example.com")
     expired_at = (datetime.now(timezone.utc) - timedelta(hours=1)).isoformat()
