@@ -206,6 +206,39 @@ def test_password_reset_request_stores_only_hashed_code_and_respects_cooldown(
     assert rows[0]["consumed_at"] is None
 
 
+def test_password_reset_request_cleans_up_code_when_email_send_fails(
+    api_module,
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    monkeypatch.setattr(api_module, "generate_password_reset_code", lambda: "123456")
+
+    def fail_send(**_: object) -> None:
+        raise RuntimeError("SMTP is not configured")
+
+    monkeypatch.setattr(api_module, "send_password_reset_email", fail_send)
+    register_user(client, email="send-fail@example.com")
+
+    with pytest.raises(RuntimeError, match="SMTP is not configured"):
+        client.post("/api/auth/password-reset/request", json={"email": "send-fail@example.com"})
+
+    conn = sqlite3.connect(api_module.AUTH_DB_PATH)
+    try:
+        row = conn.execute(
+            "SELECT COUNT(1) FROM password_reset_codes WHERE email = ?",
+            ("send-fail@example.com",),
+        ).fetchone()
+    finally:
+        conn.close()
+
+    assert row is not None
+    assert row[0] == 0
+
+    monkeypatch.setattr(api_module, "send_password_reset_email", lambda **_: None)
+    retry = client.post("/api/auth/password-reset/request", json={"email": "send-fail@example.com"})
+    assert retry.status_code == 200, retry.text
+
+
 def test_password_reset_confirm_replaces_password_and_invalidates_sessions(
     api_module,
     client: TestClient,
