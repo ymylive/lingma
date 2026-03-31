@@ -25,6 +25,20 @@ export AI_API_URL="https://api.aabao.top/v1/chat/completions"
 export AI_MODEL="deepseek-v3.2-exp-thinking"
 ```
 
+### 密码找回邮件配置
+
+```bash
+export SMTP_HOST="smtp.example.com"
+export SMTP_PORT="587"
+export SMTP_USERNAME="smtp-user"
+export SMTP_PASSWORD="smtp-password"
+export SMTP_FROM_EMAIL="no-reply@example.com"
+export SMTP_USE_TLS="true"
+export PASSWORD_RESET_DEV_LOG_FALLBACK="true"
+```
+
+如果设置了 `PASSWORD_RESET_DEV_LOG_FALLBACK=true` 且没有配置 SMTP，后端会在本地开发环境中把验证码打印到日志里，便于联调。生产环境不应依赖这个回退行为。
+
 ### 3. 安装依赖并启动服务
 
 ```bash
