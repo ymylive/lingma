@@ -39,6 +39,13 @@ def verify_password_reset_code(code: str, code_hash: str, code_salt: str) -> boo
     return derive_password_reset_code_hash(code, code_salt) == code_hash
 
 
+def sanitize_password_reset_code(value: object) -> str:
+    text = str(value or "").strip()
+    if len(text) != 6 or not text.isdigit():
+        raise ValueError("invalid verification code")
+    return text
+
+
 def send_password_reset_email(*, to_email: str, code: str, expires_in_minutes: int) -> None:
     smtp_host = (os.getenv("SMTP_HOST") or "").strip()
     smtp_from = (os.getenv("SMTP_FROM_EMAIL") or "").strip()
