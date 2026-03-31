@@ -15,7 +15,7 @@ import sys
 import threading
 from collections import defaultdict
 from contextlib import contextmanager
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Dict, Iterator, List, Optional, Tuple
 from urllib.parse import urlparse
@@ -42,6 +42,13 @@ from app_modules.judge_review import (
     extract_optional_exercise_context,
     normalize_judge_ai_review_payload,
     should_trigger_judge_ai_review,
+)
+from app_modules.auth_recovery import (
+    PASSWORD_RESET_CODE_TTL_SECONDS,
+    PASSWORD_RESET_REQUEST_COOLDOWN_SECONDS,
+    create_password_reset_code_record,
+    generate_password_reset_code,
+    send_password_reset_email,
 )
 
 DEFAULT_ALLOWED_ORIGINS = [
@@ -214,6 +221,21 @@ def init_auth_db() -> None:
                 );
                 CREATE INDEX IF NOT EXISTS idx_user_sessions_user_id ON user_sessions(user_id);
                 CREATE INDEX IF NOT EXISTS idx_user_sessions_expires_at ON user_sessions(expires_at);
+                CREATE TABLE IF NOT EXISTS password_reset_codes (
+                    id TEXT PRIMARY KEY,
+                    user_id TEXT NOT NULL,
+                    email TEXT NOT NULL,
+                    code_hash TEXT NOT NULL,
+                    code_salt TEXT NOT NULL,
+                    created_at TEXT NOT NULL,
+                    expires_at TEXT NOT NULL,
+                    consumed_at TEXT,
+                    attempt_count INTEGER NOT NULL DEFAULT 0,
+                    FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+                );
+                CREATE INDEX IF NOT EXISTS idx_password_reset_codes_user_id ON password_reset_codes(user_id);
+                CREATE INDEX IF NOT EXISTS idx_password_reset_codes_email ON password_reset_codes(email);
+                CREATE INDEX IF NOT EXISTS idx_password_reset_codes_expires_at ON password_reset_codes(expires_at);
                 CREATE TABLE IF NOT EXISTS vibe_challenges (
                     id TEXT PRIMARY KEY,
                     user_id TEXT NOT NULL,
@@ -3287,6 +3309,82 @@ async def auth_login(request: Request):
     response = JSONResponse(content={"user": serialize_user(row)})
     apply_session_cookie(response, request, session_id)
     return response
+
+
+@app.post("/api/auth/password-reset/request")
+async def auth_password_reset_request(request: Request):
+    body = await request.json()
+    try:
+        email = sanitize_email(body.get("email"))
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    code = ""
+    with db_lock:
+        conn = get_db_connection(AUTH_DB_PATH)
+        try:
+            now_value = now_iso()
+            now_dt = datetime.now(timezone.utc)
+            conn.execute("DELETE FROM password_reset_codes WHERE expires_at <= ?", (now_value,))
+            user = conn.execute(
+                "SELECT id, email FROM users WHERE email = ?",
+                (email,),
+            ).fetchone()
+            if user is None:
+                conn.commit()
+                return JSONResponse(content={"ok": True})
+
+            latest_row = conn.execute(
+                """
+                SELECT created_at
+                FROM password_reset_codes
+                WHERE email = ? AND consumed_at IS NULL
+                ORDER BY created_at DESC
+                LIMIT 1
+                """,
+                (email,),
+            ).fetchone()
+            if latest_row is not None:
+                created_at_dt = datetime.fromisoformat(str(latest_row["created_at"]))
+                if (now_dt - created_at_dt).total_seconds() < PASSWORD_RESET_REQUEST_COOLDOWN_SECONDS:
+                    conn.commit()
+                    return JSONResponse(content={"ok": True})
+
+            conn.execute(
+                "DELETE FROM password_reset_codes WHERE email = ? AND consumed_at IS NULL",
+                (email,),
+            )
+            code = generate_password_reset_code()
+            record = create_password_reset_code_record(code)
+            created_at = now_dt.isoformat()
+            expires_at = (now_dt + timedelta(seconds=PASSWORD_RESET_CODE_TTL_SECONDS)).isoformat()
+            conn.execute(
+                """
+                INSERT INTO password_reset_codes(
+                    id, user_id, email, code_hash, code_salt, created_at, expires_at, consumed_at, attempt_count
+                )
+                VALUES(?, ?, ?, ?, ?, ?, ?, NULL, 0)
+                """,
+                (
+                    f"prc_{secrets.token_urlsafe(12)}",
+                    user["id"],
+                    email,
+                    record["code_hash"],
+                    record["code_salt"],
+                    created_at,
+                    expires_at,
+                ),
+            )
+            conn.commit()
+        finally:
+            conn.close()
+
+    send_password_reset_email(
+        to_email=email,
+        code=code,
+        expires_in_minutes=PASSWORD_RESET_CODE_TTL_SECONDS // 60,
+    )
+    return JSONResponse(content={"ok": True})
 
 
 @app.post("/api/auth/profile")

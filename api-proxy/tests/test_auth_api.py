@@ -137,6 +137,75 @@ def test_wrong_password_uses_generic_error(client: TestClient):
     assert response.json()["detail"] == "invalid email or password"
 
 
+def test_password_reset_request_returns_generic_success_for_known_and_unknown_email(
+    api_module,
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    sent_messages: list[dict[str, str]] = []
+
+    def fake_send_password_reset_email(*, to_email: str, code: str, expires_in_minutes: int) -> None:
+        sent_messages.append(
+            {
+                "to_email": to_email,
+                "code": code,
+                "expires_in_minutes": str(expires_in_minutes),
+            }
+        )
+
+    monkeypatch.setattr(api_module, "send_password_reset_email", fake_send_password_reset_email)
+    register_user(client, email="recover@example.com")
+
+    known = client.post("/api/auth/password-reset/request", json={"email": "recover@example.com"})
+    unknown = client.post("/api/auth/password-reset/request", json={"email": "missing@example.com"})
+
+    assert known.status_code == 200, known.text
+    assert unknown.status_code == 200, unknown.text
+    assert known.json() == {"ok": True}
+    assert unknown.json() == {"ok": True}
+    assert len(sent_messages) == 1
+    assert sent_messages[0]["to_email"] == "recover@example.com"
+
+
+def test_password_reset_request_stores_only_hashed_code_and_respects_cooldown(
+    api_module,
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    issued_codes = iter(["123456", "654321"])
+
+    monkeypatch.setattr(api_module, "generate_password_reset_code", lambda: next(issued_codes))
+    monkeypatch.setattr(api_module, "send_password_reset_email", lambda **_: None)
+    register_user(client, email="cooldown@example.com")
+
+    first = client.post("/api/auth/password-reset/request", json={"email": "cooldown@example.com"})
+    second = client.post("/api/auth/password-reset/request", json={"email": "cooldown@example.com"})
+
+    assert first.status_code == 200, first.text
+    assert second.status_code == 200, second.text
+
+    conn = sqlite3.connect(api_module.AUTH_DB_PATH)
+    conn.row_factory = sqlite3.Row
+    try:
+        rows = conn.execute(
+            """
+            SELECT email, code_hash, code_salt, consumed_at
+            FROM password_reset_codes
+            WHERE email = ?
+            ORDER BY created_at DESC
+            """,
+            ("cooldown@example.com",),
+        ).fetchall()
+    finally:
+        conn.close()
+
+    assert len(rows) == 1
+    assert rows[0]["email"] == "cooldown@example.com"
+    assert rows[0]["code_hash"] != "123456"
+    assert rows[0]["code_salt"]
+    assert rows[0]["consumed_at"] is None
+
+
 def test_expired_session_is_rejected(api_module, client: TestClient):
     register_user(client, email="expired@example.com")
     expired_at = (datetime.now(timezone.utc) - timedelta(hours=1)).isoformat()
