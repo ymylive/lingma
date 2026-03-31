@@ -3323,6 +3323,7 @@ async def auth_password_reset_request(request: Request):
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     code = ""
+    reset_code_id = ""
     with db_lock:
         conn = get_db_connection(AUTH_DB_PATH)
         try:
@@ -3358,6 +3359,7 @@ async def auth_password_reset_request(request: Request):
                 (email,),
             )
             code = generate_password_reset_code()
+            reset_code_id = f"prc_{secrets.token_urlsafe(12)}"
             record = create_password_reset_code_record(code)
             created_at = now_dt.isoformat()
             expires_at = (now_dt + timedelta(seconds=PASSWORD_RESET_CODE_TTL_SECONDS)).isoformat()
@@ -3369,7 +3371,7 @@ async def auth_password_reset_request(request: Request):
                 VALUES(?, ?, ?, ?, ?, ?, ?, NULL, 0)
                 """,
                 (
-                    f"prc_{secrets.token_urlsafe(12)}",
+                    reset_code_id,
                     user["id"],
                     email,
                     record["code_hash"],
@@ -3382,11 +3384,23 @@ async def auth_password_reset_request(request: Request):
         finally:
             conn.close()
 
-    send_password_reset_email(
-        to_email=email,
-        code=code,
-        expires_in_minutes=PASSWORD_RESET_CODE_TTL_SECONDS // 60,
-    )
+    try:
+        await run_in_threadpool(
+            send_password_reset_email,
+            to_email=email,
+            code=code,
+            expires_in_minutes=PASSWORD_RESET_CODE_TTL_SECONDS // 60,
+        )
+    except Exception:
+        with db_lock:
+            conn = get_db_connection(AUTH_DB_PATH)
+            try:
+                conn.execute("DELETE FROM password_reset_codes WHERE id = ?", (reset_code_id,))
+                conn.commit()
+            finally:
+                conn.close()
+        raise
+
     return JSONResponse(content={"ok": True})
 
 
