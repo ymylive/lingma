@@ -101,6 +101,23 @@ def ssh_exec(ssh, cmd, check=True):
     return out
 
 
+def ssh_exec_to_log(ssh, cmd, log_path, check=True):
+    print(f"  $ {cmd[:120]}{'...' if len(cmd) > 120 else ''} > {log_path}")
+    wrapped_cmd = f"{cmd} > {log_path} 2>&1"
+    _, stdout, stderr = ssh.exec_command(wrapped_cmd, timeout=None)
+    rc = stdout.channel.recv_exit_status()
+    err = stderr.read().decode().strip()
+    log_output = ssh_exec(ssh, f"tail -n 60 {log_path}", check=False)
+    if log_output:
+        for line in log_output.split("\n"):
+            print(f"    {line}")
+    if check and rc != 0:
+        if err:
+            print(f"  [STDERR] {err}")
+        raise RuntimeError(f"Command failed (rc={rc}): {cmd}")
+    return log_output
+
+
 def build_remote_env_updates():
     return get_docker_compose_env_updates()
 
@@ -187,11 +204,12 @@ def main():
     print("\n[5/6] Building Docker containers (this may take a few minutes)...")
     sync_remote_env(ssh, remote_env_updates)
 
-    out = ssh_exec(ssh, f"cd {REMOTE_DIR}/deploy && docker-compose build --no-cache 2>&1")
-    for line in out.split("\n")[-15:]:
-        print(f"    {line}")
+    build_log = f"{REMOTE_DIR}/deploy-build.log"
+    up_log = f"{REMOTE_DIR}/deploy-up.log"
 
-    out = ssh_exec(ssh, f"cd {REMOTE_DIR}/deploy && docker-compose up -d 2>&1")
+    out = ssh_exec_to_log(ssh, f"cd {REMOTE_DIR}/deploy && docker-compose build --no-cache", build_log)
+
+    out = ssh_exec_to_log(ssh, f"cd {REMOTE_DIR}/deploy && docker-compose up -d", up_log)
     print(f"  {out}")
 
     print("\n[6/6] Pruning old images...")
