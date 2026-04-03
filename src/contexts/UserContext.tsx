@@ -133,18 +133,24 @@ function getProgressStorageKey(userId: string) {
 }
 
 function readStoredProgress(key: string) {
-  const raw = localStorage.getItem(key);
-  if (!raw) return null;
-
   try {
-    return normalizeProgress(JSON.parse(raw));
-  } catch {
+    const raw = localStorage.getItem(key);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return null;
+    return normalizeProgress(parsed);
+  } catch (error) {
+    console.error('Failed to read stored progress:', error);
     return null;
   }
 }
 
 function persistProgress(userId: string, progress: UserProgress) {
-  localStorage.setItem(getProgressStorageKey(userId), JSON.stringify(progress));
+  try {
+    localStorage.setItem(getProgressStorageKey(userId), JSON.stringify(progress));
+  } catch (error) {
+    console.error('Failed to persist progress:', error);
+  }
 }
 
 function applyDailyStreak(progress: UserProgress) {

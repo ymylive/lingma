@@ -8,6 +8,7 @@ import Footer from './components/Footer';
 import LocalizationBridge from './components/LocalizationBridge';
 import ProtectedRoute from './components/ProtectedRoute';
 import PixelCat from './components/PixelCat';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { motion } from 'framer-motion';
 import useLowMotionMode from './hooks/useLowMotionMode';
 
@@ -52,7 +53,11 @@ function RoutedPage({
   routeKey: string;
   protectedPage?: boolean;
 }) {
-  const content = <Suspense fallback={<RouteLoadingFallback />}>{children}</Suspense>;
+  const content = (
+    <ErrorBoundary>
+      <Suspense fallback={<RouteLoadingFallback />}>{children}</Suspense>
+    </ErrorBoundary>
+  );
 
   return (
     <PageWrapper routeKey={routeKey}>
@@ -100,10 +105,11 @@ function App() {
   const lowMotionMode = useLowMotionMode();
 
   return (
-    <ThemeProvider>
-      <I18nProvider>
-        <UserProvider>
-          <Router>
+    <ErrorBoundary>
+      <ThemeProvider>
+        <I18nProvider>
+          <UserProvider>
+            <Router>
             <LocalizationBridge />
             {/* Global Aurora Background - Soft, Flowing, High-End */}
             <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none bg-slate-50 dark:bg-slate-950 transition-colors duration-500">
@@ -171,6 +177,7 @@ function App() {
         </UserProvider>
       </I18nProvider>
     </ThemeProvider>
+    </ErrorBoundary>
   );
 }
 
