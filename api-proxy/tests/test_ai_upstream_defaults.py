@@ -5,6 +5,7 @@ import sys
 from pathlib import Path
 
 import pytest
+from fastapi import HTTPException
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -44,6 +45,57 @@ def test_api_proxy_defaults_to_cornna_responses_endpoint(api_module):
         api_module.resolve_responses_upstream_url(),
         api_module.AI_PROTOCOL_RESPONSES,
     ) is False
+
+
+def test_api_proxy_uses_compat_mode_for_v1_endpoint(monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
+    auth_db = tmp_path / "auth.db"
+    mindmap_db = tmp_path / "mindmaps.db"
+    monkeypatch.setenv("AUTH_DB_PATH", str(auth_db))
+    monkeypatch.setenv("MINDMAP_DB_PATH", str(mindmap_db))
+    monkeypatch.setenv("AI_API_URL", "https://api.cornna.xyz/v1")
+    module_name = f"api_proxy_main_compat_endpoint_{auth_db.stem}_{len(sys.modules)}"
+    api_module = load_module(module_name, API_MODULE_PATH)
+    try:
+        assert api_module.detect_protocol_from_url(api_module.AI_BASE_URL) == "compat"
+        assert api_module.resolve_responses_upstream_url() == "https://api.cornna.xyz/v1/chat/completions"
+    finally:
+        sys.modules.pop(module_name, None)
+
+
+def test_read_upstream_json_forces_streaming(monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
+    auth_db = tmp_path / "auth.db"
+    mindmap_db = tmp_path / "mindmaps.db"
+    monkeypatch.setenv("AUTH_DB_PATH", str(auth_db))
+    monkeypatch.setenv("MINDMAP_DB_PATH", str(mindmap_db))
+    module_name = f"api_proxy_main_force_stream_{auth_db.stem}_{len(sys.modules)}"
+    api_module = load_module(module_name, API_MODULE_PATH)
+
+    captured: dict[str, object] = {}
+
+    class _DummySession:
+        def close(self):
+            return None
+
+    class _DummyResponse:
+        headers = {"Content-Type": "text/event-stream"}
+        content = (
+            b'data: {"type":"response.completed","response":{"id":"resp_test","model":"gpt-5.4","output_text":"ok","output":[{"content":[{"text":"ok"}]}]}}\n\n'
+        )
+
+        def close(self):
+            return None
+
+    def fake_perform(payload: dict):
+        captured.update(payload)
+        return _DummySession(), _DummyResponse(), api_module.AI_PROTOCOL_RESPONSES
+
+    monkeypatch.setattr(api_module, "perform_upstream_responses_request", fake_perform)
+    try:
+        data = api_module.read_upstream_responses_json({"model": "gpt-5.4", "stream": False})
+        assert captured["stream"] is True
+        assert data["output_text"] == "ok"
+    finally:
+        sys.modules.pop(module_name, None)
 
 
 def test_deploy_runtime_defaults_match_api_proxy():
