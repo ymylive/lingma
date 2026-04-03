@@ -54,3 +54,24 @@ def test_deploy_runtime_defaults_match_api_proxy():
         assert runtime_config.DEFAULT_AI_MODEL == "gpt-5.4"
     finally:
         sys.modules.pop(module_name, None)
+
+
+def test_deploy_runtime_syncs_reasoning_env(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setenv("LINGMA_JUDGE_INTERNAL_TOKEN", "judge-token")
+    monkeypatch.setenv("LINGMA_AI_API_KEY", "test-key")
+    monkeypatch.setenv("LINGMA_AI_API_URL", "https://api.cornna.xyz/v1")
+    monkeypatch.setenv("LINGMA_AI_MODEL", "gpt-5.4")
+    monkeypatch.setenv("LINGMA_AI_REASONING_EFFORT", "high")
+    monkeypatch.setenv("LINGMA_ENABLE_THINKING", "true")
+
+    module_name = f"deploy_runtime_config_reasoning_sync_{len(sys.modules)}"
+    runtime_config = load_module(module_name, RUNTIME_CONFIG_PATH)
+    try:
+        updates = runtime_config.get_docker_compose_env_updates()
+        assert updates["AI_API_KEY"] == "test-key"
+        assert updates["AI_API_URL"] == "https://api.cornna.xyz/v1"
+        assert updates["AI_MODEL"] == "gpt-5.4"
+        assert updates["AI_REASONING_EFFORT"] == "high"
+        assert updates["ENABLE_THINKING"] == "true"
+    finally:
+        sys.modules.pop(module_name, None)

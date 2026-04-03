@@ -9,6 +9,8 @@ DEFAULT_FRONTEND_BIND_HOST = "0.0.0.0"
 DEFAULT_FRONTEND_BIND_PORT = "18081"
 DEFAULT_AI_API_URL = "https://api.cornna.xyz/responses"
 DEFAULT_AI_MODEL = "gpt-5.4"
+DEFAULT_AI_REASONING_EFFORT = ""
+DEFAULT_ENABLE_THINKING = "false"
 DEFAULT_JUDGE_BASE_URL = "http://127.0.0.1:3002"
 
 
@@ -32,13 +34,20 @@ def get_vps_config() -> Dict[str, str]:
 
 
 def get_ai_proxy_config() -> Dict[str, str]:
-    return {
+    config = {
         "AI_API_KEY": read_required_env("LINGMA_AI_API_KEY"),
         "AI_API_URL": os.getenv("LINGMA_AI_API_URL", DEFAULT_AI_API_URL).strip() or DEFAULT_AI_API_URL,
         "AI_MODEL": os.getenv("LINGMA_AI_MODEL", DEFAULT_AI_MODEL).strip() or DEFAULT_AI_MODEL,
         "JUDGE_BASE_URL": os.getenv("LINGMA_JUDGE_BASE_URL", DEFAULT_JUDGE_BASE_URL).strip() or DEFAULT_JUDGE_BASE_URL,
         "JUDGE_INTERNAL_TOKEN": read_required_env("LINGMA_JUDGE_INTERNAL_TOKEN"),
     }
+    ai_reasoning_effort = read_optional_env("LINGMA_AI_REASONING_EFFORT")
+    if ai_reasoning_effort:
+        config["AI_REASONING_EFFORT"] = ai_reasoning_effort
+    enable_thinking = read_optional_env("LINGMA_ENABLE_THINKING")
+    if enable_thinking:
+        config["ENABLE_THINKING"] = enable_thinking
+    return config
 
 
 def get_docker_compose_env_updates() -> Dict[str, str]:
@@ -53,6 +62,12 @@ def get_docker_compose_env_updates() -> Dict[str, str]:
         updates["AI_API_KEY"] = ai_key
         updates["AI_API_URL"] = read_optional_env("LINGMA_AI_API_URL") or DEFAULT_AI_API_URL
         updates["AI_MODEL"] = read_optional_env("LINGMA_AI_MODEL") or DEFAULT_AI_MODEL
+        ai_reasoning_effort = read_optional_env("LINGMA_AI_REASONING_EFFORT")
+        if ai_reasoning_effort:
+            updates["AI_REASONING_EFFORT"] = ai_reasoning_effort
+        enable_thinking = read_optional_env("LINGMA_ENABLE_THINKING")
+        if enable_thinking:
+            updates["ENABLE_THINKING"] = enable_thinking
 
     return updates
 
