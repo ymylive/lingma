@@ -55,30 +55,46 @@ const createNode = (title = '新节点'): MindMapNode => ({
 });
 
 const buildPersonalContext = (progress: ReturnType<typeof useUser>['progress']) => {
-  const categoryCount = progress.learningHistory.reduce<Record<string, number>>((acc, item) => {
-    acc[item.category] = (acc[item.category] || 0) + 1;
-    return acc;
-  }, {});
-  const topCategories = Object.entries(categoryCount)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 3)
-    .map(([name]) => name);
+  try {
+    if (!progress || !Array.isArray(progress.learningHistory)) {
+      return '';
+    }
 
-  return [
-    `已完成课程：${progress.completedLessons.length} 节`,
-    `已完成练习：${progress.completedExercises.length} 题`,
-    `连续学习：${progress.streak} 天`,
-    topCategories.length ? `近期关注：${topCategories.join('、')}` : '',
-  ]
-    .filter(Boolean)
-    .join('\n');
+    const categoryCount = progress.learningHistory.reduce<Record<string, number>>((acc, item) => {
+      if (item && item.category) {
+        acc[item.category] = (acc[item.category] || 0) + 1;
+      }
+      return acc;
+    }, {});
+
+    const topCategories = Object.entries(categoryCount)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3)
+      .map(([name]) => name);
+
+    return [
+      `已完成课程：${progress.completedLessons?.length || 0} 节`,
+      `已完成练习：${progress.completedExercises?.length || 0} 题`,
+      `连续学习：${progress.streak || 0} 天`,
+      topCategories.length ? `近期关注：${topCategories.join('、')}` : '',
+    ]
+      .filter(Boolean)
+      .join('\n');
+  } catch (error) {
+    console.error('Error building personal context:', error);
+    return '';
+  }
 };
 const findNodeById = (nodes: MindMapNode[], id: string, parentId?: string): SelectedNode | null => {
+  if (!Array.isArray(nodes)) return null;
   for (let i = 0; i < nodes.length; i += 1) {
     const node = nodes[i];
+    if (!node) continue;
     if (node.id === id) return { node, parentId, index: i };
-    const child = findNodeById(node.children, id, node.id);
-    if (child) return child;
+    if (Array.isArray(node.children)) {
+      const child = findNodeById(node.children, id, node.id);
+      if (child) return child;
+    }
   }
   return null;
 };
@@ -88,13 +104,15 @@ const updateNodeById = (
   id: string,
   updater: (node: MindMapNode) => MindMapNode
 ): MindMapNode[] => {
+  if (!Array.isArray(nodes)) return [];
   let changed = false;
   const next = nodes.map((node) => {
+    if (!node) return node;
     if (node.id === id) {
       changed = true;
       return updater(node);
     }
-    if (node.children.length) {
+    if (Array.isArray(node.children) && node.children.length) {
       const updatedChildren = updateNodeById(node.children, id, updater);
       if (updatedChildren !== node.children) {
         changed = true;
@@ -107,13 +125,15 @@ const updateNodeById = (
 };
 
 const addSiblingById = (nodes: MindMapNode[], id: string, sibling: MindMapNode): MindMapNode[] => {
+  if (!Array.isArray(nodes)) return [];
   let changed = false;
   const next = nodes.flatMap((node) => {
+    if (!node) return [];
     if (node.id === id) {
       changed = true;
       return [node, sibling];
     }
-    if (node.children.length) {
+    if (Array.isArray(node.children) && node.children.length) {
       const updatedChildren = addSiblingById(node.children, id, sibling);
       if (updatedChildren !== node.children) {
         changed = true;
@@ -126,9 +146,11 @@ const addSiblingById = (nodes: MindMapNode[], id: string, sibling: MindMapNode):
 };
 
 const deleteNodeById = (nodes: MindMapNode[], id: string): MindMapNode[] => {
+  if (!Array.isArray(nodes)) return [];
   let changed = false;
   const next = nodes
     .filter((node) => {
+      if (!node) return false;
       if (node.id === id) {
         changed = true;
         return false;
@@ -136,7 +158,8 @@ const deleteNodeById = (nodes: MindMapNode[], id: string): MindMapNode[] => {
       return true;
     })
     .map((node) => {
-      if (node.children.length) {
+      if (!node) return node;
+      if (Array.isArray(node.children) && node.children.length) {
         const updatedChildren = deleteNodeById(node.children, id);
         if (updatedChildren !== node.children) {
           changed = true;
@@ -177,7 +200,10 @@ const nodesToMarkdown = (nodes: MindMapNode[], depth = 0): string[] => {
     const prefix = '  '.repeat(depth);
     lines.push(`${prefix}- ${node.title}`);
     if (node.note) {
-      lines.push(`${prefix}  > ${node.note}`);
+      const noteLines = node.note.split('\n').map((line) => line.trimEnd()).filter(Boolean);
+      noteLines.forEach((line) => {
+        lines.push(`${prefix}  > ${line}`);
+      });
     }
     if (node.children.length) {
       lines.push(...nodesToMarkdown(node.children, depth + 1));
@@ -481,6 +507,7 @@ export default function MindMap() {
   const mindMapPanelRef = useRef<HTMLDivElement | null>(null);
   const [pan, setPan] = useState({ x: 24, y: 24 });
   const [isPanning, setIsPanning] = useState(false);
+  const [isWheelPanning, setIsWheelPanning] = useState(false);
   const [isSpacePressed, setIsSpacePressed] = useState(false);
   const isSpacePressedRef = useRef(false);
   const scaleRef = useRef(1);
@@ -492,6 +519,7 @@ export default function MindMap() {
     originX: 24,
     originY: 24,
   });
+  const wheelPanTimeoutRef = useRef<number | null>(null);
 
   const containerClass =
     theme === 'dark'
@@ -505,13 +533,20 @@ export default function MindMap() {
       const candidateKeys = userId ? [storageKey, `${STORAGE_PREFIX}_guest`] : [storageKey];
 
       const stored = candidateKeys
-        .map((key) => localStorage.getItem(key))
+        .map((key) => {
+          try {
+            return localStorage.getItem(key);
+          } catch {
+            return null;
+          }
+        })
         .find((value) => Boolean(value));
 
       if (!stored) return [];
       try {
         const parsed = JSON.parse(stored) as MindMapData[];
-        return Array.isArray(parsed) ? parsed : [];
+        if (!Array.isArray(parsed)) return [];
+        return parsed.filter((item) => item && typeof item === 'object' && item.id && Array.isArray(item.nodes));
       } catch {
         return [];
       }
@@ -1178,6 +1213,14 @@ export default function MindMap() {
   const handleCanvasWheel = (event: ReactWheelEvent<HTMLDivElement>) => {
     if (!activeMap) return;
     event.preventDefault();
+    if (wheelPanTimeoutRef.current !== null) {
+      window.clearTimeout(wheelPanTimeoutRef.current);
+    }
+    setIsWheelPanning(true);
+    wheelPanTimeoutRef.current = window.setTimeout(() => {
+      setIsWheelPanning(false);
+      wheelPanTimeoutRef.current = null;
+    }, 120);
 
     if (event.ctrlKey || event.metaKey) {
       const currentScale = scaleRef.current;
@@ -1221,7 +1264,7 @@ export default function MindMap() {
   const treeScaleStyle = {
     transform: `translate3d(${pan.x}px, ${pan.y}px, 0) scale(${scale})`,
     transformOrigin: 'top left',
-    transition: isPanning ? 'none' : 'transform 120ms ease-out',
+    transition: isPanning || isWheelPanning ? 'none' : 'transform 120ms ease-out',
   } as const;
 
   const renderMindMapPanel = (fullscreen: boolean) => (
@@ -1372,7 +1415,7 @@ export default function MindMap() {
           </motion.div>
         )}
       </AnimatePresence>
-      <div className="mx-auto max-w-7xl px-4 pb-12 pt-22 sm:px-6 sm:pb-14 sm:pt-26">
+      <div className="page-safe-top mx-auto max-w-7xl px-4 pb-12 sm:px-6 sm:pb-14">
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
@@ -1867,7 +1910,7 @@ function TreeNode({
       style={depthStyle}
     >
       <div className="font-medium text-slate-900 dark:text-white text-sm">{node.title}</div>
-      {node.note && <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">{node.note}</div>}
+      {node.note && <div className="mt-1 whitespace-pre-line text-xs text-slate-500 dark:text-slate-400">{node.note}</div>}
     </button>
   );
 

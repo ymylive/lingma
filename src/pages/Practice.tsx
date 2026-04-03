@@ -409,7 +409,7 @@ export default function Practice() {
   };
 
   return (
-    <div className="min-h-screen py-8">
+    <div className="page-safe-top min-h-screen pb-8">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="mb-8 grid gap-4 lg:grid-cols-[1.4fr_0.9fr]">
           <div className="rounded-2xl border border-slate-200 bg-[radial-gradient(circle_at_top_left,_rgba(37,99,235,0.16),_transparent_45%),linear-gradient(135deg,_rgba(255,255,255,0.96),_rgba(241,245,249,0.86))] p-5 shadow-sm dark:border-slate-700 dark:bg-[radial-gradient(circle_at_top_left,_rgba(59,130,246,0.2),_transparent_42%),linear-gradient(135deg,_rgba(15,23,42,0.98),_rgba(30,41,59,0.94))] sm:p-6">

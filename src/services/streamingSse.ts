@@ -24,12 +24,20 @@ export async function readStreamingSse<T>(
     if (!rawText) {
       throw new Error(`Streaming request failed: ${response.status}`);
     }
+
+    let payload: { detail?: string; error?: string } | null = null;
     try {
-      const payload = JSON.parse(rawText) as { detail?: string; error?: string };
-      throw new Error(payload.detail || payload.error || rawText);
+      payload = JSON.parse(rawText) as { detail?: string; error?: string };
     } catch {
       throw new Error(rawText);
     }
+
+    const detail = payload.detail || payload.error;
+    if (detail) {
+      throw new Error(detail);
+    }
+
+    throw new Error(rawText);
   }
 
   if (!response.body) {

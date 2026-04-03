@@ -49,6 +49,16 @@
 }
 
 @layer utilities {
+  .page-safe-top {
+    padding-top: calc(var(--app-header-height, 64px) + 1rem);
+  }
+
+  @media (min-width: 640px) {
+    .page-safe-top {
+      padding-top: calc(var(--app-header-height, 64px) + 1.5rem);
+    }
+  }
+
   /* 液态玻璃 (Liquid Glass) - Glossy & Wet */
   .glass {
     @apply bg-white/40 dark:bg-slate-950/60 backdrop-blur-xl border border-white/60 dark:border-white/10;
@@ -588,4 +598,3 @@
     padding-left: 0.7rem;
   }
 }
-

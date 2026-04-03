@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { normalizeSkillLevel, type UserSkillLevel } from '../utils/userPersonalization';
 import { normalizeTargetLanguage, type TargetLanguage } from '../utils/targetLanguages';
+import { clearVibeCache } from '../services/vibeCodingService';
 
 export interface User {
   id: string;
@@ -54,6 +55,8 @@ interface UserContextType {
   isAuthLoading: boolean;
   login: (email: string, password: string) => Promise<boolean>;
   register: (username: string, email: string, password: string, skillLevel: UserSkillLevel, targetLanguage: TargetLanguage) => Promise<boolean>;
+  requestPasswordReset: (email: string) => Promise<boolean>;
+  confirmPasswordReset: (email: string, code: string, newPassword: string) => Promise<boolean>;
   updatePreferences: (updates: { skillLevel?: UserSkillLevel; targetLanguage?: TargetLanguage }) => Promise<boolean>;
   logout: () => void;
   updateProgress: (updates: Partial<UserProgress>) => void;
@@ -130,18 +133,24 @@ function getProgressStorageKey(userId: string) {
 }
 
 function readStoredProgress(key: string) {
-  const raw = localStorage.getItem(key);
-  if (!raw) return null;
-
   try {
-    return normalizeProgress(JSON.parse(raw));
-  } catch {
+    const raw = localStorage.getItem(key);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return null;
+    return normalizeProgress(parsed);
+  } catch (error) {
+    console.error('Failed to read stored progress:', error);
     return null;
   }
 }
 
 function persistProgress(userId: string, progress: UserProgress) {
-  localStorage.setItem(getProgressStorageKey(userId), JSON.stringify(progress));
+  try {
+    localStorage.setItem(getProgressStorageKey(userId), JSON.stringify(progress));
+  } catch (error) {
+    console.error('Failed to persist progress:', error);
+  }
 }
 
 function applyDailyStreak(progress: UserProgress) {
@@ -329,6 +338,36 @@ async function updateProfileRequest(updates: { skillLevel?: UserSkillLevel; targ
   };
 }
 
+async function requestPasswordResetRequest(email: string) {
+  const response = await fetch(`${AUTH_BASE_URL}/password-reset/request`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email }),
+  });
+
+  if (!response.ok) {
+    throw new Error(await readAuthError(response));
+  }
+
+  return true;
+}
+
+async function confirmPasswordResetRequest(email: string, code: string, newPassword: string) {
+  const response = await fetch(`${AUTH_BASE_URL}/password-reset/confirm`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, code, newPassword }),
+  });
+
+  if (!response.ok) {
+    throw new Error(await readAuthError(response));
+  }
+
+  return true;
+}
+
 async function logoutRequest() {
   const response = await fetch(`${AUTH_BASE_URL}/logout`, {
     method: 'POST',
@@ -354,6 +393,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
         if (cancelled) return;
 
         clearLegacyAuthStorage();
+        clearVibeCache();
 
         if (!sessionUser) {
           setUser(null);
@@ -368,6 +408,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
       } catch (error) {
         console.error('Failed to restore auth session', error);
         if (!cancelled) {
+          clearVibeCache();
           setUser(null);
           setProgress({ ...defaultProgress });
         }
@@ -400,6 +441,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     }
 
     clearLegacyAuthStorage();
+    clearVibeCache();
     const nextProgress = applyDailyStreak(syncProgressSkillLevel(loadProgressForUser(nextUser.id), nextUser.skillLevel));
     setUser(nextUser);
     setProgress(nextProgress);
@@ -420,12 +462,18 @@ export function UserProvider({ children }: { children: ReactNode }) {
     }
 
     clearLegacyAuthStorage();
+    clearVibeCache();
     const nextProgress = applyDailyStreak(syncProgressSkillLevel({ ...defaultProgress }, nextUser.skillLevel));
     setUser(nextUser);
     setProgress(nextProgress);
     persistProgress(nextUser.id, nextProgress);
     return true;
   };
+
+  const requestPasswordReset = async (email: string) => requestPasswordResetRequest(email);
+
+  const confirmPasswordReset = async (email: string, code: string, newPassword: string) =>
+    confirmPasswordResetRequest(email, code, newPassword);
 
   const updatePreferences = async (updates: { skillLevel?: UserSkillLevel; targetLanguage?: TargetLanguage }) => {
     const nextUser = await updateProfileRequest(updates);
@@ -444,6 +492,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
       persistProgress(currentUser.id, progress);
     }
 
+    clearVibeCache();
     setUser(null);
     setProgress({ ...defaultProgress });
     clearLegacyAuthStorage();
@@ -530,6 +579,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
         isAuthLoading,
         login,
         register,
+        requestPasswordReset,
+        confirmPasswordReset,
         updatePreferences,
         logout,
         updateProgress,

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const messages = [
@@ -21,10 +21,26 @@ export default function PixelCat({ lowMotion = false }: PixelCatProps) {
   const [showMessage, setShowMessage] = useState(false);
   const [message, setMessage] = useState("");
   const [isSleeping, setIsSleeping] = useState(false);
+  const timeoutHandlesRef = useRef<Array<ReturnType<typeof setTimeout>>>([]);
 
   const [isBlinking, setIsBlinking] = useState(false);
   const sleeping = lowMotion ? false : isSleeping;
   const blinking = lowMotion ? false : isBlinking;
+
+  const clearAllTimeouts = () => {
+    timeoutHandlesRef.current.forEach(handle => {
+      clearTimeout(handle);
+    });
+    timeoutHandlesRef.current = [];
+  };
+
+  const scheduleTimeout = (callback: () => void, delay: number) => {
+    const handle = setTimeout(() => {
+      timeoutHandlesRef.current = timeoutHandlesRef.current.filter(currentHandle => currentHandle !== handle);
+      callback();
+    }, delay);
+    timeoutHandlesRef.current.push(handle);
+  };
 
   // Random behavior
   useEffect(() => {
@@ -38,7 +54,7 @@ export default function PixelCat({ lowMotion = false }: PixelCatProps) {
         // Show random message
         setMessage(messages[Math.floor(Math.random() * messages.length)]);
         setShowMessage(true);
-        setTimeout(() => setShowMessage(false), 3000);
+        scheduleTimeout(() => setShowMessage(false), 3000);
       }
     }, 5000);
 
@@ -46,21 +62,28 @@ export default function PixelCat({ lowMotion = false }: PixelCatProps) {
     const blinkInterval = setInterval(() => {
       if (!sleeping && Math.random() > 0.7) {
         setIsBlinking(true);
-        setTimeout(() => setIsBlinking(false), 150);
+        scheduleTimeout(() => setIsBlinking(false), 150);
       }
     }, 3000);
 
     return () => {
       clearInterval(interval);
       clearInterval(blinkInterval);
+      clearAllTimeouts();
     };
   }, [lowMotion, sleeping]);
+
+  useEffect(() => {
+    return () => {
+      clearAllTimeouts();
+    };
+  }, []);
 
   const handleClick = () => {
     setIsSleeping(false);
     setMessage(messages[Math.floor(Math.random() * messages.length)]);
     setShowMessage(true);
-    setTimeout(() => setShowMessage(false), 3000);
+    scheduleTimeout(() => setShowMessage(false), 3000);
   };
 
   return (
