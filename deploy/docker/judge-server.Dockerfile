@@ -1,6 +1,7 @@
 FROM node:18-bullseye
 
-RUN apt-get update -o Acquire::Retries=5 \
+RUN sed -i 's|deb.debian.org|mirrors.aliyun.com|g; s|security.debian.org|mirrors.aliyun.com|g' /etc/apt/sources.list \
+  && apt-get update -o Acquire::Retries=5 \
   && apt-get install -y --fix-missing --no-install-recommends \
     ca-certificates \
     gcc \
@@ -13,6 +14,7 @@ RUN apt-get update -o Acquire::Retries=5 \
 
 WORKDIR /app
 ENV NODE_ENV=production
+ENV npm_config_registry=https://registry.npmmirror.com
 RUN useradd --create-home --shell /usr/sbin/nologin judge
 
 COPY judge-server/package*.json ./
