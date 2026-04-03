@@ -188,6 +188,7 @@ function toStringList(value: unknown): string[] {
 }
 
 function buildExerciseDescription(payload: Record<string, unknown>): string {
+  const descriptionObject = isRecord(payload.description) ? payload.description : null;
   const direct = firstNonEmptyString(
     payload.description,
     payload.problem_description,
@@ -203,11 +204,34 @@ function buildExerciseDescription(payload: Record<string, unknown>): string {
     payload.problemDescription,
     payload.statement,
     payload.problem_statement,
+    descriptionObject?.problem,
+    descriptionObject?.problemDescription,
+    descriptionObject?.summary,
   );
-  const inputFormat = firstNonEmptyString(payload.input_format, payload.inputFormat);
-  const outputFormat = firstNonEmptyString(payload.output_format, payload.outputFormat);
-  const dataRange = firstNonEmptyString(payload.data_range, payload.dataRange, payload.constraints_text);
-  const sampleExplanation = firstNonEmptyString(payload.sample_explanation, payload.sampleExplanation);
+  const inputFormat = firstNonEmptyString(
+    payload.input_format,
+    payload.inputFormat,
+    descriptionObject?.input,
+    descriptionObject?.inputFormat,
+  );
+  const outputFormat = firstNonEmptyString(
+    payload.output_format,
+    payload.outputFormat,
+    descriptionObject?.output,
+    descriptionObject?.outputFormat,
+  );
+  const dataRange = firstNonEmptyString(
+    payload.data_range,
+    payload.dataRange,
+    payload.constraints_text,
+    descriptionObject?.constraints,
+    descriptionObject?.dataRange,
+  );
+  const sampleExplanation = firstNonEmptyString(
+    payload.sample_explanation,
+    payload.sampleExplanation,
+    descriptionObject?.sampleExplanation,
+  );
 
   if (problemDescription) sections.push(`${pickRuntimeText('【题目描述】', '[Problem Description]')}\n${problemDescription}`);
   if (inputFormat) sections.push(`${pickRuntimeText('【输入格式】', '[Input Format]')}\n${inputFormat}`);
