@@ -1,5 +1,6 @@
 // AI出题服务 - 支持多种AI API
 
+import { readStreamingSse } from './streamingSse';
 import { isEnglishRuntimeLocale, localizeRuntimeText, pickRuntimeText } from '../utils/runtimeLocale';
 
 export interface GeneratedExercise {
@@ -747,10 +748,10 @@ async function callAI(prompt: string, onProgress?: (text: string) => void): Prom
     },
     { role: 'user', content: prompt }
   ];
-  
+
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 300000);
-  
+
   try {
     const response = await fetch(apiUrl, {
       method: 'POST',
@@ -761,75 +762,12 @@ async function callAI(prompt: string, onProgress?: (text: string) => void): Prom
     });
     clearTimeout(timeoutId);
 
-    if (!response.ok) {
-      throw new Error(pickRuntimeText(`AI API 调用失败: ${response.status}`, `AI API request failed: ${response.status}`));
-    }
-
-    // 优先使用流式接口，避免高推理请求在上游长时间阻塞后直接超时
-    if (response.body) {
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let fullContent = '';
-      let pending = '';
-
-      const flushLine = (rawLine: string) => {
-        const line = rawLine.trim();
-        if (!line.startsWith('data: ')) return;
-
-        const data = line.slice(6).trim();
-        if (!data || data === '[DONE]') return;
-
-        const json = JSON.parse(data);
-        const streamError = json.error;
-        if (streamError) {
-          const message =
-            typeof streamError === 'string'
-              ? streamError
-              : streamError.message || pickRuntimeText('AI 流式请求失败', 'AI streaming request failed');
-          throw new Error(message);
-        }
-
-        const content = json.choices?.[0]?.delta?.content || '';
-        if (content) {
-          fullContent += content;
-          onProgress?.(fullContent);
-        }
-      };
-
-      while (true) {
-        const { done, value } = await reader.read();
-        pending += decoder.decode(value || new Uint8Array(), { stream: !done });
-        const lines = pending.split('\n');
-        pending = lines.pop() || '';
-
-        for (const line of lines) {
-          flushLine(line);
-        }
-
-        if (done) break;
-      }
-
-      if (pending.trim()) {
-        flushLine(pending);
-      }
-
-      if (!fullContent) {
-        throw new Error(pickRuntimeText('AI 返回内容为空', 'AI returned empty content'));
-      }
-
-      return fullContent;
-    }
-
-    // 非流式处理
-    const data = await response.json();
-    let content = '';
-    if (data.choices?.[0]?.message) {
-      content = data.choices[0].message.content || '';
-    }
-    if (!content) {
+    const text = await readStreamingSse<{ text: string }>(response, onProgress);
+    if (!text || typeof text.text !== 'string' || !text.text.trim()) {
       throw new Error(pickRuntimeText('AI 返回内容为空', 'AI returned empty content'));
     }
-    return content;
+
+    return text.text;
   } catch (error: unknown) {
     clearTimeout(timeoutId);
     if (error instanceof Error && error.name === 'AbortError') {
