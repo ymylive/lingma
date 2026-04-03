@@ -1,34 +1,23 @@
 import '@testing-library/jest-dom/vitest';
-import { cleanup, render, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import Header from './Header';
 
+const useUserMock = vi.fn();
+const useThemeMock = vi.fn();
+const useI18nMock = vi.fn();
+
 vi.mock('../contexts/UserContext', () => ({
-  useUser: () => ({
-    user: null,
-    isLoggedIn: false,
-    isAuthLoading: false,
-    progress: { streak: 0, completedLessons: [], completedExercises: [] },
-    logout: vi.fn(),
-  }),
+  useUser: () => useUserMock(),
 }));
 
 vi.mock('../contexts/ThemeContext', () => ({
-  useTheme: () => ({
-    theme: 'dark',
-    toggleTheme: vi.fn(),
-    isAuto: false,
-  }),
+  useTheme: () => useThemeMock(),
 }));
 
 vi.mock('../contexts/I18nContext', () => ({
-  useI18n: () => ({
-    isEnglish: false,
-    locale: 'zh-CN',
-    setLocale: vi.fn(),
-    t: (value: string) => value,
-  }),
+  useI18n: () => useI18nMock(),
 }));
 
 vi.mock('framer-motion', () => {
@@ -50,6 +39,29 @@ vi.mock('framer-motion', () => {
 
 describe('Header layout offset', () => {
   beforeEach(() => {
+    useUserMock.mockReset();
+    useThemeMock.mockReset();
+    useI18nMock.mockReset();
+
+    useUserMock.mockReturnValue({
+      user: null,
+      isLoggedIn: false,
+      isAuthLoading: false,
+      progress: { streak: 0, completedLessons: [], completedExercises: [] },
+      logout: vi.fn(),
+    });
+    useThemeMock.mockReturnValue({
+      theme: 'dark',
+      toggleTheme: vi.fn(),
+      isAuto: false,
+    });
+    useI18nMock.mockReturnValue({
+      isEnglish: false,
+      locale: 'zh-CN',
+      setLocale: vi.fn(),
+      t: (value: string) => value,
+    });
+
     class ResizeObserverMock {
       private callback: ResizeObserverCallback;
 
@@ -88,5 +100,57 @@ describe('Header layout offset', () => {
     await waitFor(() => {
       expect(document.documentElement.style.getPropertyValue('--app-header-height')).toBe('88px');
     });
+  });
+
+  it('shows auth-loading indicator while auth is resolving', () => {
+    useUserMock.mockReturnValue({
+      user: null,
+      isLoggedIn: false,
+      isAuthLoading: true,
+      progress: { streak: 0, completedLessons: [], completedExercises: [] },
+      logout: vi.fn(),
+    });
+
+    render(
+      <MemoryRouter>
+        <Header />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText('验证中...')).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: '登录' })).not.toBeInTheDocument();
+  });
+
+  it('shows auth call-to-action when logged out', () => {
+    render(
+      <MemoryRouter>
+        <Header />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByRole('link', { name: '登录' })).toBeInTheDocument();
+  });
+
+  it('opens user dropdown for logged-in users and triggers logout action', () => {
+    const logout = vi.fn();
+    useUserMock.mockReturnValue({
+      user: { username: 'Alice', email: 'alice@example.com' },
+      isLoggedIn: true,
+      isAuthLoading: false,
+      progress: { streak: 7, completedLessons: ['l1', 'l2'], completedExercises: ['e1'] },
+      logout,
+    });
+
+    render(
+      <MemoryRouter>
+        <Header />
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /Alice/i }));
+
+    expect(screen.getByRole('link', { name: /学习中心/ })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /退出登录/ }));
+    expect(logout).toHaveBeenCalledTimes(1);
   });
 });

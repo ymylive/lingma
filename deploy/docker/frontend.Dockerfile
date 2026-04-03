@@ -1,6 +1,9 @@
 FROM node:20-alpine AS build
 WORKDIR /app
 
+ARG VITE_ENABLE_REMOTE_MINDMAP_SYNC=false
+ENV VITE_ENABLE_REMOTE_MINDMAP_SYNC=${VITE_ENABLE_REMOTE_MINDMAP_SYNC}
+
 COPY package.json package-lock.json ./
 RUN npm ci
 

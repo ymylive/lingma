@@ -21,8 +21,8 @@ scp -r api-proxy/ root@your-server:/var/www/lingma/
 
 ```bash
 export AI_API_KEY="your-api-key"
-export AI_API_URL="https://api.aabao.top/v1/chat/completions"
-export AI_MODEL="deepseek-v3.2-exp-thinking"
+export AI_API_URL="https://api.cornna.xyz/responses"
+export AI_MODEL="gpt-5.4"
 ```
 
 ### 密码找回邮件配置

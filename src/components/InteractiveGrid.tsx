@@ -123,6 +123,8 @@ export default function InteractiveGrid() {
       }
     };
 
+    let animationFrameId: number;
+
     const animate = () => {
       ctx.clearRect(0, 0, width, height);
       
@@ -177,7 +179,7 @@ export default function InteractiveGrid() {
         }
       }
 
-      requestAnimationFrame(animate);
+      animationFrameId = requestAnimationFrame(animate);
     };
 
     const handleResize = () => {
@@ -200,6 +202,7 @@ export default function InteractiveGrid() {
     animate();
 
     return () => {
+      cancelAnimationFrame(animationFrameId);
       window.removeEventListener('resize', handleResize);
       window.removeEventListener('mousemove', handleMouseMove);
     };

@@ -6,7 +6,7 @@ if "%AI_API_KEY%"=="" if "%LINGMA_AI_API_KEY%"=="" (
   set AI_API_KEY=%LINGMA_AI_API_KEY%
 )
 if "%AI_BASE_URL%"=="" if not "%LINGMA_AI_API_URL%"=="" set AI_BASE_URL=%LINGMA_AI_API_URL%
-if "%AI_BASE_URL%"=="" set AI_BASE_URL=https://gmn.chuangzuoli.com/v1/responses
+if "%AI_BASE_URL%"=="" set AI_BASE_URL=https://api.cornna.xyz/responses
 if "%AI_MODEL%"=="" if not "%LINGMA_AI_MODEL%"=="" set AI_MODEL=%LINGMA_AI_MODEL%
 if "%AI_MODEL%"=="" set AI_MODEL=gpt-5.4
 if "%AI_SITE_URL%"=="" set AI_SITE_URL=http://127.0.0.1:5173
