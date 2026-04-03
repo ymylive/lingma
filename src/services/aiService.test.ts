@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+  generateCodingExercise,
   normalizeGeneratedExercisePayload,
   normalizeGeneratedFillBlankPayload,
 } from './aiService';
@@ -85,6 +86,56 @@ describe('normalizeGeneratedExercisePayload', () => {
         testCases: [{ input: '1', description: '只有输入' }],
       }),
     ).toThrow(/测试用例|test cases/);
+  });
+});
+
+describe('streamed AI exercise generation', () => {
+  beforeEach(() => {
+    const storage = new Map<string, string>();
+    vi.stubGlobal('localStorage', {
+      getItem: vi.fn((key: string) => storage.get(key) ?? null),
+      setItem: vi.fn((key: string, value: string) => {
+        storage.set(key, value);
+      }),
+      removeItem: vi.fn((key: string) => {
+        storage.delete(key);
+      }),
+      clear: vi.fn(() => {
+        storage.clear();
+      }),
+    });
+    vi.stubGlobal('fetch', vi.fn(async () => {
+      const encoder = new TextEncoder();
+      const stream = new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.enqueue(encoder.encode('data: {"type":"preview","text":"链表题"}\n\n'));
+          controller.enqueue(encoder.encode('data: {"type":"preview","text":"链表题 - 题面"}\n\n'));
+          controller.enqueue(encoder.encode('data: {"type":"final","payload":{"text":"{\\"title\\":\\"链表题\\",\\"description\\":\\"题面\\",\\"templates\\":{\\"cpp\\":\\"int main(){return 0;}\\",\\"java\\":\\"public class Main { public static void main(String[] args) {} }\\",\\"python\\":\\"print(0)\\"},\\"solutions\\":{\\"cpp\\":\\"int main(){return 0;}\\",\\"java\\":\\"public class Main { public static void main(String[] args) {} }\\",\\"python\\":\\"print(0)\\"},\\"testCases\\":[{\\"input\\":\\"1\\",\\"expectedOutput\\":\\"1\\",\\"description\\":\\"样例\\"}],\\"difficulty\\":\\"easy\\",\\"hints\\":[],\\"explanation\\":\\"\\"}"}}\n\n'));
+          controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+          controller.close();
+        },
+      });
+
+      return new Response(stream, {
+        status: 200,
+        headers: { 'Content-Type': 'text/event-stream' },
+      });
+    }));
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('uses standardized SSE events for coding exercise generation', async () => {
+    const onProgress = vi.fn();
+    const result = await generateCodingExercise('链表', 'easy', '链表', onProgress);
+
+    expect(result.title).toBe('链表题');
+    expect(result.description).toBe('题面');
+    expect(result.templates.cpp).toContain('int main');
+    expect(onProgress).toHaveBeenCalledWith('链表题');
+    expect(onProgress).toHaveBeenCalledWith('链表题 - 题面');
   });
 });
 

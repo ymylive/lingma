@@ -2651,58 +2651,49 @@ async def chat_completion_stream(request: Request):
     payload = build_legacy_request_payload(body, stream=True)
 
     def event_stream() -> Iterator[str]:
-        chunk_id = f"chatcmpl-{secrets.token_urlsafe(12)}"
-        model_name = str(payload.get("model") or AI_MODEL)
-        sent_delta = False
-        stop_sent = False
+        accumulated = ""
         try:
             for event in iter_standardized_upstream_events(payload):
-                response_obj = event.get("response")
-                if isinstance(response_obj, dict):
-                    chunk_id = str(response_obj.get("id") or chunk_id)
-                    model_name = str(response_obj.get("model") or model_name)
-
+                response_obj = event.get("response") if isinstance(event.get("response"), dict) else None
                 event_type = str(event.get("type") or "")
                 if event_type == "response.output_text.delta":
                     delta = event.get("delta")
                     if isinstance(delta, str) and delta:
-                        sent_delta = True
-                        yield f"data: {json.dumps(build_legacy_stream_chunk(chunk_id, model_name, delta=delta), ensure_ascii=False)}\n\n"
+                        accumulated += delta
+                        yield build_sse_data({"type": "preview", "text": accumulated})
                 elif event_type == "response.output_text.done":
                     done_text = event.get("text")
-                    if isinstance(done_text, str) and done_text and not sent_delta:
-                        sent_delta = True
-                        yield f"data: {json.dumps(build_legacy_stream_chunk(chunk_id, model_name, delta=done_text), ensure_ascii=False)}\n\n"
+                    if isinstance(done_text, str) and done_text and not accumulated:
+                        accumulated = done_text
+                        yield build_sse_data({"type": "preview", "text": accumulated})
                 elif event_type == "response.completed":
-                    if isinstance(response_obj, dict) and not sent_delta:
+                    if response_obj is not None:
                         final_text, _ = extract_responses_json_text(response_obj)
-                        if final_text:
-                            yield f"data: {json.dumps(build_legacy_stream_chunk(chunk_id, model_name, delta=final_text), ensure_ascii=False)}\n\n"
-                    yield f"data: {json.dumps(build_legacy_stream_chunk(chunk_id, model_name, finish_reason='stop'), ensure_ascii=False)}\n\n"
-                    yield "data: [DONE]\n\n"
-                    stop_sent = True
+                        if final_text and final_text != accumulated:
+                            accumulated = final_text
+                            yield build_sse_data({"type": "preview", "text": accumulated})
+                    yield build_sse_data({"type": "final", "payload": {"text": accumulated}})
+                    yield build_sse_done()
                     return
                 elif event_type == "response.failed" or isinstance(event.get("error"), dict):
                     error = event.get("error") if isinstance(event.get("error"), dict) else {}
                     message = str(error.get("message") or "upstream stream failed")
-                    yield f"data: {json.dumps({'error': message}, ensure_ascii=False)}\n\n"
+                    yield build_sse_data({"type": "error", "message": message})
+                    yield build_sse_done()
                     return
         except HTTPException as exc:
-            yield f"data: {json.dumps({'error': str(exc.detail)}, ensure_ascii=False)}\n\n"
+            yield build_sse_data({"type": "error", "message": str(exc.detail)})
+            yield build_sse_done()
             return
         except Exception as exc:
-            yield f"data: {json.dumps({'error': str(exc)}, ensure_ascii=False)}\n\n"
+            yield build_sse_data({"type": "error", "message": str(exc)})
+            yield build_sse_done()
             return
 
-        if not stop_sent:
-            yield f"data: {json.dumps(build_legacy_stream_chunk(chunk_id, model_name, finish_reason='stop'), ensure_ascii=False)}\n\n"
-            yield "data: [DONE]\n\n"
+        yield build_sse_data({"type": "final", "payload": {"text": accumulated}})
+        yield build_sse_done()
 
-    headers = {
-        "Cache-Control": "no-cache",
-        "Connection": "keep-alive",
-    }
-    return StreamingResponse(event_stream(), media_type="text/event-stream", headers=headers)
+    return StreamingResponse(event_stream(), media_type="text/event-stream", headers=build_standard_streaming_headers())
 
 
 @app.post("/api/doc")
