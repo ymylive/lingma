@@ -9,7 +9,6 @@ import {
   getFrontendBuildDownloadUrl,
 } from '../../services/vibeCodingService';
 import type { VibeFrontendBuildSession, VibeFrontendBuildSessionDetail } from '../../types/vibeCoding';
-import useStreamingTypewriterText from '../../hooks/useStreamingTypewriterText';
 
 const EMPTY_PREVIEW = `<!DOCTYPE html><html><body style="font-family:system-ui,sans-serif;padding:24px;color:#334155;background:#f8fafc"><h2 style="margin:0 0 12px">Live Build</h2><p style="margin:0">Start with a detailed frontend request to generate a preview.</p></body></html>`;
 
@@ -23,7 +22,6 @@ export default function VibeFrontendLiveBuild() {
   const [error, setError] = useState('');
   const [isFullscreenOpen, setIsFullscreenOpen] = useState(false);
   const [streamingBuildPreview, setStreamingBuildPreview] = useState('');
-  const typedStreamingBuildPreview = useStreamingTypewriterText(streamingBuildPreview, submitting);
 
   const loadSessions = async () => {
     setLoading(true);
@@ -229,7 +227,7 @@ export default function VibeFrontendLiveBuild() {
                   </div>
                 </div>
                 <pre className="mt-4 max-h-[420px] overflow-auto rounded-[24px] border border-white/5 bg-slate-950/80 p-4 text-xs leading-6 text-emerald-100">
-                  {typedStreamingBuildPreview || t('正在等待首个流式分片...')}
+                  {streamingBuildPreview || t('正在等待首个流式分片...')}
                   <span aria-hidden className="ml-0.5 inline-block h-4 w-2 animate-pulse rounded-sm bg-emerald-300/70 align-[-2px]" />
                 </pre>
               </div>

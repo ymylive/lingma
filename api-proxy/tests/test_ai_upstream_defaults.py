@@ -98,6 +98,54 @@ def test_read_upstream_json_forces_streaming(monkeypatch: pytest.MonkeyPatch, tm
         sys.modules.pop(module_name, None)
 
 
+def test_iter_upstream_text_stream_forces_streaming(monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
+    auth_db = tmp_path / "auth.db"
+    mindmap_db = tmp_path / "mindmaps.db"
+    monkeypatch.setenv("AUTH_DB_PATH", str(auth_db))
+    monkeypatch.setenv("MINDMAP_DB_PATH", str(mindmap_db))
+    module_name = f"api_proxy_main_force_stream_iter_{auth_db.stem}_{len(sys.modules)}"
+    api_module = load_module(module_name, API_MODULE_PATH)
+
+    captured: dict[str, object] = {}
+
+    class _DummySession:
+        def close(self):
+            return None
+
+    class _DummyResponse:
+        headers = {"Content-Type": "text/event-stream"}
+
+        def iter_lines(self, decode_unicode: bool = False):
+            payload = b'data: {"type":"response.output_text.delta","delta":"hello"}\n'
+            done = b'data: {"type":"response.completed","response":{"id":"resp_test","model":"gpt-5.4","output_text":"hello","output":[{"content":[{"text":"hello"}]}]}}\n'
+            if decode_unicode:
+                yield payload.decode("utf-8").rstrip("\n")
+                yield ""
+                yield done.decode("utf-8").rstrip("\n")
+                yield ""
+                return
+            yield payload.rstrip(b"\n")
+            yield b""
+            yield done.rstrip(b"\n")
+            yield b""
+
+        def close(self):
+            return None
+
+    def fake_perform(payload: dict):
+        captured.update(payload)
+        return _DummySession(), _DummyResponse(), api_module.AI_PROTOCOL_RESPONSES
+
+    monkeypatch.setattr(api_module, "perform_upstream_responses_request", fake_perform)
+    try:
+        events = list(api_module.iter_upstream_text_stream({"model": "gpt-5.4", "stream": False}))
+        assert captured["stream"] is True
+        assert events[-1][0] == "final"
+        assert events[-1][1] == "hello"
+    finally:
+        sys.modules.pop(module_name, None)
+
+
 def test_deploy_runtime_defaults_match_api_proxy():
     module_name = f"deploy_runtime_config_upstream_defaults_{len(sys.modules)}"
     runtime_config = load_module(module_name, RUNTIME_CONFIG_PATH)

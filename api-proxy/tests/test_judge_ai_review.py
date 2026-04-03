@@ -705,3 +705,27 @@ def test_normalize_judge_ai_review_payload_recomputes_total_score_from_dimension
     normalized = api_module.normalize_judge_ai_review_payload(payload, "judge-review-model")
 
     assert normalized["totalScore"] == 72
+
+
+def test_normalize_judge_ai_review_payload_accepts_snake_case_keys(api_module):
+    payload = {
+        "total_score": 72,
+        "dimension_scores": {
+            "correctness": 28,
+            "boundary_robustness": 14,
+            "complexity_and_performance": 15,
+            "code_quality_and_readability": 15,
+        },
+        "overall_diagnosis": "The solution still misses one failing branch.",
+        "error_points": ["The final branch does not update the answer correctly."],
+        "fix_suggestions": ["Repair the final branch before returning."],
+        "optimization_suggestions": [],
+        "next_step": "Rerun the failing sample after the branch fix.",
+    }
+
+    normalized = api_module.normalize_judge_ai_review_payload(payload, "judge-review-model")
+
+    assert normalized["totalScore"] == 72
+    assert normalized["dimensionScores"]["boundaryRobustness"] == 14
+    assert normalized["overallDiagnosis"] == "The solution still misses one failing branch."
+    assert normalized["errorPoints"] == ["The final branch does not update the answer correctly."]

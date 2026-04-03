@@ -4,8 +4,6 @@ import { quickRun, runTestCases, streamJudgeAiReview, type JudgeResponse, type S
 import { useUser } from '../../contexts/UserContext';
 import { useI18n } from '../../contexts/I18nContext';
 import type { ExerciseDifficulty } from '../../data/exercises';
-import useProgressiveAiObject from '../../hooks/useProgressiveAiObject';
-import useStreamingTypewriterText from '../../hooks/useStreamingTypewriterText';
 
 type Lang = SupportedJudgeLanguage;
 type LangTemplates = Partial<Record<Lang, string>>;
@@ -152,42 +150,10 @@ export default function CodingExercise({
     [contentText, testCases],
   );
   const localizedSolution = contentText(solutions[lang]) || solutions[lang];
-  const exerciseDisplayPayload = useMemo(
-    () => ({
-      title: localizedTitle,
-      description: localizedDescription,
-      testCases: displayTestCases.map((item) => ({
-        input: item.input,
-        expectedOutput: item.expectedOutput,
-        description: item.description || '',
-        checkpoint: item.checkpoint || '',
-      })),
-      hints: localizedHints,
-      explanation: localizedExplanation || '',
-      commonMistakes: localizedCommonMistakes,
-      solution: localizedSolution || '',
-    }),
-    [
-      displayTestCases,
-      localizedCommonMistakes,
-      localizedDescription,
-      localizedExplanation,
-      localizedHints,
-      localizedSolution,
-      localizedTitle,
-    ],
-  );
-  const progressiveExerciseText = useProgressiveAiObject(exerciseDisplayPayload, progressiveAiText);
-  const displayHints = useMemo(
-    () => progressiveExerciseText.hints.map((hint, index) => hint || localizedHints[index] || '').filter(Boolean),
-    [localizedHints, progressiveExerciseText.hints],
-  );
-  const displayExplanation = progressiveExerciseText.explanation || localizedExplanation || '';
-  const displayCommonMistakes = useMemo(
-    () => progressiveExerciseText.commonMistakes.map((item, index) => item || localizedCommonMistakes[index] || '').filter(Boolean),
-    [localizedCommonMistakes, progressiveExerciseText.commonMistakes],
-  );
-  const displaySolution = progressiveExerciseText.solution || localizedSolution || '';
+  const displayHints = localizedHints.filter(Boolean);
+  const displayExplanation = localizedExplanation || '';
+  const displayCommonMistakes = localizedCommonMistakes.filter(Boolean);
+  const displaySolution = localizedSolution || '';
 
   useEffect(() => {
     const preferredTarget = user?.targetLanguage;
@@ -211,22 +177,6 @@ export default function CodingExercise({
 
   const summary = judge?.summary;
   const aiReview = judge?.aiReview;
-  const typedAiReviewPreview = useStreamingTypewriterText(
-    aiReviewPreview,
-    aiReviewStreaming || (aiReview?.status === 'deferred' && aiReview.triggered),
-  );
-  const progressiveAiReviewText = useProgressiveAiObject(
-    aiReview?.status === 'generated'
-      ? {
-          overallDiagnosis: aiReview.overallDiagnosis,
-          errorPoints: aiReview.errorPoints,
-          fixSuggestions: aiReview.fixSuggestions,
-          optimizationSuggestions: aiReview.optimizationSuggestions,
-          nextStep: aiReview.nextStep,
-        }
-      : null,
-    aiReview?.status === 'generated',
-  );
   const showAiReview =
     aiReview?.status === 'generated'
     || aiReview?.status === 'unavailable'
@@ -547,7 +497,7 @@ export default function CodingExercise({
                           <span className="text-sm font-semibold">{judgeText('AI 正在实时分析', 'AI review is streaming')}</span>
                         </div>
                         <pre className="max-h-72 overflow-auto whitespace-pre-wrap break-words rounded-2xl bg-slate-50 p-3 text-[13px] leading-6 text-slate-700 dark:bg-slate-950/70 dark:text-slate-200 sm:text-sm">
-                          {typedAiReviewPreview || judgeText('正在等待首个流式分片...', 'Waiting for the first streamed chunk...')}
+                          {aiReviewPreview || judgeText('正在等待首个流式分片...', 'Waiting for the first streamed chunk...')}
                         </pre>
                       </div>
                     ) : aiReview?.status === 'generated' ? (
@@ -561,7 +511,7 @@ export default function CodingExercise({
                         </div>
                         <div className="rounded-2xl bg-white/80 p-4 text-[15px] leading-6 text-slate-700 shadow-sm dark:bg-slate-900/60 dark:text-slate-200 sm:text-sm">
                           <div className="mb-2 text-sm font-semibold text-slate-900 dark:text-white">{judgeText('总体诊断', 'Overall Diagnosis')}</div>
-                          <p className="whitespace-pre-line break-words">{progressiveAiReviewText?.overallDiagnosis ?? aiReview.overallDiagnosis}</p>
+                          <p className="whitespace-pre-line break-words">{aiReview.overallDiagnosis}</p>
                         </div>
                       </>
                     ) : aiReview?.status === 'deferred' ? (
@@ -615,7 +565,7 @@ export default function CodingExercise({
                       <div className="rounded-2xl border border-rose-200 bg-white p-4 dark:border-rose-900 dark:bg-slate-900/60">
                         <h4 className="text-sm font-semibold text-rose-700 dark:text-rose-300">{judgeText('错误点分析', 'Error Points')}</h4>
                         <ul className="mt-2 space-y-2 text-[15px] leading-6 text-slate-700 dark:text-slate-200 sm:text-sm">
-                          {(progressiveAiReviewText?.errorPoints || aiReview.errorPoints).map((item, index) => <li key={`${item}-${index}`} className="whitespace-pre-line break-words">- {formatAiReviewItem(item)}</li>)}
+                          {aiReview.errorPoints.map((item, index) => <li key={`${item}-${index}`} className="whitespace-pre-line break-words">- {formatAiReviewItem(item)}</li>)}
                         </ul>
                       </div>
                     )}
@@ -624,7 +574,7 @@ export default function CodingExercise({
                       <div className="rounded-2xl border border-emerald-200 bg-white p-4 dark:border-emerald-900 dark:bg-slate-900/60">
                         <h4 className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">{judgeText('修改建议', 'Fix Suggestions')}</h4>
                         <ul className="mt-2 space-y-2 text-[15px] leading-6 text-slate-700 dark:text-slate-200 sm:text-sm">
-                          {(progressiveAiReviewText?.fixSuggestions || aiReview.fixSuggestions).map((item, index) => <li key={`${item}-${index}`} className="whitespace-pre-line break-words">- {formatAiReviewItem(item)}</li>)}
+                          {aiReview.fixSuggestions.map((item, index) => <li key={`${item}-${index}`} className="whitespace-pre-line break-words">- {formatAiReviewItem(item)}</li>)}
                         </ul>
                       </div>
                     )}
@@ -633,14 +583,14 @@ export default function CodingExercise({
                       <div className="rounded-2xl border border-violet-200 bg-white p-4 dark:border-violet-900 dark:bg-slate-900/60">
                         <h4 className="text-sm font-semibold text-violet-700 dark:text-violet-300">{judgeText('优化建议', 'Optimization Suggestions')}</h4>
                         <ul className="mt-2 space-y-2 text-[15px] leading-6 text-slate-700 dark:text-slate-200 sm:text-sm">
-                          {(progressiveAiReviewText?.optimizationSuggestions || aiReview.optimizationSuggestions).map((item, index) => <li key={`${item}-${index}`} className="whitespace-pre-line break-words">- {formatAiReviewItem(item)}</li>)}
+                          {aiReview.optimizationSuggestions.map((item, index) => <li key={`${item}-${index}`} className="whitespace-pre-line break-words">- {formatAiReviewItem(item)}</li>)}
                         </ul>
                       </div>
                     )}
 
                     <div className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900/60">
                       <h4 className="text-sm font-semibold text-slate-900 dark:text-white">{judgeText('下一步', 'Next Step')}</h4>
-                      <p className="mt-2 text-[15px] leading-6 text-slate-700 dark:text-slate-200 sm:text-sm">{progressiveAiReviewText?.nextStep ?? aiReview.nextStep}</p>
+                      <p className="mt-2 text-[15px] leading-6 text-slate-700 dark:text-slate-200 sm:text-sm">{aiReview.nextStep}</p>
                     </div>
                   </div>
                 )}
@@ -707,22 +657,8 @@ export function FillInBlank({ exerciseId, title, description, difficulty, catego
       ) as LangTemplates,
     [availableLangs, codeTemplate, contentText],
   );
-  const fillBlankDisplayPayload = useMemo(
-    () => ({
-      title: localizedTitle,
-      description: localizedDescription,
-      explanation: localizedExplanation || '',
-      codeTemplate: localizedCodeTemplate[activeLang] || '',
-      blanks: localizedBlanks.map((blank) => ({
-        id: blank.id,
-        hint: blank.hint || '',
-      })),
-    }),
-    [activeLang, localizedBlanks, localizedCodeTemplate, localizedDescription, localizedExplanation, localizedTitle],
-  );
-  const progressiveFillBlankText = useProgressiveAiObject(fillBlankDisplayPayload, progressiveAiText);
-  const displayFillBlankExplanation = progressiveFillBlankText.explanation || localizedExplanation || '';
-  const displayFillBlankCodeTemplate = progressiveFillBlankText.codeTemplate || localizedCodeTemplate[activeLang] || '';
+  const displayFillBlankExplanation = localizedExplanation || '';
+  const displayFillBlankCodeTemplate = localizedCodeTemplate[activeLang] || '';
 
   const checkAnswers = () => {
     const next: Record<string, boolean> = {};
@@ -747,7 +683,7 @@ export function FillInBlank({ exerciseId, title, description, difficulty, catego
       if (match.index > lastIndex) parts.push(<span key={`text-${lineIndex}-${lastIndex}`} className="text-slate-300">{line.slice(lastIndex, match.index)}</span>);
       const blankId = match[1];
       const ok = results[blankId];
-      parts.push(<input key={`blank-${lineIndex}-${blankId}`} type="text" value={answers[blankId] || ''} onChange={(event) => { setAnswers((prev) => ({ ...prev, [blankId]: event.target.value })); setSubmitted(false); }} placeholder={progressiveFillBlankText.blanks.find((item) => item.id === blankId)?.hint || localizedBlanks.find((item) => item.id === blankId)?.hint || t('填写代码')} disabled={submitted && Boolean(ok)} className={`mx-1 my-1 min-h-[44px] min-w-[8rem] rounded-xl border px-3 py-2.5 font-mono text-[15px] sm:text-sm ${submitted ? ok ? 'border-emerald-500 bg-emerald-900/50 text-emerald-200' : 'border-rose-500 bg-rose-900/50 text-rose-200' : 'border-slate-500 bg-slate-700 text-white focus:border-indigo-400 focus:outline-none'}`} />);
+      parts.push(<input key={`blank-${lineIndex}-${blankId}`} type="text" value={answers[blankId] || ''} onChange={(event) => { setAnswers((prev) => ({ ...prev, [blankId]: event.target.value })); setSubmitted(false); }} placeholder={localizedBlanks.find((item) => item.id === blankId)?.hint || t('填写代码')} disabled={submitted && Boolean(ok)} className={`mx-1 my-1 min-h-[44px] min-w-[8rem] rounded-xl border px-3 py-2.5 font-mono text-[15px] sm:text-sm ${submitted ? ok ? 'border-emerald-500 bg-emerald-900/50 text-emerald-200' : 'border-rose-500 bg-rose-900/50 text-rose-200' : 'border-slate-500 bg-slate-700 text-white focus:border-indigo-400 focus:outline-none'}`} />);
       lastIndex = match.index + match[0].length;
     }
     if (lastIndex < line.length) parts.push(<span key={`tail-${lineIndex}`} className="text-slate-300">{line.slice(lastIndex)}</span>);
