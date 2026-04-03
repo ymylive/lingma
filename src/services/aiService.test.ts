@@ -26,6 +26,37 @@ describe('normalizeGeneratedExercisePayload', () => {
     vi.unstubAllGlobals();
   });
 
+  it('maps object-style description payloads from streamed exercise JSON', () => {
+    const payload = normalizeGeneratedExercisePayload({
+      title: '反转单链表',
+      description: {
+        problem: '给定单链表头节点，返回反转后的链表。',
+        input: '输入链表节点值。',
+        output: '输出反转后的链表。',
+        constraints: '节点数量在 1 到 5000 之间。',
+      },
+      templates: {
+        cpp: 'int main(){return 0;}',
+        java: 'public class Main { public static void main(String[] args) {} }',
+        python: 'print(0)',
+      },
+      solutions: {
+        cpp: 'int main(){return 0;}',
+        java: 'public class Main { public static void main(String[] args) {} }',
+        python: 'print(0)',
+      },
+      testCases: [
+        { input: '1 2 3', expectedOutput: '3 2 1', description: '样例' },
+      ],
+      difficulty: 'easy',
+    });
+
+    expect(payload.description).toContain('给定单链表头节点');
+    expect(payload.description).toContain('输入链表节点值');
+    expect(payload.description).toContain('输出反转后的链表');
+    expect(payload.description).toContain('节点数量在 1 到 5000 之间');
+  });
+
   it('maps alternate field names into the frontend exercise shape', () => {
     const payload = normalizeGeneratedExercisePayload({
       problem_title: '二叉树路径和',
