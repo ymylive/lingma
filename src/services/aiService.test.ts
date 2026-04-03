@@ -158,6 +158,24 @@ describe('streamed AI exercise generation', () => {
     vi.unstubAllGlobals();
   });
 
+  it('accepts alternate final payload shapes from streamed responses', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => {
+      const encoder = new TextEncoder();
+      const stream = new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.enqueue(encoder.encode('data: {"type":"preview","text":"链表"}\n\n'));
+          controller.enqueue(encoder.encode('data: {"type":"final","payload":{"content":"{\\"title\\":\\"链表题\\",\\"description\\":\\"题面\\",\\"templates\\":{\\"cpp\\":\\"int main(){return 0;}\\",\\"java\\":\\"public class Main{}\\",\\"python\\":\\"pass\\"},\\"solutions\\":{\\"cpp\\":\\"int main(){return 0;}\\",\\"java\\":\\"public class Main{}\\",\\"python\\":\\"pass\\"},\\"testCases\\":[{\\"input\\":\\"1\\",\\"expectedOutput\\":\\"1\\",\\"description\\":\\"样例\\"}],\\"difficulty\\":\\"easy\\",\\"hints\\":[],\\"explanation\\":\\"\\"}"}}\n\n'));
+          controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+          controller.close();
+        },
+      });
+      return new Response(stream, { status: 200, headers: { 'Content-Type': 'text/event-stream' } });
+    }));
+
+    const result = await generateCodingExercise('链表', 'easy', '链表');
+    expect(result.title).toBe('链表题');
+  });
+
   it('uses standardized SSE events for coding exercise generation', async () => {
     const onProgress = vi.fn();
     const result = await generateCodingExercise('链表', 'easy', '链表', onProgress);
