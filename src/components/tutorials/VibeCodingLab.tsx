@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -19,8 +19,6 @@ import {
 } from 'lucide-react';
 import { useI18n } from '../../contexts/I18nContext';
 import { methodologyUnits } from '../../data/methodologyUnits';
-import useProgressiveAiObject from '../../hooks/useProgressiveAiObject';
-import useStreamingTypewriterText from '../../hooks/useStreamingTypewriterText';
 import VibeFrontendLiveBuild from './VibeFrontendLiveBuild';
 import {
   evaluateVibePromptStream,
@@ -148,52 +146,16 @@ export default function VibeCodingLab({ onOpenAiGenerator, onOpenPracticeLibrary
   const [streamingChallengePreview, setStreamingChallengePreview] = useState('');
   const [streamingEvaluationPreview, setStreamingEvaluationPreview] = useState('');
   const [frontendMode, setFrontendMode] = useState<VibeFrontendMode>('prompt-scoring');
-  const progressiveChallengeSource = useMemo(
-    () =>
-      challenge
-        ? {
-            title: challenge.title,
-            scenario: challenge.scenario,
-            requirements: challenge.requirements,
-            constraints: challenge.constraints,
-            successCriteria: challenge.successCriteria,
-          }
-        : null,
-    [challenge],
-  );
-  const progressiveEvaluationSource = useMemo(
-    () =>
-      evaluation
-        ? {
-            strengths: evaluation.strengths,
-            weaknesses: evaluation.weaknesses,
-            rewriteExample: evaluation.rewrite_example,
-          }
-        : null,
-    [evaluation],
-  );
-  const progressiveChallengeText = useProgressiveAiObject(progressiveChallengeSource, Boolean(challenge));
-  const progressiveEvaluationText = useProgressiveAiObject(progressiveEvaluationSource, Boolean(evaluation));
   const challengeTrack = challenge?.track || selectedTrack;
   const challengeDifficulty = challenge?.difficulty || profile.recommendedDifficulty;
-  const displayChallengeTitle = progressiveChallengeText?.title || challenge?.title || '';
-  const displayChallengeScenario = progressiveChallengeText?.scenario || challenge?.scenario || '';
-  const displayChallengeRequirements = progressiveChallengeText?.requirements?.filter(Boolean).length
-    ? progressiveChallengeText.requirements.filter(Boolean)
-    : (challenge?.requirements || []);
-  const displayChallengeConstraints = progressiveChallengeText?.constraints?.filter(Boolean).length
-    ? progressiveChallengeText.constraints.filter(Boolean)
-    : (challenge?.constraints || []);
-  const displayChallengeSuccessCriteria = progressiveChallengeText?.successCriteria?.filter(Boolean).length
-    ? progressiveChallengeText.successCriteria.filter(Boolean)
-    : (challenge?.successCriteria || []);
-  const displayEvaluationStrengths = progressiveEvaluationText?.strengths?.filter(Boolean).length
-    ? progressiveEvaluationText.strengths.filter(Boolean)
-    : (evaluation?.strengths || []);
-  const displayEvaluationWeaknesses = progressiveEvaluationText?.weaknesses?.filter(Boolean).length
-    ? progressiveEvaluationText.weaknesses.filter(Boolean)
-    : (evaluation?.weaknesses || []);
-  const displayEvaluationRewriteExample = progressiveEvaluationText?.rewriteExample || evaluation?.rewrite_example || '';
+  const displayChallengeTitle = challenge?.title || '';
+  const displayChallengeScenario = challenge?.scenario || '';
+  const displayChallengeRequirements = challenge?.requirements || [];
+  const displayChallengeConstraints = challenge?.constraints || [];
+  const displayChallengeSuccessCriteria = challenge?.successCriteria || [];
+  const displayEvaluationStrengths = evaluation?.strengths || [];
+  const displayEvaluationWeaknesses = evaluation?.weaknesses || [];
+  const displayEvaluationRewriteExample = evaluation?.rewrite_example || '';
 
   const loadArenaData = async () => {
     setLoading(true);
@@ -766,8 +728,6 @@ function FeedbackPanel({
 }
 
 function LiveStreamingPanel({ title, text }: { title: string; text: string }) {
-  const typedText = useStreamingTypewriterText(text, true);
-
   return (
     <div aria-live="polite" className="mt-4 rounded-3xl border border-indigo-200 bg-indigo-50/80 p-4 shadow-sm dark:border-indigo-800 dark:bg-indigo-950/20">
       <div className="mb-2 flex items-center gap-2 text-indigo-700 dark:text-indigo-300">
@@ -775,7 +735,7 @@ function LiveStreamingPanel({ title, text }: { title: string; text: string }) {
         <span className="text-sm font-semibold">{title}</span>
       </div>
       <pre className="max-h-80 overflow-auto whitespace-pre-wrap break-words rounded-2xl bg-white/80 p-4 text-xs leading-6 text-slate-700 dark:bg-slate-900/70 dark:text-slate-200">
-        {typedText}
+        {text}
       </pre>
     </div>
   );

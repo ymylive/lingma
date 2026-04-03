@@ -2239,7 +2239,9 @@ def iter_compat_stream_events(response: Any) -> Iterator[Tuple[str, Optional[str
 
 def iter_standardized_upstream_events(payload: Dict[str, Any]) -> Iterator[Dict[str, Any]]:
     accumulated = ""
-    with open_upstream_responses(payload) as upstream:
+    request_payload = dict(payload or {})
+    request_payload["stream"] = True
+    with open_upstream_responses(request_payload) as upstream:
         protocol = getattr(upstream, "_lingma_protocol", detect_protocol_from_url(resolve_responses_upstream_url()))
         if protocol == AI_PROTOCOL_COMPAT:
             last_event: Dict[str, Any] = {}

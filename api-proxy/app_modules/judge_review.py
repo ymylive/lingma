@@ -19,6 +19,24 @@ class JudgeAiReviewNormalizationError(ValueError):
     pass
 
 
+def first_present(payload: Dict[str, Any], *keys: str) -> Any:
+    for key in keys:
+        if key in payload:
+            return payload.get(key)
+    return None
+
+
+def normalize_score_key(key: Any) -> str:
+    normalized = str(key or "").strip().replace("_", "").lower()
+    aliases = {
+        "correctness": "correctness",
+        "boundaryrobustness": "boundaryRobustness",
+        "complexityandperformance": "complexityAndPerformance",
+        "codequalityandreadability": "codeQualityAndReadability",
+    }
+    return aliases.get(normalized, "")
+
+
 def build_judge_ai_review_skipped() -> Dict[str, Any]:
     return {"triggered": False, "status": JUDGE_AI_REVIEW_STATUS_SKIPPED}
 
@@ -69,14 +87,20 @@ def normalize_judge_ai_review_payload(payload: Dict[str, Any], model: str) -> Di
     if not isinstance(payload, dict):
         raise JudgeAiReviewNormalizationError("review payload must be an object")
 
-    raw_scores = payload.get("dimensionScores")
+    raw_scores = first_present(payload, "dimensionScores", "dimension_scores")
     if not isinstance(raw_scores, dict):
         raise JudgeAiReviewNormalizationError("dimensionScores must be an object")
+
+    normalized_scores: Dict[str, Any] = {}
+    for raw_key, raw_value in raw_scores.items():
+        normalized_key = normalize_score_key(raw_key)
+        if normalized_key:
+            normalized_scores[normalized_key] = raw_value
 
     dimension_scores: Dict[str, int] = {}
     score_total = 0
     for key, max_score in JUDGE_AI_REVIEW_DIMENSION_LIMITS.items():
-        raw_value = raw_scores.get(key)
+        raw_value = normalized_scores.get(key)
         if raw_value is None:
             raise JudgeAiReviewNormalizationError(f"{key} is required")
         try:
@@ -89,7 +113,7 @@ def normalize_judge_ai_review_payload(payload: Dict[str, Any], model: str) -> Di
         score_total += score
 
     try:
-        total_score = int(payload.get("totalScore"))
+        total_score = int(first_present(payload, "totalScore", "total_score"))
     except Exception:
         total_score = score_total
 
@@ -102,15 +126,19 @@ def normalize_judge_ai_review_payload(payload: Dict[str, Any], model: str) -> Di
         "model": model,
         "totalScore": total_score,
         "dimensionScores": dimension_scores,
-        "overallDiagnosis": sanitize_judge_ai_review_string(payload.get("overallDiagnosis"), "overallDiagnosis", max_length=6000),
-        "errorPoints": sanitize_judge_ai_review_list(payload.get("errorPoints"), "errorPoints"),
-        "fixSuggestions": sanitize_judge_ai_review_list(payload.get("fixSuggestions"), "fixSuggestions"),
+        "overallDiagnosis": sanitize_judge_ai_review_string(
+            first_present(payload, "overallDiagnosis", "overall_diagnosis"),
+            "overallDiagnosis",
+            max_length=6000,
+        ),
+        "errorPoints": sanitize_judge_ai_review_list(first_present(payload, "errorPoints", "error_points"), "errorPoints"),
+        "fixSuggestions": sanitize_judge_ai_review_list(first_present(payload, "fixSuggestions", "fix_suggestions"), "fixSuggestions"),
         "optimizationSuggestions": sanitize_judge_ai_review_list(
-            payload.get("optimizationSuggestions"),
+            first_present(payload, "optimizationSuggestions", "optimization_suggestions"),
             "optimizationSuggestions",
             allow_empty=True,
         ),
-        "nextStep": sanitize_judge_ai_review_string(payload.get("nextStep"), "nextStep", max_length=1500),
+        "nextStep": sanitize_judge_ai_review_string(first_present(payload, "nextStep", "next_step"), "nextStep", max_length=1500),
     }
 
 

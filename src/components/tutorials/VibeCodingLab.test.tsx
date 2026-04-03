@@ -90,6 +90,10 @@ function renderLab() {
   );
 }
 
+function getStartTrainingButton() {
+  return screen.getByRole('button', { name: /开始一轮训练|Start a Training Round/ });
+}
+
 describe('VibeCodingLab challenge rendering', () => {
   beforeEach(() => {
     fetchVibeProfileMock.mockResolvedValue(profileFixture);
@@ -141,7 +145,7 @@ describe('VibeCodingLab challenge rendering', () => {
       expect(fetchVibeHistoryMock).toHaveBeenCalled();
     });
 
-    fireEvent.click(screen.getByRole('button', { name: '生成第一道题' }));
+    fireEvent.click(getStartTrainingButton());
 
     await waitFor(() => {
       expect(generateVibeChallengeStreamMock).toHaveBeenCalledWith('frontend', 'en-US', expect.any(Function));
@@ -152,4 +156,31 @@ describe('VibeCodingLab challenge rendering', () => {
     expect(screen.getByText(challengeFixture.constraints[0])).toBeInTheDocument();
     expect(screen.getByText(challengeFixture.successCriteria[0])).toBeInTheDocument();
   }, 5000);
+
+  it('shows full generated challenge content immediately without local fake streaming animation', async () => {
+    let frameCount = 0;
+    vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => {
+      frameCount += 1;
+      if (frameCount === 1) {
+        return window.setTimeout(() => callback(performance.now() + 1), 0);
+      }
+      return 1;
+    });
+    vi.stubGlobal('cancelAnimationFrame', vi.fn());
+
+    renderLab();
+
+    await waitFor(() => {
+      expect(fetchVibeProfileMock).toHaveBeenCalled();
+      expect(fetchVibeHistoryMock).toHaveBeenCalled();
+    });
+
+    fireEvent.click(getStartTrainingButton());
+
+    await waitFor(() => {
+      expect(generateVibeChallengeStreamMock).toHaveBeenCalled();
+    });
+
+    expect(await screen.findByText(challengeFixture.scenario, {}, { timeout: 1000 })).toBeInTheDocument();
+  });
 });
