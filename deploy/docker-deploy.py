@@ -92,6 +92,10 @@ def ssh_exec(ssh, cmd, check=True):
     err = stderr.read().decode().strip()
     rc = stdout.channel.recv_exit_status()
     if check and rc != 0:
+        if out:
+            print("  [STDOUT]")
+            for line in out.split("\n")[-15:]:
+                print(f"    {line}")
         print(f"  [STDERR] {err}")
         raise RuntimeError(f"Command failed (rc={rc}): {cmd}")
     return out
@@ -183,11 +187,11 @@ def main():
     print("\n[5/6] Building Docker containers (this may take a few minutes)...")
     sync_remote_env(ssh, remote_env_updates)
 
-    out = ssh_exec(ssh, f"cd {REMOTE_DIR}/deploy && docker-compose build --no-cache 2>&1", check=False)
+    out = ssh_exec(ssh, f"cd {REMOTE_DIR}/deploy && docker-compose build --no-cache 2>&1")
     for line in out.split("\n")[-15:]:
         print(f"    {line}")
 
-    out = ssh_exec(ssh, f"cd {REMOTE_DIR}/deploy && docker-compose up -d 2>&1", check=False)
+    out = ssh_exec(ssh, f"cd {REMOTE_DIR}/deploy && docker-compose up -d 2>&1")
     print(f"  {out}")
 
     print("\n[6/6] Pruning old images...")
