@@ -54,8 +54,11 @@ def get_docker_compose_env_updates() -> Dict[str, str]:
     updates = {
         "FRONTEND_BIND_HOST": read_optional_env("LINGMA_FRONTEND_BIND_HOST") or DEFAULT_FRONTEND_BIND_HOST,
         "FRONTEND_BIND_PORT": read_optional_env("LINGMA_FRONTEND_BIND_PORT") or DEFAULT_FRONTEND_BIND_PORT,
-        "JUDGE_INTERNAL_TOKEN": read_required_env("LINGMA_JUDGE_INTERNAL_TOKEN"),
     }
+
+    judge_internal_token = read_optional_env("LINGMA_JUDGE_INTERNAL_TOKEN")
+    if judge_internal_token:
+        updates["JUDGE_INTERNAL_TOKEN"] = judge_internal_token
 
     ai_key = read_optional_env("LINGMA_AI_API_KEY")
     if ai_key:
