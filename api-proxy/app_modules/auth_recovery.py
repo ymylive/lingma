@@ -46,14 +46,20 @@ def sanitize_password_reset_code(value: object) -> str:
     return text
 
 
-def send_password_reset_email(*, to_email: str, code: str, expires_in_minutes: int) -> None:
+def send_password_reset_email(
+    *, to_email: str, code: str, expires_in_minutes: int
+) -> None:
     smtp_host = (os.getenv("SMTP_HOST") or "").strip()
     smtp_from = (os.getenv("SMTP_FROM_EMAIL") or "").strip()
-    dev_log_fallback = (os.getenv("PASSWORD_RESET_DEV_LOG_FALLBACK") or "").strip().lower() in {"1", "true", "yes", "on"}
+    dev_log_fallback = (
+        os.getenv("PASSWORD_RESET_DEV_LOG_FALLBACK") or ""
+    ).strip().lower() in {"1", "true", "yes", "on"}
 
     if not smtp_host:
         if dev_log_fallback:
-            print(f"[password-reset] email={to_email} code={code} expires_in={expires_in_minutes}m")
+            print(
+                f"[password-reset] fallback delivery enabled expires_in={expires_in_minutes}m"
+            )
             return
         raise RuntimeError("SMTP is not configured")
 
@@ -69,7 +75,12 @@ def send_password_reset_email(*, to_email: str, code: str, expires_in_minutes: i
     smtp_port = int((os.getenv("SMTP_PORT") or "587").strip())
     smtp_username = (os.getenv("SMTP_USERNAME") or "").strip()
     smtp_password = (os.getenv("SMTP_PASSWORD") or "").strip()
-    use_tls = (os.getenv("SMTP_USE_TLS") or "true").strip().lower() not in {"0", "false", "no", "off"}
+    use_tls = (os.getenv("SMTP_USE_TLS") or "true").strip().lower() not in {
+        "0",
+        "false",
+        "no",
+        "off",
+    }
 
     with smtplib.SMTP(smtp_host, smtp_port, timeout=20) as server:
         if use_tls:

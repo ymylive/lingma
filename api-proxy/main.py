@@ -96,7 +96,7 @@ def first_env(*names: str) -> str:
     return ""
 
 AI_API_KEY = os.getenv("AI_API_KEY", "").strip()
-AI_BASE_URL = (os.getenv("AI_BASE_URL") or os.getenv("AI_API_URL") or "https://gmn.chuangzuoli.com/v1/responses").strip()
+AI_BASE_URL = (os.getenv("AI_BASE_URL") or os.getenv("AI_API_URL") or "https://api.cornna.xyz/responses").strip()
 AI_MODEL = os.getenv("AI_MODEL", "gpt-5.4").strip()
 AI_SITE_URL = os.getenv("AI_SITE_URL", "https://lingma.cornna.xyz").strip()
 AI_SITE_NAME = os.getenv("AI_SITE_NAME", "LingMa").strip()
@@ -1823,7 +1823,7 @@ def resolve_responses_upstream_url() -> str:
 
 def is_openai_official(api_url: str) -> bool:
     host = urlparse(api_url or "").netloc.lower()
-    return host == "api.openai.com"
+    return host in {"api.openai.com", "api.cornna.xyz"}
 
 
 def should_force_responses_stream(api_url: str, protocol: str) -> bool:
@@ -1832,7 +1832,7 @@ def should_force_responses_stream(api_url: str, protocol: str) -> bool:
 
 def responses_token_key(api_url: str) -> str:
     host = urlparse(api_url or "").netloc.lower()
-    if host in {"api.openai.com", "gmn.chuangzuoli.com"}:
+    if host in {"api.openai.com", "api.cornna.xyz", "gmn.chuangzuoli.com"}:
         return "max_output_tokens"
     return "max_tokens"
 

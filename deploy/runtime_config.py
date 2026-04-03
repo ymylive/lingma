@@ -7,7 +7,7 @@ import paramiko
 
 DEFAULT_FRONTEND_BIND_HOST = "0.0.0.0"
 DEFAULT_FRONTEND_BIND_PORT = "18081"
-DEFAULT_AI_API_URL = "https://gmn.chuangzuoli.com/v1/responses"
+DEFAULT_AI_API_URL = "https://api.cornna.xyz/responses"
 DEFAULT_AI_MODEL = "gpt-5.4"
 DEFAULT_JUDGE_BASE_URL = "http://127.0.0.1:3002"
 

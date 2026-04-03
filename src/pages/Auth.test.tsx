@@ -24,7 +24,7 @@ vi.mock('react-router-dom', async () => {
   };
 });
 
-describe('Auth password recovery', () => {
+describe('Auth', () => {
   beforeEach(() => {
     navigateMock.mockReset();
     useI18nMock.mockReturnValue({ isEnglish: true });
@@ -71,5 +71,75 @@ describe('Auth password recovery', () => {
       expect(confirmPasswordReset).toHaveBeenCalledWith('recover@example.com', '123456', 'UpdatedPassword123');
     });
     await waitFor(() => expect(screen.getByRole('button', { name: 'Sign In' })).toBeInTheDocument());
+  });
+
+  it('submits login and redirects to location.state.from when login succeeds', async () => {
+    const login = vi.fn().mockResolvedValue(true);
+    useUserMock.mockReturnValue({
+      login,
+      register: vi.fn(),
+      requestPasswordReset: vi.fn(),
+      confirmPasswordReset: vi.fn(),
+      isLoggedIn: false,
+      isAuthLoading: false,
+    });
+
+    render(
+      <MemoryRouter initialEntries={[{ pathname: '/auth', state: { from: '/practice' } }]}>
+        <Auth />
+      </MemoryRouter>,
+    );
+
+    fireEvent.change(screen.getByPlaceholderText('Enter your email'), { target: { value: 'learner@example.com' } });
+    fireEvent.change(screen.getByPlaceholderText('Enter your password'), { target: { value: 'StrongPass123' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Sign In' }));
+
+    await waitFor(() => {
+      expect(login).toHaveBeenCalledWith('learner@example.com', 'StrongPass123');
+    });
+    await waitFor(() => {
+      expect(navigateMock).toHaveBeenCalledWith('/practice', { replace: true });
+    });
+  });
+
+  it('redirects already logged-in users away from /auth using location.state.from', async () => {
+    useUserMock.mockReturnValue({
+      login: vi.fn(),
+      register: vi.fn(),
+      requestPasswordReset: vi.fn(),
+      confirmPasswordReset: vi.fn(),
+      isLoggedIn: true,
+      isAuthLoading: false,
+    });
+
+    render(
+      <MemoryRouter initialEntries={[{ pathname: '/auth', state: { from: '/dashboard?tab=daily' } }]}>
+        <Auth />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => {
+      expect(navigateMock).toHaveBeenCalledWith('/dashboard?tab=daily', { replace: true });
+    });
+  });
+
+  it('does not redirect logged-in users while auth state is still loading', () => {
+    useUserMock.mockReturnValue({
+      login: vi.fn(),
+      register: vi.fn(),
+      requestPasswordReset: vi.fn(),
+      confirmPasswordReset: vi.fn(),
+      isLoggedIn: true,
+      isAuthLoading: true,
+    });
+
+    render(
+      <MemoryRouter initialEntries={[{ pathname: '/auth', state: { from: '/dashboard' } }]}>
+        <Auth />
+      </MemoryRouter>,
+    );
+
+    expect(navigateMock).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: 'Checking...' })).toBeDisabled();
   });
 });
