@@ -786,12 +786,28 @@ async function callAI(prompt: string, onProgress?: (text: string) => void): Prom
     });
     clearTimeout(timeoutId);
 
-    const text = await readStreamingSse<{ text: string }>(response, onProgress);
-    if (!text || typeof text.text !== 'string' || !text.text.trim()) {
+    const payload = await readStreamingSse<unknown>(response, onProgress);
+
+    let content = '';
+    if (typeof payload === 'string') {
+      content = payload;
+    } else if (payload && typeof payload === 'object') {
+      const obj = payload as Record<string, unknown>;
+      content = firstNonEmptyString(
+        obj.text,
+        obj.content,
+        obj.message,
+        obj.data,
+        obj.response,
+        obj.output,
+      );
+    }
+
+    if (!content || !content.trim()) {
       throw new Error(pickRuntimeText('AI 返回内容为空', 'AI returned empty content'));
     }
 
-    return text.text;
+    return content;
   } catch (error: unknown) {
     clearTimeout(timeoutId);
     if (error instanceof Error && error.name === 'AbortError') {
