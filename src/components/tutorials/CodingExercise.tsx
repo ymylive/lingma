@@ -4,6 +4,7 @@ import { quickRun, runTestCases, streamJudgeAiReview, type JudgeResponse, type S
 import { useUser } from '../../contexts/UserContext';
 import { useI18n } from '../../contexts/I18nContext';
 import type { ExerciseDifficulty } from '../../data/exercises';
+import { formatAiReviewItems } from '../../utils/aiReviewFormatting';
 
 type Lang = SupportedJudgeLanguage;
 type LangTemplates = Partial<Record<Lang, string>>;
@@ -95,10 +96,6 @@ function feedbackLevelText(level?: string) {
   if (level === 'blocker') return '阻塞';
   if (level === 'review') return '待复盘';
   return level || '待判定';
-}
-
-function formatAiReviewItem(item?: string) {
-  return String(item || '').replace(/\\n/g, '\n').trim();
 }
 
 function MobileScrollHint({ isEnglish, className = '' }: { isEnglish: boolean; className?: string }) {
@@ -202,6 +199,18 @@ export default function CodingExercise({
       score: aiReview.dimensionScores[item.key],
     }));
   }, [aiReview, isEnglish]);
+  const displayErrorPoints = useMemo(
+    () => formatAiReviewItems(aiReview?.status === 'generated' ? aiReview.errorPoints : [], isEnglish),
+    [aiReview, isEnglish],
+  );
+  const displayFixSuggestions = useMemo(
+    () => formatAiReviewItems(aiReview?.status === 'generated' ? aiReview.fixSuggestions : [], isEnglish),
+    [aiReview, isEnglish],
+  );
+  const displayOptimizationSuggestions = useMemo(
+    () => formatAiReviewItems(aiReview?.status === 'generated' ? aiReview.optimizationSuggestions : [], isEnglish),
+    [aiReview, isEnglish],
+  );
 
   const onQuickRun = async () => {
     if (!code.trim()) return alert(t('请先编写代码'));
@@ -561,29 +570,29 @@ export default function CodingExercise({
 
                 {aiReview?.status === 'generated' && (
                   <div className="mt-4 grid gap-3 lg:grid-cols-2">
-                    {aiReview.errorPoints.length > 0 && (
+                    {displayErrorPoints.length > 0 && (
                       <div className="rounded-2xl border border-rose-200 bg-white p-4 dark:border-rose-900 dark:bg-slate-900/60">
                         <h4 className="text-sm font-semibold text-rose-700 dark:text-rose-300">{judgeText('错误点分析', 'Error Points')}</h4>
                         <ul className="mt-2 space-y-2 text-[15px] leading-6 text-slate-700 dark:text-slate-200 sm:text-sm">
-                          {aiReview.errorPoints.map((item, index) => <li key={`${item}-${index}`} className="whitespace-pre-line break-words">- {formatAiReviewItem(item)}</li>)}
+                          {displayErrorPoints.map((item, index) => <li key={`${item}-${index}`} className="whitespace-pre-line break-words">- {item}</li>)}
                         </ul>
                       </div>
                     )}
 
-                    {aiReview.fixSuggestions.length > 0 && (
+                    {displayFixSuggestions.length > 0 && (
                       <div className="rounded-2xl border border-emerald-200 bg-white p-4 dark:border-emerald-900 dark:bg-slate-900/60">
                         <h4 className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">{judgeText('修改建议', 'Fix Suggestions')}</h4>
                         <ul className="mt-2 space-y-2 text-[15px] leading-6 text-slate-700 dark:text-slate-200 sm:text-sm">
-                          {aiReview.fixSuggestions.map((item, index) => <li key={`${item}-${index}`} className="whitespace-pre-line break-words">- {formatAiReviewItem(item)}</li>)}
+                          {displayFixSuggestions.map((item, index) => <li key={`${item}-${index}`} className="whitespace-pre-line break-words">- {item}</li>)}
                         </ul>
                       </div>
                     )}
 
-                    {aiReview.optimizationSuggestions.length > 0 && (
+                    {displayOptimizationSuggestions.length > 0 && (
                       <div className="rounded-2xl border border-violet-200 bg-white p-4 dark:border-violet-900 dark:bg-slate-900/60">
                         <h4 className="text-sm font-semibold text-violet-700 dark:text-violet-300">{judgeText('优化建议', 'Optimization Suggestions')}</h4>
                         <ul className="mt-2 space-y-2 text-[15px] leading-6 text-slate-700 dark:text-slate-200 sm:text-sm">
-                          {aiReview.optimizationSuggestions.map((item, index) => <li key={`${item}-${index}`} className="whitespace-pre-line break-words">- {formatAiReviewItem(item)}</li>)}
+                          {displayOptimizationSuggestions.map((item, index) => <li key={`${item}-${index}`} className="whitespace-pre-line break-words">- {item}</li>)}
                         </ul>
                       </div>
                     )}
