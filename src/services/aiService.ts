@@ -1,7 +1,7 @@
 // AI出题服务 - 支持多种AI API
 
 import { readStreamingSse } from './streamingSse';
-import { isEnglishRuntimeLocale, localizeRuntimeText, pickRuntimeText } from '../utils/runtimeLocale';
+import { isEnglishRuntimeLocale, localizeRuntimeText, pickRuntimeText, getRuntimeLocale } from '../utils/runtimeLocale';
 
 export interface GeneratedExercise {
   title: string;
@@ -52,6 +52,7 @@ export interface GeneratedFillBlank {
 type ExerciseTestCase = GeneratedExercise['testCases'][number];
 type FillBlankItem = GeneratedFillBlank['blanks'][number];
 type GeneratedLanguageKey = keyof GeneratedExercise['templates'] | keyof GeneratedFillBlank['codeTemplate'];
+type ExerciseStreamRequestKind = 'coding' | 'fillBlank';
 
 const LANGUAGE_KEY_ALIASES: Record<string, GeneratedLanguageKey> = {
   c: 'c',
@@ -162,6 +163,187 @@ function firstNonEmptyString(...values: unknown[]): string {
     }
   }
   return '';
+}
+
+function parseAIJsonResponse<T>(response: string, responseType: string): T {
+  let jsonStr = String(response || '').replace(/^\uFEFF/, '').trim();
+
+  jsonStr = jsonStr.replace(/```json\s*/gi, '').replace(/```\s*/gi, '');
+
+  const startIdx = jsonStr.indexOf('{');
+  const endIdx = jsonStr.lastIndexOf('}');
+
+  if (startIdx === -1 || endIdx === -1 || endIdx <= startIdx) {
+    throw new Error(pickRuntimeText('AI返回中未找到JSON', 'No JSON payload was found in the AI response'));
+  }
+
+  const rawJson = jsonStr.substring(startIdx, endIdx + 1);
+
+  try {
+    return JSON.parse(rawJson) as T;
+  } catch {
+    // Fall through to newline repair paths.
+  }
+
+  try {
+    let fixed = '';
+    let inString = false;
+    let escape = false;
+
+    for (let i = 0; i < rawJson.length; i++) {
+      const char = rawJson[i];
+
+      if (escape) {
+        fixed += char;
+        escape = false;
+        continue;
+      }
+
+      if (char === '\\') {
+        fixed += char;
+        escape = true;
+        continue;
+      }
+
+      if (char === '"') {
+        inString = !inString;
+        fixed += char;
+        continue;
+      }
+
+      if (inString) {
+        if (char === '\n') {
+          fixed += '\\n';
+        } else if (char === '\r') {
+          continue;
+        } else if (char === '\t') {
+          fixed += '\\t';
+        } else {
+          fixed += char;
+        }
+      } else {
+        fixed += char;
+      }
+    }
+
+    return JSON.parse(fixed) as T;
+  } catch {
+    // Fall through to the final cleanup.
+  }
+
+  try {
+    let fixed = '';
+    let inString = false;
+    let escape = false;
+
+    for (let i = 0; i < rawJson.length; i++) {
+      const char = rawJson[i];
+
+      if (escape) {
+        fixed += char;
+        escape = false;
+        continue;
+      }
+
+      if (char === '\\') {
+        fixed += char;
+        escape = true;
+        continue;
+      }
+
+      if (char === '"') {
+        inString = !inString;
+        fixed += char;
+        continue;
+      }
+
+      if (char === '\n' || char === '\r') {
+        if (inString) {
+          fixed += '\\n';
+        }
+        continue;
+      }
+
+      fixed += char;
+    }
+
+    return JSON.parse(fixed) as T;
+  } catch {
+    const preview = rawJson.substring(0, 300);
+    throw new Error(
+      pickRuntimeText(
+        `${responseType} 返回格式错误: ${preview}...`,
+        `${responseType} returned malformed JSON: ${preview}...`,
+      ),
+    );
+  }
+}
+
+function looksLikeStructuredAiPayload(payload: Record<string, unknown>): boolean {
+  return [
+    'title',
+    'problem_title',
+    'problemTitle',
+    'description',
+    'problem_description',
+    'problemDescription',
+    'statement',
+    'templates',
+    'starterCode',
+    'starter_code',
+    'codeTemplate',
+    'code_template',
+    'testCases',
+    'test_cases',
+    'examples',
+    'blanks',
+    'blankItems',
+    'blank_items',
+  ].some((key) => key in payload);
+}
+
+function unwrapStructuredPayload(payload: unknown): unknown {
+  if (typeof payload === 'string') {
+    return parseAIJsonResponse<Record<string, unknown>>(payload, 'AI payload');
+  }
+
+  if (!isRecord(payload)) {
+    return payload;
+  }
+
+  const nested = payload.data;
+  if (isRecord(nested)) {
+    return nested;
+  }
+  if (typeof nested === 'string' && nested.trim()) {
+    return parseAIJsonResponse<Record<string, unknown>>(nested, 'AI payload');
+  }
+
+  const response = payload.response;
+  if (isRecord(response)) {
+    const structured = response.content;
+    if (isRecord(structured)) {
+      return structured;
+    }
+  }
+
+  if (looksLikeStructuredAiPayload(payload)) {
+    return payload;
+  }
+
+  const legacyText = firstNonEmptyString(
+    payload.text,
+    payload.content,
+    payload.message,
+    payload.data,
+    payload.response,
+    payload.output,
+  );
+  if (legacyText) {
+    return parseAIJsonResponse<Record<string, unknown>>(legacyText, 'AI payload');
+  }
+
+  return payload;
 }
 
 function normalizeLanguageKey(key: string): GeneratedLanguageKey | null {
@@ -410,96 +592,21 @@ function localizePromptValue(value: string) {
   return localizeRuntimeText(value, value);
 }
 
-function buildExerciseSystemPrompt() {
-  if (isEnglishRuntimeLocale()) {
-    return `You are an expert ACM/OJ problem designer. Generate high-quality programming exercises that strictly follow standard competitive-programming formatting.
+function buildExerciseCompatMessages(prompt: string) {
+  const systemPrompt = isEnglishRuntimeLocale()
+    ? 'You are an expert ACM/OJ problem designer. Return valid JSON only, with no markdown or explanation.'
+    : '你是专业的 ACM/OJ 题目设计专家。只返回合法 JSON，不要输出 markdown 或额外解释。';
 
-[ACM/OJ standards - follow strictly]
-
-1. Problem statement
-- Keep the scenario concise and clear
-- State the task accurately and without ambiguity
-- Explain input format line by line, including data type and constraints
-- Explain output format precisely, including formatting and precision when needed
-- State the full data range and edge conditions
-
-2. Input format
-- Usually start with T or n when appropriate
-- Arrays: first line n, second line the n space-separated values
-- Multiple parameters: one parameter per line when helpful
-- Strings: plain input without quotes
-- Matrices: first line m n, followed by m rows
-- Linked lists: first line n, second line node values
-- Binary trees: level-order traversal, use -1 or N for null
-
-3. Output format
-- Output only the required result
-- Separate multiple values with spaces
-- Print array results directly without []
-- Boolean values should be "true"/"false" or "Yes"/"No"
-- Respect required decimal precision
-
-4. Code templates
-- Must be complete and compilable
-- Include required imports / headers
-- Use standard input and standard output
-- C++: cin/cout, Java: Scanner/System.out, Python: input()/print()
-- Main entry should be standard (main / Main)
-
-5. Test cases
-- Provide at least 3 test cases
-- Include normal, boundary, and special cases
-- input and expectedOutput must be plain text
-
-6. JSON output
-- Return JSON only, with no markdown or extra explanation
-
-7. Output language
-- ${getUserFacingOutputInstruction()}`;
-  }
-
-  return `你是一个专业的ACM/OJ竞赛题目出题专家，严格遵循国际编程竞赛标准格式生成高质量编程练习题。
-
-【ACM/OJ标准规范 - 必须严格遵守】
-
-一、题目描述规范：
-1. 题目背景：简洁明了，说明问题场景
-2. 问题描述：清晰准确，无歧义
-3. 输入格式：详细说明每行输入的含义、数据类型、取值范围
-4. 输出格式：明确输出要求，包括精度、格式
-5. 数据范围：明确给出数据规模和边界条件
-
-二、输入格式规范：
-- 第一行通常是数据组数T或数组长度n
-- 数组：第一行长度n，第二行n个空格分隔的元素
-- 多参数：每个参数独占一行
-- 字符串：直接输入，不加引号
-- 矩阵：第一行m n，接下来m行每行n个元素
-- 链表：第一行长度n，第二行n个节点值
-- 二叉树：层序遍历，null用-1或N表示
-
-三、输出格式规范：
-- 纯结果输出，无多余信息
-- 多个值用空格分隔
-- 数组结果直接输出元素，不加[]括号
-- 布尔值输出"true"/"false"或"Yes"/"No"
-- 浮点数按要求保留小数位
-
-四、代码规范：
-1. 必须是完整可编译运行的程序
-2. 包含必要的头文件/import
-3. 使用标准输入输出（stdin/stdout）
-4. C++: cin/cout, Java: Scanner/System.out, Python: input()/print()
-5. 主函数命名：C++为main，Java类名为Main
-
-五、测试用例规范：
-- 至少3个测试用例
-- 包含：基本功能测试、边界条件测试、特殊情况测试
-- input和expectedOutput必须是纯文本格式
-
-六、JSON输出：严格按照要求格式，不包含任何其他文字说明
-
-七、输出语言要求：${getUserFacingOutputInstruction()}`;
+  return [
+    {
+      role: 'system',
+      content: systemPrompt,
+    },
+    {
+      role: 'user',
+      content: prompt,
+    },
+  ];
 }
 
 function buildCodingPrompt(
@@ -761,17 +868,15 @@ int main() {
 }
 
 // 调用AI API (流式输出)
-async function callAI(prompt: string, onProgress?: (text: string) => void): Promise<string> {
+async function callAI<T>(
+  requestKind: ExerciseStreamRequestKind,
+  prompt: string,
+  normalizePayload: (payload: unknown) => T,
+  onProgress?: (text: string) => void,
+): Promise<T> {
   const apiUrl = AI_STREAM_URL;
   const modelOverride = getConfiguredModelOverride();
-
-  const messages = [
-    {
-      role: 'system',
-      content: buildExerciseSystemPrompt(),
-    },
-    { role: 'user', content: prompt }
-  ];
+  const messages = buildExerciseCompatMessages(prompt);
 
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 300000);
@@ -781,33 +886,19 @@ async function callAI(prompt: string, onProgress?: (text: string) => void): Prom
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(modelOverride ? { messages, model: modelOverride } : { messages }),
+      body: JSON.stringify({
+        kind: requestKind,
+        prompt,
+        locale: getRuntimeLocale(),
+        messages,
+        ...(modelOverride ? { model: modelOverride } : {}),
+      }),
       signal: controller.signal,
     });
     clearTimeout(timeoutId);
 
     const payload = await readStreamingSse<unknown>(response, onProgress);
-
-    let content = '';
-    if (typeof payload === 'string') {
-      content = payload;
-    } else if (payload && typeof payload === 'object') {
-      const obj = payload as Record<string, unknown>;
-      content = firstNonEmptyString(
-        obj.text,
-        obj.content,
-        obj.message,
-        obj.data,
-        obj.response,
-        obj.output,
-      );
-    }
-
-    if (!content || !content.trim()) {
-      throw new Error(pickRuntimeText('AI 返回内容为空', 'AI returned empty content'));
-    }
-
-    return content;
+    return normalizePayload(unwrapStructuredPayload(payload));
   } catch (error: unknown) {
     clearTimeout(timeoutId);
     if (error instanceof Error && error.name === 'AbortError') {
@@ -827,8 +918,7 @@ export async function generateCodingExercise(
 ): Promise<GeneratedExercise> {
   const prompt = buildCodingPrompt(topic, difficulty, dataStructure, profileHint);
 
-  const response = await callAI(prompt, onProgress);
-  return normalizeGeneratedExercisePayload(parseAIJsonResponse<unknown>(response, 'coding exercise'));
+  return callAI('coding', prompt, normalizeGeneratedExercisePayload, onProgress);
 }
 
 // 生成填空题 (支持流式输出)
@@ -841,133 +931,7 @@ export async function generateFillBlank(
 ): Promise<GeneratedFillBlank> {
   const prompt = buildFillBlankPrompt(topic, difficulty, dataStructure, profileHint);
 
-  const response = await callAI(prompt, onProgress);
-  return normalizeGeneratedFillBlankPayload(parseAIJsonResponse<unknown>(response, 'fill blank exercise'));
-}
-
-// 通用JSON解析函数 - 处理AI返回中的换行问题
-function parseAIJsonResponse<T>(response: string, responseType: string): T {
-  let jsonStr = response;
-  
-  // 移除可能的markdown代码块
-  jsonStr = jsonStr.replace(/```json\s*/gi, '').replace(/```\s*/gi, '');
-  
-  // 找到JSON的起始和结束位置
-  const startIdx = jsonStr.indexOf('{');
-  const endIdx = jsonStr.lastIndexOf('}');
-  
-  if (startIdx === -1 || endIdx === -1 || endIdx <= startIdx) {
-    throw new Error(pickRuntimeText('AI返回中未找到JSON', 'No JSON payload was found in the AI response'));
-  }
-  
-  const rawJson = jsonStr.substring(startIdx, endIdx + 1);
-  
-  // 方法1: 直接尝试解析
-  try {
-    return JSON.parse(rawJson) as T;
-  } catch (e1) {
-    void e1;
-  }
-  
-  // 方法2: 智能处理字符串内的换行符
-  try {
-    let fixed = '';
-    let inString = false;
-    let escape = false;
-    
-    for (let i = 0; i < rawJson.length; i++) {
-      const char = rawJson[i];
-      
-      if (escape) {
-        fixed += char;
-        escape = false;
-        continue;
-      }
-      
-      if (char === '\\') {
-        fixed += char;
-        escape = true;
-        continue;
-      }
-      
-      if (char === '"') {
-        inString = !inString;
-        fixed += char;
-        continue;
-      }
-      
-      if (inString) {
-        // 在字符串内部，转义实际换行符
-        if (char === '\n') {
-          fixed += '\\n';
-        } else if (char === '\r') {
-          // 忽略CR
-        } else if (char === '\t') {
-          fixed += '\\t';
-        } else {
-          fixed += char;
-        }
-      } else {
-        // 在字符串外部，直接添加（包括换行，这在JSON中是合法的）
-        fixed += char;
-      }
-    }
-    
-    return JSON.parse(fixed) as T;
-  } catch (e2) {
-    void e2;
-  }
-  
-  // 方法3: 移除字符串外的换行，保留字符串内的转义
-  try {
-    let fixed = '';
-    let inString = false;
-    let escape = false;
-    
-    for (let i = 0; i < rawJson.length; i++) {
-      const char = rawJson[i];
-      
-      if (escape) {
-        fixed += char;
-        escape = false;
-        continue;
-      }
-      
-      if (char === '\\') {
-        fixed += char;
-        escape = true;
-        continue;
-      }
-      
-      if (char === '"') {
-        inString = !inString;
-        fixed += char;
-        continue;
-      }
-      
-      if (char === '\n' || char === '\r') {
-        if (inString) {
-          fixed += '\\n';
-        }
-        // 字符串外的换行直接跳过
-        continue;
-      }
-      
-      fixed += char;
-    }
-    
-    return JSON.parse(fixed) as T;
-  } catch (e3) {
-    void e3;
-  }
-  
-  const preview = rawJson.substring(0, 300);
-  throw new Error(
-    pickRuntimeText(
-      `${responseType} 返回格式错误: ${preview}...`,
-      `${responseType} returned malformed JSON: ${preview}...`,
-    ),
-  );
+  return callAI('fillBlank', prompt, normalizeGeneratedFillBlankPayload, onProgress);
 }
 
 // 批量生成题目

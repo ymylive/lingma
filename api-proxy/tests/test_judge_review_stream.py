@@ -207,6 +207,8 @@ def test_judge_review_stream_emits_preview_and_final(client: TestClient, api_env
     )
     assert response.status_code == 200, response.text
     assert response.headers["content-type"].startswith("text/event-stream")
+    assert response.headers["x-accel-buffering"] == "no"
+    assert response.headers["cache-control"] == "no-cache, no-transform"
 
     events = parse_sse_events(response.text)
     assert any(event.get("type") == "preview" and "overallDiagnosis" in event.get("text", "") for event in events)

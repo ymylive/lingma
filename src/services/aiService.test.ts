@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   generateCodingExercise,
+  generateFillBlank,
   normalizeGeneratedExercisePayload,
   normalizeGeneratedFillBlankPayload,
 } from './aiService';
@@ -158,13 +159,47 @@ describe('streamed AI exercise generation', () => {
     vi.unstubAllGlobals();
   });
 
+  it('accepts nested data and response payload shapes from streamed responses', async () => {
+    const structuredPayload = {
+      title: '链表题',
+      description: '题面',
+      templates: { cpp: 'int main(){return 0;}', java: 'public class Main{}', python: 'pass' },
+      solutions: { cpp: 'int main(){return 0;}', java: 'public class Main{}', python: 'pass' },
+      testCases: [{ input: '1', expectedOutput: '1', description: '样例' }],
+      difficulty: 'easy',
+      hints: [],
+      explanation: '',
+    };
+
+    for (const payloadVariant of [
+      structuredPayload,
+      { title: '链表题', problem_description: '题面', starter_code: { cpp: 'int main(){return 0;}', java: 'public class Main{}', python3: 'pass' }, reference_solutions: { cpp: 'int main(){return 0;}', java: 'public class Main{}', python: 'pass' }, examples: [{ sampleInput: '1', output: '1', label: '样例' }], difficulty: 'easy', tips: [], analysis: '' },
+    ]) {
+      vi.stubGlobal('fetch', vi.fn(async () => {
+        const encoder = new TextEncoder();
+        const stream = new ReadableStream<Uint8Array>({
+          start(controller) {
+            controller.enqueue(encoder.encode('data: {"type":"preview","text":"链表"}\n\n'));
+            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'final', payload: payloadVariant })}\n\n`));
+            controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+            controller.close();
+          },
+        });
+        return new Response(stream, { status: 200, headers: { 'Content-Type': 'text/event-stream' } });
+      }));
+
+      const result = await generateCodingExercise('链表', 'easy', '链表');
+      expect(result.title).toBe('链表题');
+    }
+  });
+
   it('accepts alternate final payload shapes from streamed responses', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => {
       const encoder = new TextEncoder();
       const stream = new ReadableStream<Uint8Array>({
         start(controller) {
           controller.enqueue(encoder.encode('data: {"type":"preview","text":"链表"}\n\n'));
-          controller.enqueue(encoder.encode('data: {"type":"final","payload":{"content":"{\\"title\\":\\"链表题\\",\\"description\\":\\"题面\\",\\"templates\\":{\\"cpp\\":\\"int main(){return 0;}\\",\\"java\\":\\"public class Main{}\\",\\"python\\":\\"pass\\"},\\"solutions\\":{\\"cpp\\":\\"int main(){return 0;}\\",\\"java\\":\\"public class Main{}\\",\\"python\\":\\"pass\\"},\\"testCases\\":[{\\"input\\":\\"1\\",\\"expectedOutput\\":\\"1\\",\\"description\\":\\"样例\\"}],\\"difficulty\\":\\"easy\\",\\"hints\\":[],\\"explanation\\":\\"\\"}"}}\n\n'));
+          controller.enqueue(encoder.encode('data: {"type":"final","payload":{"problem_title":"链表题","problem_description":"题面","starter_code":{"cpp":"int main(){return 0;}","java":"public class Main{}","python3":"pass"},"reference_solutions":{"cpp":"int main(){return 0;}","java":"public class Main{}","python":"pass"},"examples":[{"sampleInput":"1","output":"1","label":"样例"}],"difficulty":"easy","tips":[],"analysis":""}}\n\n'));
           controller.enqueue(encoder.encode('data: [DONE]\n\n'));
           controller.close();
         },
@@ -176,15 +211,102 @@ describe('streamed AI exercise generation', () => {
     expect(result.title).toBe('链表题');
   });
 
-  it('uses standardized SSE events for coding exercise generation', async () => {
-    const onProgress = vi.fn();
-    const result = await generateCodingExercise('链表', 'easy', '链表', onProgress);
+  it('accepts structured final payload objects from streamed responses', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => {
+      const encoder = new TextEncoder();
+      const stream = new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.enqueue(encoder.encode('data: {"type":"preview","text":"链表"}\n\n'));
+          controller.enqueue(encoder.encode('data: {"type":"final","payload":{"title":"链表题","description":"题面","templates":{"cpp":"int main(){return 0;}","java":"public class Main{}","python":"pass"},"solutions":{"cpp":"int main(){return 0;}","java":"public class Main{}","python":"pass"},"testCases":[{"input":"1","expectedOutput":"1","description":"样例"}],"difficulty":"easy","hints":[],"explanation":""}}\n\n'));
+          controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+          controller.close();
+        },
+      });
+      return new Response(stream, { status: 200, headers: { 'Content-Type': 'text/event-stream' } });
+    }));
 
+    const result = await generateCodingExercise('链表', 'easy', '链表');
     expect(result.title).toBe('链表题');
-    expect(result.description).toBe('题面');
-    expect(result.templates.cpp).toContain('int main');
-    expect(onProgress).toHaveBeenCalledWith('链表题');
-    expect(onProgress).toHaveBeenCalledWith('链表题 - 题面');
+  });
+
+  it('accepts structured final fill-blank payload objects from streamed responses', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => {
+      const encoder = new TextEncoder();
+      const stream = new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.enqueue(encoder.encode('data: {"type":"preview","text":"补全函数"}\n\n'));
+          controller.enqueue(encoder.encode('data: {"type":"final","payload":{"title":"补全链表反转函数","description":"补全程序中的函数体。","templates":{"cpp":"___FUNC1___"},"blankItems":[{"key":"FUNC1","expected_answer":"return head;","description":"返回反转后的头节点"}],"difficulty":"easy","solution_explanation":"先处理空链表，再迭代反转。"}}\n\n'));
+          controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+          controller.close();
+        },
+      });
+      return new Response(stream, { status: 200, headers: { 'Content-Type': 'text/event-stream' } });
+    }));
+
+    const result = await generateFillBlank('链表', 'easy', '链表');
+    expect(result.title).toBe('补全链表反转函数');
+    expect(result.blanks[0]?.answer).toBe('return head;');
+  });
+
+  it('parses legacy text payloads from older exercise stream responses', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => {
+      const encoder = new TextEncoder();
+      const legacyTextPayload = [
+        '```json',
+        '{"title":"链表题","description":"第一行',
+        '第二行","templates":{"cpp":"int main(){return 0;}","java":"public class Main{}","python":"pass"},"solutions":{"cpp":"int main(){return 0;}","java":"public class Main{}","python":"pass"},"testCases":[{"input":"1","expectedOutput":"1","description":"样例"}],"difficulty":"easy","hints":[],"explanation":""}',
+        '```',
+      ].join('\n');
+      const stream = new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.enqueue(encoder.encode('data: {"type":"preview","text":"链表"}\n\n'));
+          controller.enqueue(
+            encoder.encode(`data: ${JSON.stringify({ type: 'final', payload: { text: legacyTextPayload } })}\n\n`),
+          );
+          controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+          controller.close();
+        },
+      });
+      return new Response(stream, { status: 200, headers: { 'Content-Type': 'text/event-stream' } });
+    }));
+
+    const result = await generateCodingExercise('链表', 'easy', '链表');
+    expect(result.title).toBe('链表题');
+    expect(result.description).toContain('第一行');
+    expect(result.description).toContain('第二行');
+  });
+
+  it('sends legacy messages alongside structured stream fields for backend compatibility', async () => {
+    let requestBody: Record<string, unknown> | null = null;
+
+    vi.stubGlobal('fetch', vi.fn(async (_input, init) => {
+      requestBody = JSON.parse(String(init?.body ?? '{}')) as Record<string, unknown>;
+      const encoder = new TextEncoder();
+      const stream = new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.enqueue(encoder.encode('data: {"type":"preview","text":"链表"}\n\n'));
+          controller.enqueue(encoder.encode('data: {"type":"final","payload":{"title":"链表题","description":"题面","templates":{"cpp":"int main(){return 0;}","java":"public class Main{}","python":"pass"},"solutions":{"cpp":"int main(){return 0;}","java":"public class Main{}","python":"pass"},"testCases":[{"input":"1","expectedOutput":"1","description":"样例"}],"difficulty":"easy","hints":[],"explanation":""}}\n\n'));
+          controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+          controller.close();
+        },
+      });
+      return new Response(stream, { status: 200, headers: { 'Content-Type': 'text/event-stream' } });
+    }));
+
+    await generateCodingExercise('链表', 'easy', '链表');
+
+    expect(requestBody?.kind).toBe('coding');
+    expect(requestBody?.prompt).toEqual(expect.any(String));
+    expect(requestBody?.messages).toEqual([
+      expect.objectContaining({
+        role: 'system',
+        content: expect.any(String),
+      }),
+      expect.objectContaining({
+        role: 'user',
+        content: expect.any(String),
+      }),
+    ]);
   });
 });
 

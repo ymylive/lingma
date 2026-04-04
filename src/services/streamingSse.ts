@@ -19,6 +19,8 @@ export async function readStreamingSse<T>(
   response: Response,
   onProgress?: (text: string) => void,
 ): Promise<T> {
+  const prematureCloseMessage = 'Streaming connection closed before the final payload arrived';
+
   if (!response.ok) {
     const rawText = await response.text();
     if (!rawText) {
@@ -49,11 +51,16 @@ export async function readStreamingSse<T>(
   let pending = '';
   let finalPayload: T | undefined;
 
-  const flushLine = (rawLine: string) => {
-    const line = rawLine.trim();
-    if (!line.startsWith('data:')) return;
+  const flushEvent = (rawEvent: string) => {
+    const lines = rawEvent
+      .split('\n')
+      .map((line) => line.trimEnd())
+      .filter(Boolean);
+    const dataLines = lines
+      .filter((line) => line.startsWith('data:'))
+      .map((line) => line.slice(5).trim());
+    const data = dataLines.length > 1 ? dataLines.join('') : dataLines.join('\n').trim();
 
-    const data = line.slice(5).trim();
     if (!data || data === '[DONE]') return;
 
     const event = JSON.parse(data) as StreamingEvent<T>;
@@ -69,22 +76,51 @@ export async function readStreamingSse<T>(
     }
   };
 
-  while (true) {
-    const { done, value } = await reader.read();
-    pending += decoder.decode(value || new Uint8Array(), { stream: !done });
-    const lines = pending.split('\n');
-    pending = lines.pop() || '';
+  const flushPendingEvent = (allowPartialPayloadFailure = false) => {
+    if (!pending.trim()) return;
 
-    for (const line of lines) {
-      flushLine(line);
+    const buffered = pending;
+    pending = '';
+
+    try {
+      flushEvent(buffered);
+    } catch (error) {
+      if (allowPartialPayloadFailure && error instanceof SyntaxError) {
+        return;
+      }
+      throw error;
+    }
+  };
+
+  while (true) {
+    let chunk: ReadableStreamReadResult<Uint8Array>;
+    try {
+      chunk = await reader.read();
+    } catch (error) {
+      flushPendingEvent(true);
+
+      if (finalPayload !== undefined) {
+        return finalPayload;
+      }
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw error;
+      }
+      throw new Error(prematureCloseMessage);
+    }
+
+    const { done, value } = chunk;
+    pending += decoder.decode(value || new Uint8Array(), { stream: !done });
+    const events = pending.split('\n\n');
+    pending = events.pop() || '';
+
+    for (const event of events) {
+      flushEvent(event);
     }
 
     if (done) break;
   }
 
-  if (pending.trim()) {
-    flushLine(pending);
-  }
+  flushPendingEvent();
 
   if (finalPayload === undefined) {
     throw new Error('Streaming response completed without a final payload');

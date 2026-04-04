@@ -53,6 +53,11 @@ from app_modules.auth_recovery import (
     sanitize_password_reset_code,
     verify_password_reset_code,
 )
+from app_modules.exercise_payloads import (
+    normalize_generated_exercise_payload,
+    normalize_generated_fill_blank_payload,
+)
+from app_modules.structured_json import parse_structured_json_object
 
 DEFAULT_ALLOWED_ORIGINS = [
     "http://localhost:5173",
@@ -436,13 +441,9 @@ def parse_upstream_json_object(data: Dict[str, Any]) -> Dict[str, Any]:
         raw_payload = json.dumps(data, ensure_ascii=False)
 
     try:
-        parsed = json.loads(raw_payload)
-    except Exception as exc:
+        return parse_structured_json_object(raw_payload)
+    except ValueError as exc:
         raise HTTPException(status_code=502, detail="invalid structured AI output") from exc
-
-    if not isinstance(parsed, dict):
-        raise HTTPException(status_code=502, detail="invalid structured AI output")
-    return parsed
 
 
 def normalize_generated_challenge_payload(payload: Dict[str, Any], track: str, difficulty: str, user_id: str) -> Dict[str, Any]:
@@ -2528,8 +2529,9 @@ def build_sse_done() -> str:
 
 def build_standard_streaming_headers() -> Dict[str, str]:
     return {
-        "Cache-Control": "no-cache",
+        "Cache-Control": "no-cache, no-transform",
         "Connection": "keep-alive",
+        "X-Accel-Buffering": "no",
     }
 
 
@@ -2537,18 +2539,42 @@ def parse_streamed_json_object(final_text: str, fallback_response: Optional[Dict
     raw_payload = str(final_text or "").strip()
     if raw_payload:
         try:
-            parsed = json.loads(raw_payload)
-        except Exception as exc:
+            return parse_structured_json_object(raw_payload)
+        except ValueError as exc:
             if fallback_response is None:
                 raise HTTPException(status_code=502, detail="invalid structured AI output") from exc
-        else:
-            if isinstance(parsed, dict):
-                return parsed
-            raise HTTPException(status_code=502, detail="invalid structured AI output")
 
     if fallback_response is not None:
         return parse_upstream_json_object(fallback_response)
     raise HTTPException(status_code=502, detail="invalid structured AI output")
+
+
+def build_exercise_prompt_payload(kind: str, prompt: str, model: str, locale: str) -> Dict[str, Any]:
+    normalized_kind = str(kind or "").strip()
+    if normalized_kind not in {"coding", "fillBlank"}:
+        raise HTTPException(status_code=400, detail="invalid exercise stream kind")
+
+    instructions = (
+        "You are an expert ACM/OJ problem designer. Return valid JSON only, with no markdown or explanation."
+        if sanitize_app_locale(locale) == "en-US"
+        else "你是专业的 ACM/OJ 题目设计专家。只返回合法 JSON，不要输出 markdown 或额外解释。"
+    )
+
+    return {
+        "model": resolve_requested_model(model),
+        "input": [
+            {
+                "role": "system",
+                "content": [{"type": "input_text", "text": instructions}],
+            },
+            {
+                "role": "user",
+                "content": [{"type": "input_text", "text": prompt}],
+            },
+        ],
+        "metadata": {"exercise_kind": normalized_kind},
+        "max_output_tokens": 3200,
+    }
 
 
 def iter_upstream_text_stream(payload: Dict[str, Any]) -> Iterator[Tuple[str, str, Optional[Dict[str, Any]]]]:
@@ -2648,6 +2674,42 @@ async def chat_completion_stream(request: Request):
         raise HTTPException(status_code=500, detail="AI_API_KEY is not configured")
 
     body = await request.json()
+    kind = str(body.get("kind") or "").strip()
+    prompt = str(body.get("prompt") or "").strip()
+
+    if kind and prompt:
+        model_name = resolve_requested_model(body.get("model"))
+        locale = sanitize_app_locale(body.get("locale"))
+        payload = build_exercise_prompt_payload(kind, prompt, model_name, locale)
+
+        def event_stream() -> Iterator[str]:
+            try:
+                for phase, text, response_obj in iter_upstream_text_stream(payload):
+                    if phase == "preview":
+                        if text:
+                            yield build_sse_data({"type": "preview", "text": text})
+                        continue
+
+                    parsed = parse_streamed_json_object(text, response_obj)
+                    normalized = (
+                        normalize_generated_fill_blank_payload(parsed)
+                        if kind == "fillBlank"
+                        else normalize_generated_exercise_payload(parsed)
+                    )
+                    yield build_sse_data({"type": "final", "payload": normalized})
+                    yield build_sse_done()
+                    return
+            except HTTPException as exc:
+                yield build_sse_data({"type": "error", "message": str(exc.detail)})
+                yield build_sse_done()
+                return
+            except Exception as exc:
+                yield build_sse_data({"type": "error", "message": str(exc)})
+                yield build_sse_done()
+                return
+
+        return StreamingResponse(event_stream(), media_type="text/event-stream", headers=build_standard_streaming_headers())
+
     payload = build_legacy_request_payload(body, stream=True)
 
     def event_stream() -> Iterator[str]:
