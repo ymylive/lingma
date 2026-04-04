@@ -174,4 +174,10 @@ Latest checks completed:
 
 ## License / 许可证
 
-MIT
+Licensed under the [MIT License](./LICENSE).
+
+Additional copyright, notice, and brand-reservation details are documented in [NOTICE](./NOTICE).
+
+Security disclosure guidance is documented in [SECURITY.md](./SECURITY.md).
+
+Copyright (c) 2024-2026 LingMa Team.
