@@ -26,6 +26,7 @@ INCLUDE_PATHS = [
     "deploy/docker-deploy.py",
     "deploy/lingma.conf",
     "deploy/nginx.conf",
+    "deploy/snippets/",
     "deploy/runtime_config.py",
     "deploy/setup-env.py",
     "deploy/setup-judge.sh",
