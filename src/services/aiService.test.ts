@@ -339,3 +339,135 @@ describe('normalizeGeneratedFillBlankPayload', () => {
     expect(payload.explanation).toBe('先处理空链表，再迭代反转。');
   });
 });
+
+/* ---------------------------------------------------------------------------
+ * unwrapStructuredPayload branch coverage (tested indirectly via SSE streams)
+ * ---------------------------------------------------------------------------*/
+describe('unwrapStructuredPayload branch coverage', () => {
+  const exerciseObj = {
+    title: '链表题',
+    description: '题面',
+    templates: { cpp: 'int main(){return 0;}', java: 'public class Main{}', python: 'pass' },
+    solutions: { cpp: 'int main(){return 0;}', java: 'public class Main{}', python: 'pass' },
+    testCases: [{ input: '1', expectedOutput: '1', description: '样例' }],
+    difficulty: 'easy',
+    hints: [],
+    explanation: '',
+  };
+
+  function makeStorage() {
+    const storage = new Map<string, string>();
+    return {
+      getItem: vi.fn((key: string) => storage.get(key) ?? null),
+      setItem: vi.fn((key: string, value: string) => { storage.set(key, value); }),
+      removeItem: vi.fn((key: string) => { storage.delete(key); }),
+      clear: vi.fn(() => { storage.clear(); }),
+    };
+  }
+
+  function stubFetchWithPayload(payload: unknown) {
+    vi.stubGlobal('fetch', vi.fn(async () => {
+      const encoder = new TextEncoder();
+      const stream = new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.enqueue(encoder.encode('data: {"type":"preview","text":"loading"}\n\n'));
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'final', payload })}\n\n`));
+          controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+          controller.close();
+        },
+      });
+      return new Response(stream, { status: 200, headers: { 'Content-Type': 'text/event-stream' } });
+    }));
+  }
+
+  beforeEach(() => {
+    vi.stubGlobal('localStorage', makeStorage());
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('unwraps payload.data when data is a JSON string', async () => {
+    stubFetchWithPayload({ data: JSON.stringify(exerciseObj) });
+    const result = await generateCodingExercise('链表', 'easy', '链表');
+    expect(result.title).toBe('链表题');
+    expect(result.testCases[0]?.expectedOutput).toBe('1');
+  });
+
+  it('unwraps payload.response.content when it is an object', async () => {
+    stubFetchWithPayload({ response: { content: exerciseObj } });
+    const result = await generateCodingExercise('链表', 'easy', '链表');
+    expect(result.title).toBe('链表题');
+    expect(result.templates.cpp).toContain('int main');
+  });
+
+  it('unwraps payload.text as legacy text field', async () => {
+    stubFetchWithPayload({ text: JSON.stringify(exerciseObj) });
+    const result = await generateCodingExercise('链表', 'easy', '链表');
+    expect(result.title).toBe('链表题');
+    expect(result.difficulty).toBe('easy');
+  });
+});
+
+/* ---------------------------------------------------------------------------
+ * parseAIJsonResponse repair-path coverage (tested indirectly via SSE streams)
+ * ---------------------------------------------------------------------------*/
+describe('parseAIJsonResponse repair-path coverage', () => {
+  const exerciseObj = {
+    title: '链表题',
+    description: '题面',
+    templates: { cpp: 'int main(){return 0;}', java: 'public class Main{}', python: 'pass' },
+    solutions: { cpp: 'int main(){return 0;}', java: 'public class Main{}', python: 'pass' },
+    testCases: [{ input: '1', expectedOutput: '1', description: '样例' }],
+    difficulty: 'easy',
+    hints: [],
+    explanation: '',
+  };
+
+  function makeStorage() {
+    const storage = new Map<string, string>();
+    return {
+      getItem: vi.fn((key: string) => storage.get(key) ?? null),
+      setItem: vi.fn((key: string, value: string) => { storage.set(key, value); }),
+      removeItem: vi.fn((key: string) => { storage.delete(key); }),
+      clear: vi.fn(() => { storage.clear(); }),
+    };
+  }
+
+  function stubFetchWithTextPayload(text: string) {
+    vi.stubGlobal('fetch', vi.fn(async () => {
+      const encoder = new TextEncoder();
+      const stream = new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.enqueue(encoder.encode('data: {"type":"preview","text":"loading"}\n\n'));
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'final', payload: { text } })}\n\n`));
+          controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+          controller.close();
+        },
+      });
+      return new Response(stream, { status: 200, headers: { 'Content-Type': 'text/event-stream' } });
+    }));
+  }
+
+  beforeEach(() => {
+    vi.stubGlobal('localStorage', makeStorage());
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('strips markdown code fences wrapping the JSON before parsing', async () => {
+    const wrappedJson = '```json\n' + JSON.stringify(exerciseObj) + '\n```';
+    stubFetchWithTextPayload(wrappedJson);
+    const result = await generateCodingExercise('链表', 'easy', '链表');
+    expect(result.title).toBe('链表题');
+    expect(result.testCases).toHaveLength(1);
+  });
+
+  it('throws when all JSON repair attempts fail on invalid payload', async () => {
+    stubFetchWithTextPayload('this is not json at all {{{{');
+    await expect(generateCodingExercise('链表', 'easy', '链表')).rejects.toThrow(/格式错误|malformed JSON|未找到JSON|No JSON/);
+  });
+});

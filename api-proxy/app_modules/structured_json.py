@@ -23,8 +23,17 @@ def _extract_json_object_slice(raw_text: str) -> str:
     return raw_text[start_idx : end_idx + 1]
 
 
-def _escape_control_chars_inside_strings(raw_json: str) -> str:
-    fixed = []
+def _fix_json_control_chars(
+    raw_json: str, strip_exterior_newlines: bool = False
+) -> str:
+    """Single-pass fix for control characters in a JSON string.
+
+    * Always escapes literal newlines/tabs inside JSON string values.
+    * When *strip_exterior_newlines* is ``True``, also removes ``\\n``/``\\r``
+      that appear **outside** JSON string values (structural whitespace that
+      some LLMs inject between keys).
+    """
+    fixed: list[str] = []
     in_string = False
     escape = False
 
@@ -53,37 +62,9 @@ def _escape_control_chars_inside_strings(raw_json: str) -> str:
             if char == "\t":
                 fixed.append("\\t")
                 continue
-
-        fixed.append(char)
-
-    return "".join(fixed)
-
-
-def _remove_exterior_newlines(raw_json: str) -> str:
-    fixed = []
-    in_string = False
-    escape = False
-
-    for char in raw_json:
-        if escape:
-            fixed.append(char)
-            escape = False
-            continue
-
-        if char == "\\":
-            fixed.append(char)
-            escape = True
-            continue
-
-        if char == '"':
-            in_string = not in_string
-            fixed.append(char)
-            continue
-
-        if char in {"\n", "\r"}:
-            if in_string:
-                fixed.append("\\n")
-            continue
+        else:
+            if strip_exterior_newlines and char in {"\n", "\r"}:
+                continue
 
         fixed.append(char)
 
@@ -96,8 +77,8 @@ def parse_structured_json_object(raw_text: str) -> Dict[str, Any]:
 
     for candidate in (
         raw_json,
-        _escape_control_chars_inside_strings(raw_json),
-        _remove_exterior_newlines(raw_json),
+        _fix_json_control_chars(raw_json, strip_exterior_newlines=False),
+        _fix_json_control_chars(raw_json, strip_exterior_newlines=True),
     ):
         try:
             parsed = json.loads(candidate)

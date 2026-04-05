@@ -42,6 +42,7 @@ function createReaderResponse(
         value: step.value ? encoder.encode(step.value) : undefined,
       };
     }),
+    cancel: vi.fn(async () => {}),
   };
 
   return {
@@ -68,7 +69,7 @@ describe('readStreamingSse', () => {
   it('surfaces plain-text body from non-OK response', async () => {
     const response = new Response('plain backend failure', { status: 500 });
 
-    await expect(readStreamingSse(response)).rejects.toThrow('plain backend failure');
+    await expect(readStreamingSse(response)).rejects.toThrow('AI service returned an unexpected response');
   });
 
   it('throws when OK response has no readable body', async () => {

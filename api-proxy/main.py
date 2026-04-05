@@ -2303,14 +2303,17 @@ def extract_responses_sse_json(body_text: str) -> Dict[str, Any]:
         if event_type == "response.failed":
             error = event.get("error") if isinstance(event.get("error"), dict) else {}
             message = str(error.get("message") or "upstream stream failed").strip()
-            raise HTTPException(status_code=502, detail=message or "upstream stream failed")
+            logger.warning("upstream stream error: %s", message)
+            raise HTTPException(status_code=502, detail="upstream stream failed")
 
     if isinstance(last_response, dict):
         return last_response
     if isinstance(last_payload, dict) and isinstance(last_payload.get("error"), dict):
         message = str(last_payload["error"].get("message") or "upstream stream failed").strip()
-        raise HTTPException(status_code=502, detail=message or "upstream stream failed")
-    raise HTTPException(status_code=502, detail=f"invalid upstream response: {(body_text or '').strip()[:500]}")
+        logger.warning("upstream stream error: %s", message)
+        raise HTTPException(status_code=502, detail="upstream stream failed")
+    logger.warning("invalid upstream response: %s", (body_text or "").strip()[:500])
+    raise HTTPException(status_code=502, detail="invalid upstream response")
 
 
 def extract_compat_sse_json(body_text: str) -> Dict[str, Any]:
@@ -2352,10 +2355,12 @@ def perform_upstream_responses_request(payload: Dict[str, Any]) -> Tuple[request
             if downgraded_payload is not None:
                 current_payload = downgraded_payload
                 continue
-            raise HTTPException(status_code=504, detail=str(exc)) from exc
+            logger.warning("upstream request timeout: %s", exc)
+            raise HTTPException(status_code=504, detail="upstream request timed out") from exc
         except requests.RequestException as exc:
             session.close()
-            raise HTTPException(status_code=502, detail=str(exc)) from exc
+            logger.warning("upstream request failed: %s", exc)
+            raise HTTPException(status_code=502, detail="upstream request failed") from exc
 
         if response.status_code < 400:
             return session, response, protocol
@@ -2375,7 +2380,8 @@ def perform_upstream_responses_request(payload: Dict[str, Any]) -> Tuple[request
             if downgraded_payload is not None:
                 current_payload = downgraded_payload
                 continue
-        raise HTTPException(status_code=response.status_code, detail=extract_error_message(body_text))
+        logger.warning("upstream error %d: %s", response.status_code, extract_error_message(body_text))
+        raise HTTPException(status_code=response.status_code, detail="upstream request failed")
 
 
 @contextmanager
@@ -2409,7 +2415,8 @@ def read_upstream_responses_json(payload: Dict[str, Any]) -> Dict[str, Any]:
         try:
             data = json.loads(body_text)
         except Exception as exc:
-            raise HTTPException(status_code=502, detail=f"invalid upstream response: {body_text[:500]}") from exc
+            logger.warning("invalid upstream response: %s", body_text[:500])
+            raise HTTPException(status_code=502, detail="invalid upstream response") from exc
         if not isinstance(data, dict):
             raise HTTPException(status_code=502, detail="invalid upstream response payload")
         return build_synthetic_responses_payload_from_compat(data)
@@ -2419,7 +2426,8 @@ def read_upstream_responses_json(payload: Dict[str, Any]) -> Dict[str, Any]:
     try:
         data = json.loads(body_text)
     except Exception as exc:
-        raise HTTPException(status_code=502, detail=f"invalid upstream response: {body_text[:500]}") from exc
+        logger.warning("invalid upstream response: %s", body_text[:500])
+        raise HTTPException(status_code=502, detail="invalid upstream response") from exc
     if not isinstance(data, dict):
         raise HTTPException(status_code=502, detail="invalid upstream response payload")
     return data
@@ -2549,10 +2557,15 @@ def parse_streamed_json_object(final_text: str, fallback_response: Optional[Dict
     raise HTTPException(status_code=502, detail="invalid structured AI output")
 
 
+MAX_EXERCISE_PROMPT_LENGTH = 10000
+
+
 def build_exercise_prompt_payload(kind: str, prompt: str, model: str, locale: str) -> Dict[str, Any]:
     normalized_kind = str(kind or "").strip()
     if normalized_kind not in {"coding", "fillBlank"}:
         raise HTTPException(status_code=400, detail="invalid exercise stream kind")
+    if len(str(prompt or "")) > MAX_EXERCISE_PROMPT_LENGTH:
+        raise HTTPException(status_code=400, detail="prompt exceeds maximum length")
 
     instructions = (
         "You are an expert ACM/OJ problem designer. Return valid JSON only, with no markdown or explanation."
@@ -2704,7 +2717,8 @@ async def chat_completion_stream(request: Request):
                 yield build_sse_done()
                 return
             except Exception as exc:
-                yield build_sse_data({"type": "error", "message": str(exc)})
+                logger.exception("exercise stream error: %s", exc)
+                yield build_sse_data({"type": "error", "message": "AI service encountered an error"})
                 yield build_sse_done()
                 return
 
@@ -2739,8 +2753,8 @@ async def chat_completion_stream(request: Request):
                     return
                 elif event_type == "response.failed" or isinstance(event.get("error"), dict):
                     error = event.get("error") if isinstance(event.get("error"), dict) else {}
-                    message = str(error.get("message") or "upstream stream failed")
-                    yield build_sse_data({"type": "error", "message": message})
+                    logger.warning("upstream stream failed: %s", error.get("message", "unknown"))
+                    yield build_sse_data({"type": "error", "message": "AI service encountered an error"})
                     yield build_sse_done()
                     return
         except HTTPException as exc:
@@ -2748,7 +2762,8 @@ async def chat_completion_stream(request: Request):
             yield build_sse_done()
             return
         except Exception as exc:
-            yield build_sse_data({"type": "error", "message": str(exc)})
+            logger.exception("legacy stream error: %s", exc)
+            yield build_sse_data({"type": "error", "message": "AI service encountered an error"})
             yield build_sse_done()
             return
 
@@ -3025,7 +3040,8 @@ async def vibe_coding_generate_stream(request: Request):
             yield build_sse_data({"type": "error", "message": str(exc.detail)})
             yield build_sse_done()
         except Exception as exc:
-            yield build_sse_data({"type": "error", "message": str(exc)})
+            logger.exception("SSE stream error: %s", exc)
+            yield build_sse_data({"type": "error", "message": "AI service encountered an error"})
             yield build_sse_done()
 
     return StreamingResponse(event_stream(), media_type="text/event-stream", headers=build_standard_streaming_headers())
@@ -3163,7 +3179,8 @@ async def vibe_coding_evaluate_stream(request: Request):
             yield build_sse_data({"type": "error", "message": str(exc.detail)})
             yield build_sse_done()
         except Exception as exc:
-            yield build_sse_data({"type": "error", "message": str(exc)})
+            logger.exception("SSE stream error: %s", exc)
+            yield build_sse_data({"type": "error", "message": "AI service encountered an error"})
             yield build_sse_done()
 
     return StreamingResponse(event_stream(), media_type="text/event-stream", headers=build_standard_streaming_headers())
@@ -3340,7 +3357,8 @@ async def vibe_frontend_build_create_session_stream(request: Request):
             yield build_sse_data({"type": "error", "message": str(exc.detail)})
             yield build_sse_done()
         except Exception as exc:
-            yield build_sse_data({"type": "error", "message": str(exc)})
+            logger.exception("SSE stream error: %s", exc)
+            yield build_sse_data({"type": "error", "message": "AI service encountered an error"})
             yield build_sse_done()
 
     return StreamingResponse(event_stream(), media_type="text/event-stream", headers=build_standard_streaming_headers())
@@ -3400,7 +3418,8 @@ async def vibe_frontend_build_append_turn_stream(session_id: str, request: Reque
             yield build_sse_data({"type": "error", "message": str(exc.detail)})
             yield build_sse_done()
         except Exception as exc:
-            yield build_sse_data({"type": "error", "message": str(exc)})
+            logger.exception("SSE stream error: %s", exc)
+            yield build_sse_data({"type": "error", "message": "AI service encountered an error"})
             yield build_sse_done()
 
     return StreamingResponse(event_stream(), media_type="text/event-stream", headers=build_standard_streaming_headers())

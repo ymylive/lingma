@@ -100,3 +100,69 @@ def test_normalize_generated_exercise_payload_rejects_missing_title():
             )
     finally:
         sys.modules.pop(module.__name__, None)
+
+
+def test_normalize_generated_exercise_rejects_empty_description():
+    module = load_module("exercise_payloads_empty_desc")
+    try:
+        with pytest.raises(ValueError, match="missing description"):
+            module.normalize_generated_exercise_payload(
+                {
+                    "title": "链表题",
+                    "description": "",
+                    "templates": {"cpp": "int main(){return 0;}"},
+                    "testCases": [{"input": "1", "expectedOutput": "1", "description": "样例"}],
+                }
+            )
+    finally:
+        sys.modules.pop(module.__name__, None)
+
+
+def test_normalize_generated_exercise_rejects_empty_templates():
+    module = load_module("exercise_payloads_empty_tpl")
+    try:
+        with pytest.raises(ValueError, match="missing templates"):
+            module.normalize_generated_exercise_payload(
+                {
+                    "title": "链表题",
+                    "description": "题面",
+                    "templates": {},
+                    "testCases": [{"input": "1", "expectedOutput": "1", "description": "样例"}],
+                }
+            )
+    finally:
+        sys.modules.pop(module.__name__, None)
+
+
+def test_normalize_generated_exercise_rejects_empty_test_cases():
+    module = load_module("exercise_payloads_empty_tc")
+    try:
+        with pytest.raises(ValueError, match="missing test cases"):
+            module.normalize_generated_exercise_payload(
+                {
+                    "title": "链表题",
+                    "description": "题面",
+                    "templates": {"cpp": "int main(){return 0;}"},
+                    "testCases": [{"noInput": "x", "noOutput": "y"}],
+                }
+            )
+    finally:
+        sys.modules.pop(module.__name__, None)
+
+
+def test_normalize_generated_fill_blank_rejects_missing_code_template():
+    module = load_module("exercise_payloads_empty_code_tpl")
+    try:
+        with pytest.raises(ValueError, match="missing code template"):
+            module.normalize_generated_fill_blank_payload(
+                {
+                    "title": "补全函数",
+                    "description": "补全程序。",
+                    "codeTemplate": {},
+                    "blankItems": [
+                        {"key": "FUNC1", "expected_answer": "return head;", "description": "返回头节点"}
+                    ],
+                }
+            )
+    finally:
+        sys.modules.pop(module.__name__, None)

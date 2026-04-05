@@ -165,6 +165,65 @@ function firstNonEmptyString(...values: unknown[]): string {
   return '';
 }
 
+/**
+ * Walk a raw JSON string character-by-character and escape control characters
+ * that appear inside string literals (unescaped \n, \r, \t).
+ *
+ * When `stripExteriorNewlines` is **false**, only characters inside JSON string
+ * literals are touched (\n -> \\n, \r stripped, \t -> \\t); newlines outside
+ * strings are left intact.
+ *
+ * When `stripExteriorNewlines` is **true**, newlines (\n and \r) outside string
+ * literals are also stripped, matching the more aggressive cleanup pass.
+ *
+ * This mirrors the Python-side `_fix_json_control_chars` in structured_json.py.
+ */
+function fixJsonControlChars(raw: string, stripExteriorNewlines: boolean): string {
+  let fixed = '';
+  let inString = false;
+  let escape = false;
+
+  for (let i = 0; i < raw.length; i++) {
+    const char = raw[i];
+
+    if (escape) {
+      fixed += char;
+      escape = false;
+      continue;
+    }
+
+    if (char === '\\') {
+      fixed += char;
+      escape = true;
+      continue;
+    }
+
+    if (char === '"') {
+      inString = !inString;
+      fixed += char;
+      continue;
+    }
+
+    if (char === '\n' || char === '\r') {
+      if (inString) {
+        fixed += '\\n';
+      } else if (!stripExteriorNewlines) {
+        fixed += char;
+      }
+      continue;
+    }
+
+    if (inString && char === '\t') {
+      fixed += '\\t';
+      continue;
+    }
+
+    fixed += char;
+  }
+
+  return fixed;
+}
+
 function parseAIJsonResponse<T>(response: string, responseType: string): T {
   let jsonStr = String(response || '').replace(/^\uFEFF/, '').trim();
 
@@ -185,90 +244,15 @@ function parseAIJsonResponse<T>(response: string, responseType: string): T {
     // Fall through to newline repair paths.
   }
 
-  try {
-    let fixed = '';
-    let inString = false;
-    let escape = false;
-
-    for (let i = 0; i < rawJson.length; i++) {
-      const char = rawJson[i];
-
-      if (escape) {
-        fixed += char;
-        escape = false;
-        continue;
-      }
-
-      if (char === '\\') {
-        fixed += char;
-        escape = true;
-        continue;
-      }
-
-      if (char === '"') {
-        inString = !inString;
-        fixed += char;
-        continue;
-      }
-
-      if (inString) {
-        if (char === '\n') {
-          fixed += '\\n';
-        } else if (char === '\r') {
-          continue;
-        } else if (char === '\t') {
-          fixed += '\\t';
-        } else {
-          fixed += char;
-        }
-      } else {
-        fixed += char;
-      }
+  for (const stripExteriorNewlines of [false, true]) {
+    try {
+      return JSON.parse(fixJsonControlChars(rawJson, stripExteriorNewlines)) as T;
+    } catch {
+      continue;
     }
-
-    return JSON.parse(fixed) as T;
-  } catch {
-    // Fall through to the final cleanup.
   }
 
-  try {
-    let fixed = '';
-    let inString = false;
-    let escape = false;
-
-    for (let i = 0; i < rawJson.length; i++) {
-      const char = rawJson[i];
-
-      if (escape) {
-        fixed += char;
-        escape = false;
-        continue;
-      }
-
-      if (char === '\\') {
-        fixed += char;
-        escape = true;
-        continue;
-      }
-
-      if (char === '"') {
-        inString = !inString;
-        fixed += char;
-        continue;
-      }
-
-      if (char === '\n' || char === '\r') {
-        if (inString) {
-          fixed += '\\n';
-        }
-        continue;
-      }
-
-      fixed += char;
-    }
-
-    return JSON.parse(fixed) as T;
-  } catch {
+  {
     const preview = rawJson.substring(0, 300);
     throw new Error(
       pickRuntimeText(

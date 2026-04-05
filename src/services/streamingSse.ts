@@ -31,7 +31,8 @@ export async function readStreamingSse<T>(
     try {
       payload = JSON.parse(rawText) as { detail?: string; error?: string };
     } catch {
-      throw new Error(rawText);
+      console.error('[streamingSse] Unexpected non-JSON error response:', rawText);
+      throw new Error('AI service returned an unexpected response');
     }
 
     const detail = payload.detail || payload.error;
@@ -39,7 +40,8 @@ export async function readStreamingSse<T>(
       throw new Error(detail);
     }
 
-    throw new Error(rawText);
+    console.error('[streamingSse] Unrecognised error payload:', rawText);
+    throw new Error('AI service returned an unexpected response');
   }
 
   if (!response.body) {
@@ -92,39 +94,43 @@ export async function readStreamingSse<T>(
     }
   };
 
-  while (true) {
-    let chunk: ReadableStreamReadResult<Uint8Array>;
-    try {
-      chunk = await reader.read();
-    } catch (error) {
-      flushPendingEvent(true);
+  try {
+    while (true) {
+      let chunk: ReadableStreamReadResult<Uint8Array>;
+      try {
+        chunk = await reader.read();
+      } catch (error) {
+        flushPendingEvent(true);
 
-      if (finalPayload !== undefined) {
-        return finalPayload;
+        if (finalPayload !== undefined) {
+          return finalPayload;
+        }
+        if (error instanceof Error && error.name === 'AbortError') {
+          throw error;
+        }
+        throw new Error(prematureCloseMessage);
       }
-      if (error instanceof Error && error.name === 'AbortError') {
-        throw error;
+
+      const { done, value } = chunk;
+      pending += decoder.decode(value || new Uint8Array(), { stream: !done });
+      const events = pending.split('\n\n');
+      pending = events.pop() || '';
+
+      for (const event of events) {
+        flushEvent(event);
       }
-      throw new Error(prematureCloseMessage);
+
+      if (done) break;
     }
 
-    const { done, value } = chunk;
-    pending += decoder.decode(value || new Uint8Array(), { stream: !done });
-    const events = pending.split('\n\n');
-    pending = events.pop() || '';
+    flushPendingEvent();
 
-    for (const event of events) {
-      flushEvent(event);
+    if (finalPayload === undefined) {
+      throw new Error('Streaming response completed without a final payload');
     }
 
-    if (done) break;
+    return finalPayload;
+  } finally {
+    reader.cancel().catch(() => {});
   }
-
-  flushPendingEvent();
-
-  if (finalPayload === undefined) {
-    throw new Error('Streaming response completed without a final payload');
-  }
-
-  return finalPayload;
 }

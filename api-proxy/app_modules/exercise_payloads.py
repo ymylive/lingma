@@ -240,6 +240,28 @@ def normalize_generated_exercise_payload(payload: Any) -> Dict[str, Any]:
     if not templates:
         raise ValueError("AI exercise payload is missing templates")
 
+    # --- Field length limits (DoS prevention) ---
+    if len(title) > 256:
+        raise ValueError("AI exercise payload field 'title' exceeds maximum length")
+    if len(description) > 10000:
+        raise ValueError("AI exercise payload field 'description' exceeds maximum length")
+    for _lang, _code in templates.items():
+        if len(_code) > 20000:
+            raise ValueError("AI exercise payload field 'template' exceeds maximum length")
+    for _lang, _code in solutions.items():
+        if len(_code) > 20000:
+            raise ValueError("AI exercise payload field 'solution' exceeds maximum length")
+    if explanation and len(explanation) > 5000:
+        raise ValueError("AI exercise payload field 'explanation' exceeds maximum length")
+    for _hint in hints:
+        if len(_hint) > 2000:
+            raise ValueError("AI exercise payload field 'hint' exceeds maximum length")
+    for _tc in test_cases:
+        if len(_tc["input"]) > 5000:
+            raise ValueError("AI exercise payload field 'test case input' exceeds maximum length")
+        if len(_tc["expectedOutput"]) > 5000:
+            raise ValueError("AI exercise payload field 'test case expectedOutput' exceeds maximum length")
+
     return {
         "title": title,
         "description": description,
@@ -289,6 +311,22 @@ def normalize_generated_fill_blank_payload(payload: Any) -> Dict[str, Any]:
         raise ValueError("AI fill-blank payload is missing code template")
     if not blanks:
         raise ValueError("AI fill-blank payload is missing blanks")
+
+    # --- Field length limits (DoS prevention) ---
+    if len(title) > 256:
+        raise ValueError("AI fill-blank payload field 'title' exceeds maximum length")
+    if len(description) > 10000:
+        raise ValueError("AI fill-blank payload field 'description' exceeds maximum length")
+    for _lang, _code in code_template.items():
+        if len(_code) > 20000:
+            raise ValueError("AI fill-blank payload field 'template' exceeds maximum length")
+    if explanation and len(explanation) > 5000:
+        raise ValueError("AI fill-blank payload field 'explanation' exceeds maximum length")
+    for _blank in blanks:
+        if len(_blank["answer"]) > 2000:
+            raise ValueError("AI fill-blank payload field 'blank answer' exceeds maximum length")
+        if _blank["hint"] and len(_blank["hint"]) > 2000:
+            raise ValueError("AI fill-blank payload field 'blank hint' exceeds maximum length")
 
     return {
         "title": title,
