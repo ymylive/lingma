@@ -194,8 +194,8 @@ def main():
     os.unlink(tar_path)
     print("  Upload complete.")
 
-    print("\n[3/6] Extracting...")
-    ssh_exec(ssh, f"cd {REMOTE_DIR} && tar xzf deploy-bundle.tar.gz && rm deploy-bundle.tar.gz")
+    print("\n[3/6] Cleaning old source & extracting...")
+    ssh_exec(ssh, f"cd {REMOTE_DIR} && rm -rf src/ public/ api-proxy/ judge-server/ && tar xzf deploy-bundle.tar.gz && rm deploy-bundle.tar.gz")
 
     print("\n[4/6] Stopping old services...")
     ssh_exec(ssh, "systemctl stop ai-proxy 2>/dev/null; systemctl disable ai-proxy 2>/dev/null; true", check=False)
