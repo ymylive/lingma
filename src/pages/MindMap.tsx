@@ -1277,22 +1277,16 @@ export default function MindMap() {
       }`}
     >
       <div
-        className={`mindmap-toolbar mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between ${
+        className={`mindmap-toolbar mb-3 flex items-center justify-between gap-3 ${
           fullscreen ? 'mindmap-toolbar-fullscreen' : ''
         }`}
       >
-        <div className="text-sm text-slate-500 dark:text-slate-400">
-          缩放：{Math.round(scale * 100)}%
-        </div>
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          <button
-            onClick={resetCanvasViewport}
-            className="min-h-[44px] w-full cursor-pointer rounded-lg border border-slate-200 bg-white/80 px-3 py-2 text-sm text-slate-600 hover:border-indigo-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 sm:w-auto"
-          >
-            视图重置
-          </button>
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-slate-500 dark:text-slate-400 tabular-nums">
+            {Math.round(scale * 100)}%
+          </span>
           <input
-            className="mindmap-zoom-range w-full sm:w-40"
+            className="mindmap-zoom-range w-20 sm:w-28"
             type="range"
             min={MIN_SCALE}
             max={MAX_SCALE}
@@ -1300,19 +1294,21 @@ export default function MindMap() {
             value={scale}
             onChange={(e) => handleScaleChange(Number(e.target.value))}
           />
+        </div>
+        <div className="flex items-center gap-1.5">
+          <button
+            onClick={resetCanvasViewport}
+            className="cursor-pointer rounded-lg border border-slate-200 bg-white/80 px-2.5 py-1.5 text-xs text-slate-600 hover:border-indigo-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+          >
+            重置
+          </button>
           <button
             onClick={handleToggleMapFullscreen}
-            className="min-h-[44px] w-full cursor-pointer rounded-lg border border-slate-200 bg-white/80 px-3 py-2 text-sm text-slate-600 hover:border-indigo-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 sm:w-auto"
+            className="cursor-pointer rounded-lg border border-slate-200 bg-white/80 p-1.5 text-slate-600 hover:border-indigo-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
           >
-            <span className="inline-flex items-center gap-1.5">
-              {fullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
-              {fullscreen ? '窗口化' : '全屏'}
-            </span>
+            {fullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
           </button>
         </div>
-      </div>
-      <div className="mb-2 text-[11px] leading-5 text-slate-500 dark:text-slate-400">
-        空白处拖动，或按住空格 / 鼠标中键拖动画布；滚轮平移，Ctrl+滚轮缩放
       </div>
       {!activeMap && (
         <div className="text-center py-16 text-slate-500 dark:text-slate-400">
@@ -1661,85 +1657,67 @@ export default function MindMap() {
             </div>
           </aside>
 
-          <section className="min-w-0 space-y-8">
-            <div className="glass-card p-5 sm:p-6">
-              <div className="flex flex-col gap-4">
-                <div>
-                  <label className="text-xs text-slate-500 dark:text-slate-400">导图标题</label>
-                  <input
-                    value={mapTitle}
-                    onChange={(e) => handleUpdateTitle(e.target.value)}
-                    className="mt-1 min-h-[44px] w-full rounded-lg border border-slate-200 bg-white/80 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900 sm:w-[320px]"
-                    placeholder="导图标题"
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center">
+          <section className="min-w-0 space-y-6">
+            <div className="glass-card flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+              <div className="flex items-center gap-3">
+                <input
+                  value={mapTitle}
+                  onChange={(e) => handleUpdateTitle(e.target.value)}
+                  className="min-h-[40px] w-full rounded-lg border border-slate-200 bg-white/80 px-3 py-1.5 text-sm font-medium dark:border-slate-700 dark:bg-slate-900 sm:w-[240px]"
+                  placeholder="导图标题"
+                />
+              </div>
+              <div className="flex flex-wrap items-center gap-1.5">
+                {[
+                  { label: 'JSON', onClick: handleExportJson, primary: false },
+                  { label: 'MD', onClick: handleExportMarkdown, primary: false },
+                  { label: 'SVG', onClick: handleExportSvg, primary: false },
+                  { label: 'PNG', onClick: handleExportPng, primary: true },
+                ].map((btn) => (
                   <button
-                    onClick={handleExportJson}
+                    key={btn.label}
+                    onClick={btn.onClick}
                     disabled={!activeMap}
-                    className="min-h-[44px] w-full cursor-pointer rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-600 hover:border-indigo-400 dark:border-slate-700 dark:text-slate-200 sm:w-auto"
+                    className={`cursor-pointer rounded-lg px-2.5 py-1.5 text-xs font-medium transition ${
+                      btn.primary
+                        ? 'bg-slate-900 text-white hover:bg-slate-800 dark:bg-white dark:text-slate-900'
+                        : 'border border-slate-200 text-slate-500 hover:border-indigo-400 hover:text-slate-700 dark:border-slate-700 dark:text-slate-400'
+                    }`}
                   >
-                    <span className="inline-flex items-center gap-2">
-                      <Download className="w-4 h-4" /> JSON
+                    <span className="inline-flex items-center gap-1">
+                      <Download className="w-3 h-3" /> {btn.label}
                     </span>
                   </button>
-                  <button
-                    onClick={handleExportMarkdown}
-                    disabled={!activeMap}
-                    className="min-h-[44px] w-full cursor-pointer rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-600 hover:border-indigo-400 dark:border-slate-700 dark:text-slate-200 sm:w-auto"
-                  >
-                    <span className="inline-flex items-center gap-2">
-                      <Download className="w-4 h-4" /> Markdown
-                    </span>
-                  </button>
-                  <button
-                    onClick={handleExportSvg}
-                    disabled={!activeMap}
-                    className="min-h-[44px] w-full cursor-pointer rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-600 hover:border-indigo-400 dark:border-slate-700 dark:text-slate-200 sm:w-auto"
-                  >
-                    <span className="inline-flex items-center gap-2">
-                      <Download className="w-4 h-4" /> SVG
-                    </span>
-                  </button>
-                  <button
-                    onClick={handleExportPng}
-                    disabled={!activeMap}
-                    className="min-h-[44px] w-full cursor-pointer rounded-lg bg-slate-900 px-3 py-2 text-sm text-white hover:bg-slate-800 dark:bg-white dark:text-slate-900 sm:w-auto"
-                  >
-                    <span className="inline-flex items-center gap-2">
-                      <Download className="w-4 h-4" /> PNG
-                    </span>
-                  </button>
-                  <button
-                    onClick={handleCopyMarkdown}
-                    disabled={!activeMap}
-                    className="min-h-[44px] w-full cursor-pointer rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-600 hover:border-indigo-400 dark:border-slate-700 dark:text-slate-200 sm:w-auto"
-                  >
-                    <span className="inline-flex items-center gap-2">
-                      <Copy className="w-4 h-4" /> 复制大纲
-                    </span>
-                  </button>
-                </div>
+                ))}
+                <button
+                  onClick={handleCopyMarkdown}
+                  disabled={!activeMap}
+                  className="cursor-pointer rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-medium text-slate-500 transition hover:border-indigo-400 hover:text-slate-700 dark:border-slate-700 dark:text-slate-400"
+                >
+                  <span className="inline-flex items-center gap-1">
+                    <Copy className="w-3 h-3" /> 大纲
+                  </span>
+                </button>
               </div>
             </div>
             <div
-              className={`grid gap-8 ${
-                isMapFullscreen ? 'grid-cols-1' : 'xl:grid-cols-[minmax(0,1fr)_360px]'
+              className={`grid gap-6 ${
+                isMapFullscreen ? 'grid-cols-1' : 'xl:grid-cols-[minmax(0,1fr)_300px]'
               }`}
             >
               {renderMindMapPanel(isMapFullscreen)}
               {!isMapFullscreen && (
-                <div className="glass-card space-y-5 p-5 sm:p-6">
-                <h3 className="text-lg font-semibold text-slate-900 dark:text-white">节点编辑</h3>
+                <div className="glass-card space-y-4 p-4">
+                <h3 className="text-sm font-semibold text-slate-900 dark:text-white">节点编辑</h3>
                 {!selectedNode && (
-                  <div className="text-sm text-slate-500 dark:text-slate-400">
+                  <div className="text-xs text-slate-500 dark:text-slate-400">
                     请选择一个节点进行编辑。
                   </div>
                 )}
                 {selectedNode && (
                   <>
                     <div>
-                      <label className="text-xs text-slate-500 dark:text-slate-400">节点标题</label>
+                      <label className="text-[11px] text-slate-500 dark:text-slate-400">标题</label>
                       <input
                         value={selectedNode.node.title}
                         onChange={(e) =>
@@ -1752,11 +1730,11 @@ export default function MindMap() {
                             updatedAt: new Date().toISOString(),
                           }))
                         }
-                        className="mt-1 w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-900 text-sm"
+                        className="mt-1 w-full px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-900 text-sm"
                       />
                     </div>
                     <div>
-                      <label className="text-xs text-slate-500 dark:text-slate-400">笔记</label>
+                      <label className="text-[11px] text-slate-500 dark:text-slate-400">笔记</label>
                       <textarea
                         value={selectedNode.node.note || ''}
                         onChange={(e) =>
@@ -1769,19 +1747,19 @@ export default function MindMap() {
                             updatedAt: new Date().toISOString(),
                           }))
                         }
-                        rows={5}
-                        className="mt-1 w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-900 text-sm"
+                        rows={3}
+                        className="mt-1 w-full px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-900 text-sm"
                         placeholder="记录关键理解、例子或待复习点"
                       />
                     </div>
                     <div className="space-y-2">
-                      <div className="flex flex-col items-start justify-between gap-2 text-[11px] sm:flex-row sm:items-center">
+                      <div className="flex items-center justify-between text-[11px]">
                         <span className="text-slate-500 dark:text-slate-400">写入方式</span>
-                        <div className="inline-flex rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden">
+                        <div className="inline-flex rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden text-xs">
                           <button
                             type="button"
                             onClick={() => setNodeAiWriteMode('replace')}
-                            className={`min-h-[44px] px-3 py-2 transition ${
+                            className={`px-2.5 py-1 transition ${
                               nodeAiWriteMode === 'replace'
                                 ? 'bg-indigo-600 text-white'
                                 : 'bg-white/80 dark:bg-slate-900 text-slate-600 dark:text-slate-300'
@@ -1792,7 +1770,7 @@ export default function MindMap() {
                           <button
                             type="button"
                             onClick={() => setNodeAiWriteMode('append')}
-                            className={`min-h-[44px] px-3 py-2 transition ${
+                            className={`px-2.5 py-1 transition ${
                               nodeAiWriteMode === 'append'
                                 ? 'bg-indigo-600 text-white'
                                 : 'bg-white/80 dark:bg-slate-900 text-slate-600 dark:text-slate-300'
@@ -1805,61 +1783,58 @@ export default function MindMap() {
                       <button
                         onClick={handleExpandSelectedNodeNote}
                         disabled={isNodeAiLoading}
-                        className="min-h-[44px] w-full cursor-pointer rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-700 hover:bg-amber-100 disabled:opacity-60 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-300 dark:hover:bg-amber-500/20"
+                        className="w-full cursor-pointer rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-700 hover:bg-amber-100 disabled:opacity-60 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-300 dark:hover:bg-amber-500/20"
                       >
-                        <span className="inline-flex items-center gap-2">
-                          <Wand2 className="w-4 h-4" />
+                        <span className="inline-flex items-center gap-1.5">
+                          <Wand2 className="w-3.5 h-3.5" />
                           {isNodeAiLoading
                             ? 'AI 扩写中...'
                             : nodeAiWriteMode === 'append'
-                              ? 'AI 追加当前节点笔记'
-                              : 'AI 扩写当前节点笔记'}
+                              ? 'AI 追加笔记'
+                              : 'AI 扩写笔记'}
                         </span>
                       </button>
-                      <div className="text-[11px] text-slate-500 dark:text-slate-400">
-                        基于当前节点、父子节点上下文自动补全“定义/要点/易错点”。
-                      </div>
                       {nodeAiError && <div className="text-xs text-rose-500">{nodeAiError}</div>}
                     </div>
-                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <div className="grid grid-cols-2 gap-2">
                       <button
                         onClick={handleAddChild}
-                        className="min-h-[44px] cursor-pointer rounded-lg bg-indigo-600 px-3 py-2 text-sm text-white hover:bg-indigo-700"
+                        className="cursor-pointer rounded-lg bg-indigo-600 px-2.5 py-2 text-xs font-medium text-white hover:bg-indigo-700"
                       >
-                        <span className="inline-flex items-center gap-2">
-                          <Plus className="w-4 h-4" /> 添加子节点
+                        <span className="inline-flex items-center gap-1.5">
+                          <Plus className="w-3.5 h-3.5" /> 子节点
                         </span>
                       </button>
                       <button
                         onClick={handleAddSibling}
-                        className="min-h-[44px] cursor-pointer rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
+                        className="cursor-pointer rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-xs font-medium dark:border-slate-700 dark:bg-slate-900"
                       >
-                        <span className="inline-flex items-center gap-2">
-                          <ListPlus className="w-4 h-4" /> 添加同级
+                        <span className="inline-flex items-center gap-1.5">
+                          <ListPlus className="w-3.5 h-3.5" /> 同级
                         </span>
                       </button>
                       <button
                         onClick={() => handleMoveNode('up')}
-                        className="min-h-[44px] cursor-pointer rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
+                        className="cursor-pointer rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-xs font-medium dark:border-slate-700 dark:bg-slate-900"
                       >
-                        <span className="inline-flex items-center gap-2">
-                          <MoveUp className="w-4 h-4" /> 上移
+                        <span className="inline-flex items-center gap-1.5">
+                          <MoveUp className="w-3.5 h-3.5" /> 上移
                         </span>
                       </button>
                       <button
                         onClick={() => handleMoveNode('down')}
-                        className="min-h-[44px] cursor-pointer rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
+                        className="cursor-pointer rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-xs font-medium dark:border-slate-700 dark:bg-slate-900"
                       >
-                        <span className="inline-flex items-center gap-2">
-                          <MoveDown className="w-4 h-4" /> 下移
+                        <span className="inline-flex items-center gap-1.5">
+                          <MoveDown className="w-3.5 h-3.5" /> 下移
                         </span>
                       </button>
                       <button
                         onClick={handleDeleteNode}
-                        className="min-h-[44px] cursor-pointer rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-600 hover:bg-rose-100 sm:col-span-2"
+                        className="col-span-2 cursor-pointer rounded-lg border border-rose-200 bg-rose-50 px-2.5 py-2 text-xs font-medium text-rose-600 hover:bg-rose-100"
                       >
-                        <span className="inline-flex items-center gap-2">
-                          <Trash2 className="w-4 h-4" /> 删除节点
+                        <span className="inline-flex items-center gap-1.5">
+                          <Trash2 className="w-3.5 h-3.5" /> 删除节点
                         </span>
                       </button>
                     </div>
