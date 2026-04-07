@@ -1700,13 +1700,10 @@ export default function MindMap() {
                 </button>
               </div>
             </div>
-            <div
-              className={`grid gap-6 ${
-                isMapFullscreen ? 'grid-cols-1' : 'xl:grid-cols-[minmax(0,1fr)_300px]'
-              }`}
-            >
-              {renderMindMapPanel(isMapFullscreen)}
-              {!isMapFullscreen && (
+            {renderMindMapPanel(isMapFullscreen)}
+            {!isMapFullscreen && (
+              <div className="grid gap-6 lg:grid-cols-2">
+              {/* Node editor - now below the canvas in a 2-col grid */}
                 <div className="glass-card space-y-4 p-4">
                 <h3 className="text-sm font-semibold text-slate-900 dark:text-white">节点编辑</h3>
                 {!selectedNode && (
@@ -1841,8 +1838,34 @@ export default function MindMap() {
                   </>
                 )}
               </div>
-              )}
-            </div>
+              <div className="glass-card space-y-4 p-4">
+                <h3 className="text-sm font-semibold text-slate-900 dark:text-white">快捷操作</h3>
+                <div className="space-y-3">
+                  <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-800/60">
+                    <div className="text-[11px] text-slate-500 dark:text-slate-400">当前导图</div>
+                    <div className="mt-1 text-sm font-medium text-slate-900 dark:text-white">{activeMap?.title || '未选择'}</div>
+                    <div className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">{activeMap ? `${activeMap.nodes.length} 个顶级节点` : ''}</div>
+                  </div>
+                  <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-800/60">
+                    <div className="text-[11px] text-slate-500 dark:text-slate-400">画布操作</div>
+                    <div className="mt-2 text-[11px] leading-5 text-slate-600 dark:text-slate-300">
+                      拖动空白区域平移 · 滚轮平移<br />
+                      Ctrl+滚轮缩放 · 空格键拖拽
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => handleGenerate('update')}
+                    disabled={isLoading || !activeMap}
+                    className="w-full cursor-pointer rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-600 hover:border-indigo-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                  >
+                    <span className="inline-flex items-center gap-1.5">
+                      <RefreshCw className="w-3.5 h-3.5" /> AI 重新生成当前导图
+                    </span>
+                  </button>
+                </div>
+              </div>
+              </div>
+            )}
           </section>
         </div>
       </div>
