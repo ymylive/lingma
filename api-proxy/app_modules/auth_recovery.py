@@ -13,7 +13,7 @@ PASSWORD_RESET_HASH_ITERATIONS = 120000
 
 
 def generate_password_reset_code() -> str:
-    return f"{secrets.randbelow(1_000_000):06d}"
+    return f"{secrets.randbelow(100_000_000):08d}"
 
 
 def derive_password_reset_code_hash(code: str, salt_b64: str) -> str:

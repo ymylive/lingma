@@ -1,5 +1,6 @@
 import base64
 import hashlib
+import hmac
 import html
 import http.client
 import ipaddress
@@ -18,6 +19,7 @@ from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Dict, Iterator, List, Optional, Tuple
+import urllib.parse
 from urllib.parse import urlparse
 
 import requests
@@ -66,10 +68,6 @@ DEFAULT_ALLOWED_ORIGINS = [
     "http://127.0.0.1:3000",
     "https://lingma.cornna.xyz",
     "http://lingma.cornna.xyz",
-    "http://8.134.33.19",
-    "https://8.134.33.19",
-    "http://8.134.33.19:8080",
-    "https://8.134.33.19:8080",
 ]
 
 logger = logging.getLogger("lingma.api_proxy")
@@ -459,7 +457,8 @@ def normalize_generated_challenge_payload(payload: Dict[str, Any], track: str, d
         success_criteria = sanitize_string_list(payload.get("success_criteria"), "success_criteria")
         expected_focus = normalize_expected_focus(payload.get("expected_focus"))
     except ValueError as exc:
-        raise HTTPException(status_code=502, detail=f"invalid challenge payload: {exc}") from exc
+        logger.error("invalid challenge payload: %s", exc)
+        raise HTTPException(status_code=502, detail="invalid request format") from exc
 
     return {
         "id": f"challenge_{secrets.token_urlsafe(12)}",
@@ -504,7 +503,8 @@ def normalize_evaluation_payload(payload: Dict[str, Any], challenge_id: str) -> 
             raise ValueError("rewrite_example is required")
         next_difficulty = sanitize_vibe_difficulty(payload.get("next_difficulty_recommendation"))
     except ValueError as exc:
-        raise HTTPException(status_code=502, detail=f"invalid evaluation payload: {exc}") from exc
+        logger.error("invalid evaluation payload: %s", exc)
+        raise HTTPException(status_code=502, detail="invalid request format") from exc
 
     return {
         "challengeId": challenge_id,
@@ -552,7 +552,8 @@ def normalize_frontend_build_payload(payload: Dict[str, Any], session_id: str, t
             raise ValueError("html is required")
         next_suggestions = sanitize_string_list(payload.get("nextSuggestions"), "nextSuggestions", min_items=1, max_items=6)
     except ValueError as exc:
-        raise HTTPException(status_code=502, detail=f"invalid frontend build payload: {exc}") from exc
+        logger.error("invalid frontend build payload: %s", exc)
+        raise HTTPException(status_code=502, detail="invalid request format") from exc
 
     return {
         "id": f"artifact_{secrets.token_urlsafe(12)}",
@@ -1482,7 +1483,7 @@ def create_password_record(password: str) -> Dict[str, str]:
 
 
 def verify_password(password: str, password_hash: str, password_salt: str) -> bool:
-    return derive_password_hash(password, password_salt) == password_hash
+    return hmac.compare_digest(derive_password_hash(password, password_salt), password_hash)
 
 
 AUTH_REGISTRATION_FAILURE_DETAIL = "unable to create account"
@@ -2786,7 +2787,8 @@ async def doc_fetch(request: Request):
         document = await run_in_threadpool(fetch_document, target_url, max_length)
         return JSONResponse(content=document)
     except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        logger.warning("Document fetch validation error for %s: %s", target_url, exc)
+        raise HTTPException(status_code=400, detail="invalid request format") from exc
     except Exception as exc:
         logger.warning("Document fetch failed for %s: %s", target_url, exc)
         raise HTTPException(status_code=502, detail="document fetch failed") from exc
@@ -2971,7 +2973,8 @@ async def vibe_coding_generate(request: Request):
         track = sanitize_vibe_track(body.get("track"), fallback=profile["recommendedTrack"] or fallback_track)
         difficulty = sanitize_vibe_difficulty(body.get("difficulty"), fallback=profile["recommendedDifficulty"] or fallback_difficulty)
     except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        logger.warning("vibe-coding/generate validation error: %s", exc)
+        raise HTTPException(status_code=400, detail="invalid request format") from exc
 
     payload = build_vibe_generation_prompt(track, difficulty, profile, user, model_name, locale)
     data = await run_in_threadpool(read_upstream_responses_json, payload)
@@ -3012,7 +3015,8 @@ async def vibe_coding_generate_stream(request: Request):
         track = sanitize_vibe_track(body.get("track"), fallback=profile["recommendedTrack"] or fallback_track)
         difficulty = sanitize_vibe_difficulty(body.get("difficulty"), fallback=profile["recommendedDifficulty"] or fallback_difficulty)
     except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        logger.warning("vibe-coding/generate/stream validation error: %s", exc)
+        raise HTTPException(status_code=400, detail="invalid request format") from exc
 
     payload = build_vibe_generation_prompt(track, difficulty, profile, user, model_name, locale)
 
@@ -3062,7 +3066,8 @@ async def vibe_coding_evaluate(request: Request):
     try:
         prompt_text = sanitize_vibe_prompt(body.get("user_prompt"))
     except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        logger.warning("vibe-coding/evaluate prompt validation error: %s", exc)
+        raise HTTPException(status_code=400, detail="invalid request format") from exc
 
     with db_lock:
         conn = get_db_connection(AUTH_DB_PATH)
@@ -3122,7 +3127,8 @@ async def vibe_coding_evaluate_stream(request: Request):
     try:
         prompt_text = sanitize_vibe_prompt(body.get("user_prompt"))
     except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        logger.warning("vibe-coding/evaluate/stream prompt validation error: %s", exc)
+        raise HTTPException(status_code=400, detail="invalid request format") from exc
 
     with db_lock:
         conn = get_db_connection(AUTH_DB_PATH)
@@ -3252,7 +3258,13 @@ async def vibe_coding_profile(request: Request):
                     snapshot = calculate_vibe_profile_snapshot(recent_rows, fallback_track, fallback_difficulty)
                     upsert_vibe_profile(conn, user["id"], snapshot)
                     conn.commit()
-                    row = get_stored_vibe_profile(conn, user["id"])
+                    return JSONResponse(content={
+                        "recommendedTrack": snapshot["recommended_track"],
+                        "recommendedDifficulty": snapshot["recommended_difficulty"],
+                        "weakestDimension": snapshot["weakest_dimension"],
+                        "recentAverageScore": snapshot["recent_average_score"],
+                        "trackScores": snapshot["track_scores"],
+                    })
         finally:
             conn.close()
 
@@ -3271,7 +3283,8 @@ async def vibe_frontend_build_create_session(request: Request):
     try:
         prompt_text = sanitize_vibe_prompt(body.get("prompt"))
     except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        logger.warning("frontend/session create prompt validation error: %s", exc)
+        raise HTTPException(status_code=400, detail="invalid request format") from exc
 
     session_id = f"frontend_session_{secrets.token_urlsafe(12)}"
     assistant_turn_id = f"frontend_turn_{secrets.token_urlsafe(12)}"
@@ -3293,7 +3306,8 @@ async def vibe_frontend_build_append_turn(session_id: str, request: Request):
     try:
         prompt_text = sanitize_vibe_prompt(body.get("prompt"))
     except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        logger.warning("frontend/session/%s/turns prompt validation error: %s", session_id, exc)
+        raise HTTPException(status_code=400, detail="invalid request format") from exc
 
     with db_lock:
         conn = get_db_connection(AUTH_DB_PATH)
@@ -3333,7 +3347,8 @@ async def vibe_frontend_build_create_session_stream(request: Request):
     try:
         prompt_text = sanitize_vibe_prompt(body.get("prompt"))
     except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        logger.warning("frontend/session/stream create prompt validation error: %s", exc)
+        raise HTTPException(status_code=400, detail="invalid request format") from exc
 
     session_id = f"frontend_session_{secrets.token_urlsafe(12)}"
     assistant_turn_id = f"frontend_turn_{secrets.token_urlsafe(12)}"
@@ -3376,7 +3391,8 @@ async def vibe_frontend_build_append_turn_stream(session_id: str, request: Reque
     try:
         prompt_text = sanitize_vibe_prompt(body.get("prompt"))
     except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        logger.warning("frontend/session/%s/turns/stream prompt validation error: %s", session_id, exc)
+        raise HTTPException(status_code=400, detail="invalid request format") from exc
 
     with db_lock:
         conn = get_db_connection(AUTH_DB_PATH)
@@ -3469,11 +3485,14 @@ async def vibe_frontend_build_download(session_id: str, request: Request):
     if artifact_row is None:
         raise HTTPException(status_code=404, detail="frontend build artifact not found")
 
-    filename = f"{str(artifact_row['title'] or 'frontend-build').strip() or 'frontend-build'}.html"
+    raw_title = str(artifact_row['title'] or 'frontend-build').strip() or 'frontend-build'
+    safe_title = re.sub(r'[\x00-\x1f\x7f"\\/:*?<>|]', '', raw_title).strip() or 'frontend-build'
+    filename = f"{safe_title}.html"
+    encoded = urllib.parse.quote(filename, safe='')
     return Response(
         content=artifact_row["merged_html"],
         media_type="text/html; charset=utf-8",
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        headers={"Content-Disposition": f"attachment; filename=\"{filename}\"; filename*=UTF-8''{encoded}"},
     )
 
 
@@ -3495,7 +3514,8 @@ async def auth_register(request: Request):
         skill_level = sanitize_skill_level(body.get("skillLevel"))
         target_language = sanitize_target_language(body.get("targetLanguage"))
     except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        logger.warning("auth/register validation error: %s", exc)
+        raise HTTPException(status_code=400, detail="invalid request format") from exc
 
     password_record = create_password_record(password)
     created_at = now_iso()
@@ -3555,7 +3575,8 @@ async def auth_login(request: Request):
         email = sanitize_email(body.get("email"))
         password = sanitize_password(body.get("password"))
     except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        logger.warning("auth/login validation error: %s", exc)
+        raise HTTPException(status_code=400, detail="invalid request format") from exc
 
     with db_lock:
         conn = get_db_connection(AUTH_DB_PATH)
@@ -3588,7 +3609,8 @@ async def auth_password_reset_request(request: Request):
     try:
         email = sanitize_email(body.get("email"))
     except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        logger.warning("auth/password-reset/request validation error: %s", exc)
+        raise HTTPException(status_code=400, detail="invalid request format") from exc
 
     code = ""
     reset_code_id = ""
@@ -3680,7 +3702,8 @@ async def auth_password_reset_confirm(request: Request):
         code = sanitize_password_reset_code(body.get("code"))
         new_password = sanitize_password(body.get("newPassword"))
     except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        logger.warning("auth/password-reset/confirm validation error: %s", exc)
+        raise HTTPException(status_code=400, detail="invalid request format") from exc
 
     with db_lock:
         conn = get_db_connection(AUTH_DB_PATH)
@@ -3739,7 +3762,8 @@ async def auth_update_profile(request: Request):
         skill_level = sanitize_skill_level(body.get("skillLevel", user["skill_level"]))
         target_language = sanitize_target_language(body.get("targetLanguage", user["target_language"]))
     except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        logger.warning("auth/profile update validation error: %s", exc)
+        raise HTTPException(status_code=400, detail="invalid request format") from exc
 
     with db_lock:
         conn = get_db_connection(AUTH_DB_PATH)
@@ -3807,7 +3831,8 @@ async def load_mindmaps(request: Request):
     try:
         maps = normalize_maps_payload(json.loads(row[0]))
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"stored data is invalid: {exc}") from exc
+        logger.error("stored mindmap data is invalid: %s", exc)
+        raise HTTPException(status_code=500, detail="internal error") from exc
     return JSONResponse(content={"maps": maps, "updatedAt": row[1]})
 
 
@@ -3820,7 +3845,8 @@ async def save_mindmaps(request: Request):
         user_id = current_user["id"]
         maps = normalize_maps_payload(body.get("maps"))
     except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        logger.warning("mindmaps/save validation error: %s", exc)
+        raise HTTPException(status_code=400, detail="invalid request format") from exc
 
     updated_at = now_iso()
     maps_json = json.dumps(maps, ensure_ascii=False)
