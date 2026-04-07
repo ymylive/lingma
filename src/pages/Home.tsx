@@ -150,7 +150,7 @@ export default function Home() {
   return (
     <div className={containerClass}>
       {/* Hero */}
-      <section className="page-safe-top relative px-4 pb-16 sm:px-6 sm:pb-20">
+      <section className="page-safe-top relative px-4 pb-20 sm:px-6 sm:pb-24">
         <motion.div 
           className="max-w-6xl mx-auto text-center relative z-10"
           initial="hidden"
@@ -194,12 +194,12 @@ export default function Home() {
       </section>
 
       {/* Stats */}
-      <section className="relative z-10 px-4 py-6 sm:px-6 sm:py-8">
+      <section className="relative z-10 px-4 py-16 sm:px-6 sm:py-20">
         <motion.div 
           className="max-w-6xl mx-auto"
           {...revealUp}
         >
-          <div className="grid grid-cols-2 gap-5 rounded-3xl border border-white/20 bg-white/60 p-5 shadow-xl backdrop-blur-md dark:border-slate-700/50 dark:bg-slate-800/60 dark:shadow-slate-900/50 sm:gap-8 sm:p-8 md:grid-cols-4">
+          <div className="grid grid-cols-2 gap-6 rounded-3xl border border-white/20 bg-white/60 p-6 shadow-xl backdrop-blur-md dark:border-slate-700/50 dark:bg-slate-800/60 dark:shadow-slate-900/50 sm:gap-10 sm:p-10 md:grid-cols-4">
             <div className="text-center group">
               <div className="mb-2 bg-gradient-to-br from-klein-500 to-klein-600 bg-clip-text text-3xl font-bold text-transparent transition-transform group-hover:scale-110 dark:from-klein-400 dark:to-blue-400 sm:text-4xl">6</div>
               <div className="text-sm font-medium text-slate-500 dark:text-slate-400">章节内容</div>
@@ -221,9 +221,9 @@ export default function Home() {
       </section>
 
       {/* Learning Paths */}
-      <section className="relative z-10 px-4 py-16 sm:px-6 sm:py-20">
+      <section className="relative z-10 px-4 py-20 sm:px-6 sm:py-24">
         <div className="max-w-6xl mx-auto">
-          <motion.div 
+          <motion.div
             className="mb-12 text-center sm:mb-16"
             {...revealUp}
           >
@@ -252,7 +252,7 @@ export default function Home() {
                   <h3 className="font-bold text-xl text-slate-900 dark:text-white group-hover:text-klein-600 dark:group-hover:text-klein-400 mb-3 relative z-10">
                     {path.title}
                   </h3>
-                  <p className="text-sm text-slate-500 dark:text-slate-400 mb-8 leading-relaxed relative z-10">{path.desc}</p>
+                  <p className="text-sm text-slate-500 dark:text-slate-400 mb-6 leading-relaxed relative z-10">{path.desc}</p>
                   
                   <div className="space-y-4 relative z-10">
                     {path.steps.map((step, i) => (
@@ -274,7 +274,7 @@ export default function Home() {
       </section>
 
       {/* Quick Access */}
-      <section className="border-y border-slate-100 bg-slate-50/50 px-4 py-16 dark:border-slate-800 dark:bg-slate-900/50 sm:px-6 sm:py-20">
+      <section className="border-y border-slate-100 bg-slate-50/50 px-4 py-20 dark:border-slate-800 dark:bg-slate-900/50 sm:px-6 sm:py-24">
         <div className="max-w-6xl mx-auto">
           <motion.div 
             className="mb-12 text-center sm:mb-16"
@@ -284,7 +284,7 @@ export default function Home() {
             <p className="text-slate-600 dark:text-slate-400">精选算法可视化演示，即点即用</p>
           </motion.div>
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 md:grid-cols-3">
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-6 md:grid-cols-3">
             {algorithms.map((algo, idx) => (
               <motion.div
                 key={algo.id}
@@ -317,14 +317,14 @@ export default function Home() {
       <section className="relative z-10 px-4 py-20 sm:px-6 sm:py-24">
         <div className="max-w-6xl mx-auto">
           <motion.div 
-            className="mb-12 text-center sm:mb-20"
+            className="mb-12 text-center sm:mb-16"
             {...revealUp}
           >
             <h2 className="mb-4 text-2xl font-bold text-slate-900 dark:text-white sm:text-3xl">✨ 为什么选择我们</h2>
             <p className="text-slate-600 dark:text-slate-400">精心打磨的每一个细节</p>
           </motion.div>
 
-          <div className="grid gap-4 sm:gap-6 md:grid-cols-2 xl:grid-cols-4">
+          <div className="grid gap-5 sm:gap-8 md:grid-cols-2 xl:grid-cols-4">
             {[
               { icon: '🎬', title: '动画演示', desc: '流畅的动画效果，直观展示数据结构的每一次变化过程', color: 'indigo' },
               { icon: '💻', title: '代码同步', desc: '动画执行与代码高亮实时同步，真正理解每行代码的含义', color: 'emerald' },
@@ -353,7 +353,7 @@ export default function Home() {
       </section>
 
       {/* CTA */}
-      <section className="px-4 py-16 sm:px-6 sm:py-20">
+      <section className="px-4 py-20 sm:px-6 sm:py-24">
         <motion.div 
           className="max-w-6xl mx-auto"
           {...revealScale}

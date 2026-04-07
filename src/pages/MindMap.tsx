@@ -523,8 +523,8 @@ export default function MindMap() {
 
   const containerClass =
     theme === 'dark'
-      ? 'min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-900 text-slate-100'
-      : 'min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-50 text-slate-900';
+      ? 'min-h-screen text-slate-100 transition-colors duration-500'
+      : 'min-h-screen text-slate-900 transition-colors duration-500';
 
   useEffect(() => {
     let cancelled = false;
@@ -1415,12 +1415,12 @@ export default function MindMap() {
           </motion.div>
         )}
       </AnimatePresence>
-      <div className="page-safe-top mx-auto max-w-7xl px-4 pb-12 sm:px-6 sm:pb-14">
+      <div className="page-safe-top mx-auto max-w-6xl px-4 pb-16 sm:px-6 sm:pb-20">
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
-          className={`mb-8 ${isMapFullscreen ? 'relative z-[120]' : ''}`}
+          className={`mb-10 ${isMapFullscreen ? 'relative z-[120]' : ''}`}
         >
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
@@ -1457,8 +1457,8 @@ export default function MindMap() {
           </div>
         </motion.div>
 
-        <div className="grid gap-6 lg:grid-cols-[380px_minmax(0,1fr)] xl:grid-cols-[400px_minmax(0,1fr)]">
-          <aside className="space-y-6">
+        <div className="grid gap-8 lg:grid-cols-[340px_minmax(0,1fr)] xl:grid-cols-[360px_minmax(0,1fr)]">
+          <aside className="space-y-8">
             <div className="glass-card p-5 sm:p-6">
               <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
                 <Wand2 className="w-4 h-4 text-amber-500" /> 生成来源
@@ -1661,7 +1661,7 @@ export default function MindMap() {
             </div>
           </aside>
 
-          <section className="min-w-0 space-y-6">
+          <section className="min-w-0 space-y-8">
             <div className="glass-card p-5 sm:p-6">
               <div className="flex flex-col gap-4">
                 <div>
@@ -1723,13 +1723,13 @@ export default function MindMap() {
               </div>
             </div>
             <div
-              className={`grid gap-6 ${
+              className={`grid gap-8 ${
                 isMapFullscreen ? 'grid-cols-1' : 'xl:grid-cols-[minmax(0,1fr)_360px]'
               }`}
             >
               {renderMindMapPanel(isMapFullscreen)}
               {!isMapFullscreen && (
-                <div className="glass-card space-y-4 p-4 sm:p-5">
+                <div className="glass-card space-y-5 p-5 sm:p-6">
                 <h3 className="text-lg font-semibold text-slate-900 dark:text-white">节点编辑</h3>
                 {!selectedNode && (
                   <div className="text-sm text-slate-500 dark:text-slate-400">
@@ -1821,7 +1821,7 @@ export default function MindMap() {
                       </div>
                       {nodeAiError && <div className="text-xs text-rose-500">{nodeAiError}</div>}
                     </div>
-                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                       <button
                         onClick={handleAddChild}
                         className="min-h-[44px] cursor-pointer rounded-lg bg-indigo-600 px-3 py-2 text-sm text-white hover:bg-indigo-700"

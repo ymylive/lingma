@@ -85,7 +85,7 @@ export default function Dashboard() {
 
   return (
     <div className="page-safe-top min-h-screen pb-12 transition-colors duration-300">
-      <Container size="lg">
+      <Container size="lg" className="!max-w-6xl">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -136,7 +136,7 @@ export default function Dashboard() {
           ))}
         </Grid>
 
-        <div className="grid gap-6 lg:grid-cols-3">
+        <div className="grid gap-8 lg:grid-cols-3">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}

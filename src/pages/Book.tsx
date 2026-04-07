@@ -155,7 +155,7 @@ export default function Book() {
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true }}
-          className="space-y-4"
+          className="space-y-5"
         >
           {curriculum.map((chapter, index) => {
             const colors = colorMap[chapter.color];
@@ -209,7 +209,7 @@ export default function Book() {
                 {/* 章节内容 */}
                 {isExpanded && (
                   <div className="border-t border-slate-100 px-4 pb-4 dark:border-slate-700 sm:px-5 sm:pb-5">
-                    <div className="grid gap-3 mt-4">
+                    <div className="grid gap-4 mt-5">
                       {chapter.topics.map((topic, topicIndex) => (
                         <Link
                           key={t(topic.name)}

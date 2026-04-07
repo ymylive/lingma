@@ -176,7 +176,7 @@ export default function Methodology() {
 
   return (
     <div className="page-safe-top min-h-screen pb-24">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6">
+      <div className="mx-auto max-w-6xl px-4 sm:px-6">
         {/* Hero */}
         <div className="mb-12">
           <Link
@@ -204,7 +204,7 @@ export default function Methodology() {
         </div>
 
         {/* Grid: Sidebar + Content */}
-        <div className="lg:grid lg:grid-cols-[280px_1fr] lg:gap-8">
+        <div className="lg:grid lg:grid-cols-[260px_1fr] lg:gap-8">
           {/* Desktop Sidebar */}
           <aside className="hidden lg:block">
             <div className="sticky top-24 rounded-[28px] border border-slate-200/60 bg-white/70 p-4 shadow-sm backdrop-blur-xl dark:border-slate-700/60 dark:bg-slate-800/70">
