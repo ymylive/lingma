@@ -396,7 +396,7 @@ export default function AIExerciseGenerator() {
                 <Sparkles className="h-4 w-4 text-klein-500 dark:text-klein-300" />
                 <span className="text-sm font-medium text-slate-700 dark:text-slate-200">{t('难度')}</span>
               </div>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <div className="grid grid-cols-3 gap-2">
                 {[
                   { id: 'easy', label: '⭐简单' },
                   { id: 'medium', label: '⭐⭐中等' },
@@ -409,7 +409,7 @@ export default function AIExerciseGenerator() {
                       setDifficulty(item.id as Difficulty);
                       setHasManualDifficulty(true);
                     }}
-                    className={`min-h-[44px] cursor-pointer rounded-2xl px-3 py-2 text-sm font-medium transition-all ${
+                    className={`min-h-[44px] cursor-pointer whitespace-nowrap rounded-2xl px-2 py-2 text-sm font-medium transition-all ${
                       difficulty === item.id
                         ? 'bg-slate-900 text-white shadow-sm dark:bg-klein-500'
                         : 'border border-slate-200 bg-white text-slate-700 hover:border-klein-300 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-klein-500/50 dark:hover:bg-slate-800'
