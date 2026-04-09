@@ -7,7 +7,7 @@ ARG PIP_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple
 ENV PIP_INDEX_URL=${PIP_INDEX_URL}
 
 COPY api-proxy/requirements.txt ./
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --upgrade pip && pip install --no-cache-dir -r requirements.txt
 
 COPY api-proxy/main.py ./
 COPY api-proxy/app_modules ./app_modules
