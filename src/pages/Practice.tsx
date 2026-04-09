@@ -410,8 +410,8 @@ export default function Practice() {
 
   return (
     <div className="page-safe-top min-h-screen pb-8">
-      <div className="mx-auto max-w-6xl px-4 sm:px-6">
-        <div className="mb-10 grid gap-6 lg:grid-cols-[1.4fr_0.9fr]">
+      <div className="mx-auto max-w-5xl px-4 sm:px-6">
+        <div className="mb-12 grid gap-6 lg:grid-cols-[1.4fr_0.9fr]">
           <div className="rounded-2xl border border-slate-200 bg-[radial-gradient(circle_at_top_left,_rgba(37,99,235,0.16),_transparent_45%),linear-gradient(135deg,_rgba(255,255,255,0.96),_rgba(241,245,249,0.86))] p-5 shadow-sm dark:border-slate-700 dark:bg-[radial-gradient(circle_at_top_left,_rgba(59,130,246,0.2),_transparent_42%),linear-gradient(135deg,_rgba(15,23,42,0.98),_rgba(30,41,59,0.94))] sm:p-6">
             <div className="flex flex-wrap items-center gap-2">
               <span className="rounded-full bg-klein-100 px-3 py-1 text-xs font-semibold text-klein-700 dark:bg-klein-900/40 dark:text-klein-300">{isEnglish ? 'LeetCode-style Practice' : 'LeetCode 风格刷题'}</span>
@@ -423,18 +423,18 @@ export default function Practice() {
             </p>
           </div>
 
-          <div className="grid grid-cols-2 gap-3 sm:gap-4">
-            <div className="rounded-2xl border border-slate-200 bg-white p-3.5 shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:p-4"><div className="text-xs text-slate-500 dark:text-slate-400">{isEnglish ? 'Unique Problems' : '去重后题量'}</div><div className="mt-2 text-2xl font-bold text-slate-900 dark:text-white sm:text-3xl">{hasLoadedExercises ? exercises.length : '…'}</div></div>
-            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-3.5 shadow-sm dark:border-emerald-800 dark:bg-emerald-900/20 sm:p-4"><div className="text-xs text-emerald-700 dark:text-emerald-300">{isEnglish ? 'Completed' : '已完成'}</div><div className="mt-2 text-2xl font-bold text-emerald-700 dark:text-emerald-300 sm:text-3xl">{progress.completedExercises.length}</div></div>
-            <div className="rounded-2xl border border-slate-200 bg-white p-3.5 shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:p-4"><div className="text-xs text-slate-500 dark:text-slate-400">{isEnglish ? 'Review Queue' : '待复盘'}</div><div className="mt-2 text-2xl font-bold text-slate-900 dark:text-white sm:text-3xl">{reviewQueue.length}</div></div>
-            <div className="rounded-2xl border border-indigo-200 bg-indigo-50 p-3.5 shadow-sm dark:border-indigo-800 dark:bg-indigo-900/20 sm:p-4"><div className="text-xs text-indigo-700 dark:text-indigo-300">{isEnglish ? 'Recent Avg Score' : '近期平均得分'}</div><div className="mt-2 text-2xl font-bold text-indigo-700 dark:text-indigo-300 sm:text-3xl">{recentScore}</div></div>
+          <div className="grid grid-cols-2 gap-3 sm:gap-3.5">
+            <div className="rounded-xl border border-slate-200 bg-white p-3.5 shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:p-4"><div className="text-xs text-slate-500 dark:text-slate-400">{isEnglish ? 'Unique Problems' : '去重后题量'}</div><div className="mt-2 text-2xl font-bold text-slate-900 dark:text-white sm:text-3xl">{hasLoadedExercises ? exercises.length : '…'}</div></div>
+            <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3.5 shadow-sm dark:border-emerald-800 dark:bg-emerald-900/20 sm:p-4"><div className="text-xs text-emerald-700 dark:text-emerald-300">{isEnglish ? 'Completed' : '已完成'}</div><div className="mt-2 text-2xl font-bold text-emerald-700 dark:text-emerald-300 sm:text-3xl">{progress.completedExercises.length}</div></div>
+            <div className="rounded-xl border border-slate-200 bg-white p-3.5 shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:p-4"><div className="text-xs text-slate-500 dark:text-slate-400">{isEnglish ? 'Review Queue' : '待复盘'}</div><div className="mt-2 text-2xl font-bold text-slate-900 dark:text-white sm:text-3xl">{reviewQueue.length}</div></div>
+            <div className="rounded-xl border border-indigo-200 bg-indigo-50 p-3.5 shadow-sm dark:border-indigo-800 dark:bg-indigo-900/20 sm:p-4"><div className="text-xs text-indigo-700 dark:text-indigo-300">{isEnglish ? 'Recent Avg Score' : '近期平均得分'}</div><div className="mt-2 text-2xl font-bold text-indigo-700 dark:text-indigo-300 sm:text-3xl">{recentScore}</div></div>
           </div>
         </div>
 
-        <div className="mb-10 grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-5">
-          <button onClick={() => setTab('preset')} onMouseEnter={preloadAllExercises} onFocus={preloadAllExercises} className={`min-h-[48px] cursor-pointer rounded-2xl px-6 py-3 text-sm font-semibold transition-all ${tab === 'preset' ? 'bg-klein-500 text-white shadow-sm' : 'border border-slate-200 bg-white text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200'}`}>{t('题库练习')}</button>
-          <button onClick={() => setTab('ai')} onMouseEnter={preloadExerciseDetailPanels} onFocus={preloadExerciseDetailPanels} className={`min-h-[48px] cursor-pointer rounded-2xl px-6 py-3 text-sm font-semibold transition-all ${tab === 'ai' ? 'bg-klein-500 text-white shadow-sm' : 'border border-slate-200 bg-white text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200'}`}>{t('AI 智能出题')}</button>
-          <button onClick={() => setTab('vibe')} onMouseEnter={preloadVibeCodingLab} onFocus={preloadVibeCodingLab} className={`min-h-[48px] cursor-pointer rounded-2xl px-6 py-3 text-sm font-semibold transition-all ${tab === 'vibe' ? 'bg-klein-500 text-white shadow-sm' : 'border border-slate-200 bg-white text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200'}`}>{isEnglish ? 'Vibe Coding Lab' : 'Vibe Coding 学习'}</button>
+        <div className="mb-8 grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-3">
+          <button onClick={() => setTab('preset')} onMouseEnter={preloadAllExercises} onFocus={preloadAllExercises} className={`min-h-[48px] cursor-pointer rounded-2xl px-6 py-3 text-sm font-semibold transition-all ${tab === 'preset' ? 'bg-klein-600 text-white shadow-sm' : 'border border-slate-200/80 bg-white/70 text-slate-600 backdrop-blur-sm dark:border-slate-700/60 dark:bg-slate-800/70 dark:text-slate-300'}`}>{t('题库练习')}</button>
+          <button onClick={() => setTab('ai')} onMouseEnter={preloadExerciseDetailPanels} onFocus={preloadExerciseDetailPanels} className={`min-h-[48px] cursor-pointer rounded-2xl px-6 py-3 text-sm font-semibold transition-all ${tab === 'ai' ? 'bg-klein-600 text-white shadow-sm' : 'border border-slate-200/80 bg-white/70 text-slate-600 backdrop-blur-sm dark:border-slate-700/60 dark:bg-slate-800/70 dark:text-slate-300'}`}>{t('AI 智能出题')}</button>
+          <button onClick={() => setTab('vibe')} onMouseEnter={preloadVibeCodingLab} onFocus={preloadVibeCodingLab} className={`min-h-[48px] cursor-pointer rounded-2xl px-6 py-3 text-sm font-semibold transition-all ${tab === 'vibe' ? 'bg-klein-600 text-white shadow-sm' : 'border border-slate-200/80 bg-white/70 text-slate-600 backdrop-blur-sm dark:border-slate-700/60 dark:bg-slate-800/70 dark:text-slate-300'}`}>{isEnglish ? 'Vibe Coding Lab' : 'Vibe Coding 学习'}</button>
         </div>
 
         <div className="space-y-8">
@@ -517,7 +517,7 @@ export default function Practice() {
                   </div>
                 </div>
 
-                <div className="mb-8 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:p-6">
+                <div className="mb-8 rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-800 sm:p-6">
                   <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                     <div>
                       <h2 className="text-lg font-semibold text-slate-900 dark:text-white">{t('多语言学习支持')}</h2>
@@ -525,7 +525,7 @@ export default function Practice() {
                     </div>
                     <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600 dark:bg-slate-700 dark:text-slate-200">{t('在线搜集后接入')}</span>
                   </div>
-                  <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+                  <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5">
                     {LANGUAGE_SUPPORT.map((item) => (
                       <div key={item.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-900">
                         <div className="text-sm font-semibold text-slate-900 dark:text-white">{t(item.name)}</div>

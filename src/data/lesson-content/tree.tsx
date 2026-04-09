@@ -24,7 +24,7 @@ export const treeLessons: Record<string, LessonContent> = {
               有且仅有一个<strong>根节点</strong>，其余节点可分为若干互不相交的子树。
             </p>
             <div className="grid md:grid-cols-2 gap-4">
-              <KnowledgeCard title="🌳 树的特点" color="indigo">
+              <KnowledgeCard title="🌳 树的特点" color="klein">
                 <ul className="list-disc list-inside space-y-1">
                   <li>n个节点有n-1条边</li>
                   <li>任意两节点间只有一条路径</li>
@@ -77,7 +77,7 @@ export const treeLessons: Record<string, LessonContent> = {
         content: (
           <div className="space-y-4">
             <div className="grid md:grid-cols-2 gap-4">
-              <KnowledgeCard title="🔄 前序遍历 (根-左-右)" color="indigo">
+              <KnowledgeCard title="🔄 前序遍历 (根-左-右)" color="klein">
                 <p className="text-sm">先访问根，再左子树，最后右子树</p>
                 <p className="text-xs text-slate-500 mt-2">应用：复制二叉树、前缀表达式</p>
               </KnowledgeCard>
@@ -156,7 +156,7 @@ void levelOrder(TreeNode* root) {
         title: 'BST的特性',
         content: (
           <div className="space-y-4">
-            <KnowledgeCard title="🔍 二叉搜索树 (BST)" color="indigo">
+            <KnowledgeCard title="🔍 二叉搜索树 (BST)" color="klein">
               <p><strong>左子树</strong>所有节点的值 &lt; <strong>根节点</strong>的值 &lt; <strong>右子树</strong>所有节点的值</p>
               <p className="text-sm text-slate-500 mt-2">中序遍历BST得到有序序列！</p>
             </KnowledgeCard>
@@ -264,7 +264,7 @@ TreeNode* insert(TreeNode* root, int key) {
         content: (
           <div className="space-y-4">
             <div className="grid md:grid-cols-2 gap-4">
-              <KnowledgeCard title="📊 堆排序" color="indigo">
+              <KnowledgeCard title="📊 堆排序" color="klein">
                 <p className="text-sm">1. 建大顶堆</p>
                 <p className="text-sm">2. 取堆顶放末尾</p>
                 <p className="text-sm">3. 调整堆，重复</p>

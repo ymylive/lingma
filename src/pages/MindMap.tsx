@@ -1402,16 +1402,16 @@ export default function MindMap() {
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
               transition={{ duration: 0.2 }}
-              className="rounded-3xl border-2 border-dashed border-indigo-400 bg-white/90 px-12 py-10 text-center shadow-2xl dark:bg-slate-900/90"
+              className="rounded-3xl border-2 border-dashed border-klein-400 bg-white/90 px-12 py-10 text-center shadow-lg dark:bg-slate-900/90"
             >
-              <FileUp className="mx-auto h-12 w-12 text-indigo-500" />
+              <FileUp className="mx-auto h-12 w-12 text-klein-500" />
               <div className="mt-4 text-lg font-semibold text-slate-900 dark:text-white">松开文件即可生成思维导图</div>
               <div className="mt-2 text-sm text-slate-500">支持 .txt / .md 文件</div>
             </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
-      <div className="page-safe-top mx-auto max-w-6xl px-4 pb-16 sm:px-6 sm:pb-20">
+      <div className="page-safe-top mx-auto max-w-5xl px-4 pb-16 sm:px-6 sm:pb-20">
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
@@ -1424,7 +1424,7 @@ export default function MindMap() {
                 <Wand2 className="w-3.5 h-3.5 text-amber-500" />
                 AI 思维导图工作室
               </div>
-              <h1 className="text-2xl font-bold text-slate-900 dark:text-white sm:text-3xl md:text-4xl">
+              <h1 className="text-2xl font-bold text-slate-900 dark:text-white sm:text-3xl">
                 生成 · 编辑 · 导出 · 笔记
               </h1>
               <p className="text-slate-600 dark:text-slate-400 mt-2 max-w-2xl">
@@ -1434,7 +1434,7 @@ export default function MindMap() {
             <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
               <button
                 onClick={handleCreateNew}
-                className="min-h-[44px] w-full cursor-pointer rounded-xl bg-slate-900 px-4 py-2 text-white transition hover:bg-slate-800 dark:bg-white dark:text-slate-900 sm:w-auto"
+                className="min-h-[44px] w-full cursor-pointer rounded-xl bg-klein-600 px-4 py-2 text-white transition hover:bg-klein-700 dark:bg-klein-500 dark:text-white sm:w-auto"
               >
                 <span className="inline-flex items-center gap-2">
                   <Plus className="w-4 h-4" /> 新建导图
@@ -1443,7 +1443,7 @@ export default function MindMap() {
               <button
                 onClick={() => handleGenerate('new')}
                 disabled={isLoading}
-                className="min-h-[44px] w-full cursor-pointer rounded-xl bg-indigo-600 px-4 py-2 text-white transition hover:bg-indigo-700 disabled:opacity-50 sm:w-auto"
+                className="min-h-[44px] w-full cursor-pointer rounded-xl bg-klein-500 px-4 py-2 text-white transition hover:bg-klein-600 disabled:opacity-50 sm:w-auto"
               >
                 <span className="inline-flex items-center gap-2">
                   <ListPlus className="w-4 h-4" /> 生成导图
@@ -1470,8 +1470,8 @@ export default function MindMap() {
                     onClick={() => setSourceTab(tab.id as SourceTab)}
                     className={`min-h-[44px] cursor-pointer rounded-lg px-3 py-2 text-sm font-medium transition ${
                       sourceTab === tab.id
-                        ? 'bg-indigo-600 text-white shadow'
-                        : 'bg-white/80 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700'
+                        ? 'bg-klein-600 text-white shadow-sm'
+                        : 'bg-white/80 backdrop-blur-sm dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700'
                     }`}
                   >
                     {tab.label}
@@ -1487,8 +1487,8 @@ export default function MindMap() {
                     onClick={() => setGenerationMode('full')}
                     className={`min-h-[44px] cursor-pointer rounded-lg px-3 py-2 text-sm font-medium transition border ${
                       generationMode === 'full'
-                        ? 'bg-indigo-600 text-white border-indigo-600'
-                        : 'bg-white/80 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700'
+                        ? 'bg-klein-600 text-white border-klein-600'
+                        : 'bg-white/80 backdrop-blur-sm dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700'
                     }`}
                   >
                     完整知识导图
@@ -1499,7 +1499,7 @@ export default function MindMap() {
                     className={`min-h-[44px] cursor-pointer rounded-lg px-3 py-2 text-sm font-medium transition border ${
                       generationMode === 'explore'
                         ? 'bg-amber-600 text-white border-amber-600'
-                        : 'bg-white/80 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700'
+                        : 'bg-white/80 backdrop-blur-sm dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700'
                     }`}
                   >
                     探索模式
@@ -1549,7 +1549,7 @@ export default function MindMap() {
                   <label className="text-xs text-slate-500 dark:text-slate-400">上传文件</label>
                   <label className="flex min-h-[48px] cursor-pointer flex-col gap-3 rounded-lg border border-dashed border-slate-300 bg-white/70 px-3 py-3 text-sm dark:border-slate-600 dark:bg-slate-900 sm:flex-row sm:items-center sm:justify-between">
                     <span className="inline-flex items-center gap-2">
-                      <FileUp className="w-4 h-4 text-indigo-500" />
+                      <FileUp className="w-4 h-4 text-klein-500" />
                       {fileName || '拖拽或点击上传 .txt / .md'}
                     </span>
                     <input
@@ -1571,14 +1571,14 @@ export default function MindMap() {
                 <button
                   onClick={() => handleGenerate('new')}
                   disabled={isLoading}
-                  className="min-h-[44px] w-full cursor-pointer rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-60"
+                  className="min-h-[44px] w-full cursor-pointer rounded-lg bg-klein-600 px-4 py-2 text-sm font-medium text-white hover:bg-klein-700 disabled:opacity-60"
                 >
                   {isLoading ? '生成中...' : '生成新导图'}
                 </button>
                 <button
                   onClick={() => handleGenerate('update')}
                   disabled={isLoading || !activeMap}
-                  className="min-h-[44px] w-full cursor-pointer rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 hover:border-indigo-400 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                  className="min-h-[44px] w-full cursor-pointer rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 hover:border-klein-400 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
                 >
                   <span className="inline-flex items-center gap-2">
                     <RefreshCw className="w-4 h-4" /> 更新当前导图
@@ -1590,7 +1590,7 @@ export default function MindMap() {
 
             <div className="glass-card p-5 sm:p-6">
               <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
-                <Pencil className="w-4 h-4 text-indigo-500" /> 导图库
+                <Pencil className="w-4 h-4 text-klein-500" /> 导图库
               </h3>
               <div
                 className={`text-xs mb-3 ${
@@ -1629,8 +1629,8 @@ export default function MindMap() {
                     }}
                     className={`w-full text-left p-3 rounded-xl border transition cursor-pointer ${
                       activeMapId === map.id
-                        ? 'border-indigo-500 bg-indigo-50/80 dark:bg-indigo-500/10'
-                        : 'border-slate-200 dark:border-slate-700 bg-white/70 dark:bg-slate-900'
+                        ? 'border-klein-500 bg-klein-50/80 dark:bg-klein-500/10'
+                        : 'border-slate-200 dark:border-slate-700 bg-white/70 backdrop-blur-sm dark:bg-slate-900'
                     }`}
                   >
                     <div className="flex items-center justify-between">

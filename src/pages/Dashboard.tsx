@@ -85,7 +85,7 @@ export default function Dashboard() {
 
   return (
     <div className="page-safe-top min-h-screen pb-12 transition-colors duration-300">
-      <Container size="lg" className="!max-w-6xl">
+      <Container size="lg" className="!max-w-5xl">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}

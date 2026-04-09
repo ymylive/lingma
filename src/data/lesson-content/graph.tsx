@@ -113,7 +113,7 @@ export const graphLessons: Record<string, LessonContent> = {
         content: (
           <div className="space-y-4">
             <div className="grid md:grid-cols-2 gap-4">
-              <KnowledgeCard title="📊 度 = 有几个好友" color="indigo">
+              <KnowledgeCard title="📊 度 = 有几个好友" color="klein">
                 <p className="mb-2">一个顶点连接的边数</p>
                 <div className="bg-indigo-50 rounded p-3 text-sm">
                   <p>你有10个微信好友 → 你的度=10</p>
@@ -303,7 +303,7 @@ for (auto& e : adj[u]) {
                 </div>
               </div>
             </Diagram>
-            <KnowledgeCard title="🌊 核心思想" color="indigo">
+            <KnowledgeCard title="🌊 核心思想" color="klein">
               <p className="text-base"><strong>一圈一圈向外扩展</strong>，就像往水里扔石头，波纹一层层向外扩散。</p>
               <p className="mt-2">先访问距离为1的所有节点，再访问距离为2的所有节点...</p>
             </KnowledgeCard>
@@ -442,7 +442,7 @@ def bfs(adj, start):
               BFS在实际中有很多应用，最核心的是<strong>找最短路径</strong>：
             </p>
             <div className="grid md:grid-cols-2 gap-4">
-              <KnowledgeCard title="🗺️ 最短路径问题" color="indigo">
+              <KnowledgeCard title="🗺️ 最短路径问题" color="klein">
                 <p><strong>无权图</strong>中，BFS找到的路径一定是最短的！</p>
                 <p className="mt-2 text-sm">例：社交网络中找两人最短关系链</p>
               </KnowledgeCard>
@@ -955,7 +955,7 @@ void floyd() {
               <strong>最小生成树（MST）</strong>：边权和最小的生成树。
             </p>
             <div className="grid md:grid-cols-2 gap-4">
-              <KnowledgeCard title="🏗️ 应用场景" color="indigo">
+              <KnowledgeCard title="🏗️ 应用场景" color="klein">
                 <ul className="list-disc list-inside space-y-1">
                   <li>网络布线（最小成本连接）</li>
                   <li>城市道路规划</li>

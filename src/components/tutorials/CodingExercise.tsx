@@ -303,7 +303,7 @@ export default function CodingExercise({
   };
 
   return (
-    <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800">
+    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800">
       <div className="border-b border-slate-200 bg-[radial-gradient(circle_at_top_left,_rgba(37,99,235,0.14),_transparent_45%),linear-gradient(135deg,_rgba(255,255,255,0.92),_rgba(241,245,249,0.78))] px-4 py-5 dark:border-slate-700 dark:bg-[radial-gradient(circle_at_top_left,_rgba(59,130,246,0.2),_transparent_42%),linear-gradient(135deg,_rgba(15,23,42,0.98),_rgba(30,41,59,0.94))] sm:px-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:justify-between">
           <div className="space-y-3">
@@ -373,21 +373,21 @@ export default function CodingExercise({
           </div>
         </div>
         <MobileScrollHint isEnglish={isEnglish} className="mb-3" />
-        <textarea value={code} onChange={(event) => setCode(event.target.value)} spellCheck={false} className="h-80 w-full rounded-3xl border border-slate-800 bg-slate-950 p-3 font-mono text-[13px] leading-6 text-slate-100 outline-none focus:border-indigo-500 sm:h-72 sm:p-4 sm:text-sm" />
+        <textarea value={code} onChange={(event) => setCode(event.target.value)} spellCheck={false} className="h-80 w-full rounded-2xl border border-slate-800 bg-slate-950 p-3 font-mono text-[13px] leading-6 text-slate-100 outline-none focus:border-indigo-500 sm:h-72 sm:p-4 sm:text-sm" />
         <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-[auto_auto_1fr]">
           <button onClick={onQuickRun} disabled={isRunning} className="min-h-[48px] w-full rounded-2xl bg-emerald-600 px-4 py-3 text-[15px] font-semibold text-white disabled:opacity-60 sm:min-h-[44px] sm:text-sm lg:w-auto">{isRunning ? t('运行中...') : t('快速运行')}</button>
           <button onClick={onJudge} disabled={isRunning} className="min-h-[48px] w-full rounded-2xl bg-indigo-600 px-4 py-3 text-[15px] font-semibold text-white disabled:opacity-60 sm:min-h-[44px] sm:text-sm lg:w-auto">{isRunning ? t('判题中...') : t('提交判题')}</button>
           <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-[15px] leading-6 text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 sm:text-sm">{t('草稿会按题目和语言自动保存，切换语言不再清空代码。')}</div>
         </div>
         {runOutput && (
-          <div className="mt-4 rounded-3xl border border-slate-800 bg-slate-950 p-3 sm:p-4">
+          <div className="mt-4 rounded-2xl border border-slate-800 bg-slate-950 p-3 sm:p-4">
             <MobileScrollHint isEnglish={isEnglish} className="mb-3" />
             <pre className="overflow-x-auto whitespace-pre-wrap text-[13px] leading-6 text-slate-100 sm:text-sm">{runOutput}</pre>
           </div>
         )}
 
         {summary && (
-          <div className="mt-6 rounded-3xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900 sm:p-5">
+          <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900 sm:p-5">
             <div className="flex flex-col gap-4 lg:flex-row lg:justify-between">
               <div className="space-y-3">
                 <div className="flex flex-wrap gap-2">
@@ -609,7 +609,7 @@ export default function CodingExercise({
         )}
 
         {showSolution && (
-          <div className="mt-6 rounded-3xl border border-slate-200 bg-slate-50 p-5 dark:border-slate-700 dark:bg-slate-900">
+          <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-5 dark:border-slate-700 dark:bg-slate-900">
             <div className="mb-3 flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between">
               <h4 className="text-base font-semibold text-slate-900 dark:text-white">{t('参考答案')}</h4>
               <span className="rounded-full bg-slate-200 px-3 py-1 text-xs font-medium text-slate-700 dark:bg-slate-700 dark:text-slate-100">{LANG_NAMES[lang]}</span>
@@ -617,7 +617,7 @@ export default function CodingExercise({
             {solutions[lang] ? (
               <>
                 <MobileScrollHint isEnglish={isEnglish} className="mb-3" />
-                <pre className="overflow-x-auto rounded-3xl border border-slate-800 bg-slate-950 p-3 text-[13px] leading-6 text-slate-100 sm:p-4 sm:text-sm">{displaySolution}</pre>
+                <pre className="overflow-x-auto rounded-2xl border border-slate-800 bg-slate-950 p-3 text-[13px] leading-6 text-slate-100 sm:p-4 sm:text-sm">{displaySolution}</pre>
               </>
             ) : (
               <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-[15px] leading-6 text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 sm:text-sm">{t('当前语言暂无预置参考答案，可以继续使用模板自行完成。')}</div>
@@ -703,7 +703,7 @@ export function FillInBlank({ exerciseId, title, description, difficulty, catego
   const allCorrect = submitted && correctCount === blanks.length;
 
   return (
-    <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800">
+    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800">
       <div className="border-b border-slate-200 bg-[radial-gradient(circle_at_top_left,_rgba(16,185,129,0.14),_transparent_45%),linear-gradient(135deg,_rgba(255,255,255,0.92),_rgba(240,253,250,0.82))] px-4 py-5 dark:border-slate-700 dark:bg-[radial-gradient(circle_at_top_left,_rgba(16,185,129,0.2),_transparent_42%),linear-gradient(135deg,_rgba(15,23,42,0.98),_rgba(30,41,59,0.94))] sm:px-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:justify-between">
           <div className="space-y-3">
@@ -725,18 +725,18 @@ export function FillInBlank({ exerciseId, title, description, difficulty, catego
       </div>
       <div className="p-4 sm:p-6">
         <MobileScrollHint isEnglish={isEnglish} className="mb-3" />
-        <div className="overflow-x-auto rounded-3xl border border-slate-800 bg-slate-950 p-3 font-mono text-[13px] sm:p-4 sm:text-sm">{renderCode()}</div>
+        <div className="overflow-x-auto rounded-2xl border border-slate-800 bg-slate-950 p-3 font-mono text-[13px] sm:p-4 sm:text-sm">{renderCode()}</div>
         <div className="mt-4 flex flex-col gap-3 sm:flex-row">
           <button onClick={checkAnswers} disabled={Object.keys(answers).length === 0} className="min-h-[48px] w-full rounded-2xl bg-emerald-600 px-4 py-3 text-[15px] font-semibold text-white disabled:opacity-60 sm:min-h-[44px] sm:text-sm sm:w-auto">{t('检查答案')}</button>
           <button onClick={() => { setAnswers({}); setResults({}); setSubmitted(false); }} className="min-h-[48px] w-full rounded-2xl border border-slate-200 bg-slate-100 px-4 py-3 text-[15px] font-semibold text-slate-700 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 sm:min-h-[44px] sm:text-sm sm:w-auto">{t('重置')}</button>
         </div>
         {submitted && (
-          <div className={`mt-5 rounded-3xl border p-4 ${allCorrect ? 'border-emerald-200 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-900/20' : 'border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-900/20'}`}>
+          <div className={`mt-5 rounded-2xl border p-4 ${allCorrect ? 'border-emerald-200 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-900/20' : 'border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-900/20'}`}>
             <div className="text-base font-semibold text-slate-900 dark:text-white sm:text-lg">{allCorrect ? t('全部正确，可以继续下一题。') : t(`当前正确 ${correctCount} / ${blanks.length}`)}</div>
           </div>
         )}
         {submitted && localizedExplanation && (
-          <div className="mt-5 rounded-3xl border border-indigo-200 bg-indigo-50 p-4 dark:border-indigo-800 dark:bg-indigo-900/20">
+          <div className="mt-5 rounded-2xl border border-indigo-200 bg-indigo-50 p-4 dark:border-indigo-800 dark:bg-indigo-900/20">
             <h4 className="mb-2 text-sm font-semibold text-indigo-800 dark:text-indigo-200">{t('解析')}</h4>
                 <p className="whitespace-pre-line text-[15px] leading-6 text-indigo-700 dark:text-indigo-200 sm:text-sm">{displayFillBlankExplanation}</p>
           </div>

@@ -17,7 +17,7 @@ function LessonLoadingShell({ currentLink, isSidebarOpen, onOpen, onClose }: {
 }) {
   return (
     <div className="page-safe-top min-h-screen transition-colors duration-300">
-      <div className="mx-auto flex max-w-6xl min-w-0">
+      <div className="mx-auto flex max-w-5xl min-w-0">
         <LessonSidebar
           currentLink={currentLink}
           isOpen={isSidebarOpen}
@@ -176,7 +176,7 @@ export default function Lesson() {
 
   return (
     <div key={path} className="page-safe-top min-h-screen transition-colors duration-300">
-      <div className="mx-auto flex max-w-6xl min-w-0">
+      <div className="mx-auto flex max-w-5xl min-w-0">
         <LessonSidebar
           currentLink={currentLink}
           isOpen={isSidebarOpen}

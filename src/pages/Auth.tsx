@@ -173,7 +173,7 @@ export default function Auth() {
       <div className="mx-auto max-w-lg">
         <div className="mb-8 text-center">
           <Link to="/" className="inline-flex items-center gap-2">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-600">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-klein-600">
               <span className="text-xl font-bold text-white">DS</span>
             </div>
           </Link>
@@ -191,7 +191,7 @@ export default function Auth() {
                   value={username}
                   onChange={(event) => setUsername(event.target.value)}
                   placeholder={copy.usernamePlaceholder}
-                  className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 dark:border-slate-600 dark:bg-slate-700/50 dark:text-white dark:focus:ring-indigo-900/50"
+                  className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-klein-500 focus:ring-2 focus:ring-klein-200 dark:border-slate-600 dark:bg-slate-700/50 dark:text-white dark:focus:ring-klein-900/50"
                   required={isRegister}
                 />
               </div>
@@ -206,14 +206,14 @@ export default function Auth() {
                       key={item.id}
                       type="button"
                       onClick={() => setSkillLevel(item.id)}
-                      className={`min-h-[96px] cursor-pointer rounded-2xl border px-4 py-3 text-left transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/60 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900 ${
+                      className={`min-h-[96px] cursor-pointer rounded-2xl border px-4 py-3 text-left transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-klein-500/60 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900 ${
                         skillLevel === item.id
-                          ? 'border-indigo-500 bg-indigo-50 shadow-sm dark:border-indigo-400 dark:bg-indigo-900/20'
-                          : 'border-slate-200 bg-slate-50 hover:border-indigo-300 dark:border-slate-700 dark:bg-slate-900/50'
+                          ? 'border-klein-500 bg-klein-50 shadow-sm dark:border-klein-400 dark:bg-klein-900/20'
+                          : 'border-slate-200 bg-slate-50 hover:border-klein-300 dark:border-slate-700 dark:bg-slate-900/50'
                       }`}
                     >
                       <div className="text-sm font-semibold text-slate-900 dark:text-white">{item.label}</div>
-                      <div className="mt-1 text-xs text-indigo-600 dark:text-indigo-300">{item.recommendedTrack}</div>
+                      <div className="mt-1 text-xs text-klein-600 dark:text-klein-300">{item.recommendedTrack}</div>
                       <p className="mt-2 text-xs leading-5 text-slate-600 dark:text-slate-300">{item.description}</p>
                     </button>
                   ))}
@@ -253,7 +253,7 @@ export default function Auth() {
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
                 placeholder={copy.emailPlaceholder}
-                className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 dark:border-slate-600 dark:bg-slate-700/50 dark:text-white dark:focus:ring-indigo-900/50"
+                className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-klein-500 focus:ring-2 focus:ring-klein-200 dark:border-slate-600 dark:bg-slate-700/50 dark:text-white dark:focus:ring-klein-900/50"
                 required
               />
             </div>
@@ -266,7 +266,7 @@ export default function Auth() {
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
                   placeholder={copy.passwordPlaceholder}
-                  className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 dark:border-slate-600 dark:bg-slate-700/50 dark:text-white dark:focus:ring-indigo-900/50"
+                  className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-klein-500 focus:ring-2 focus:ring-klein-200 dark:border-slate-600 dark:bg-slate-700/50 dark:text-white dark:focus:ring-klein-900/50"
                   required={!isForgot || resetRequested}
                 />
               </div>
@@ -285,7 +285,7 @@ export default function Auth() {
                     setResetCode('');
                     setResetRequested(false);
                   }}
-                  className="cursor-pointer text-sm font-medium text-indigo-600 transition-colors hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300"
+                  className="cursor-pointer text-sm font-medium text-klein-600 transition-colors hover:text-klein-700 dark:text-klein-400 dark:hover:text-klein-300"
                 >
                   {copy.forgotAction}
                 </button>
@@ -309,7 +309,7 @@ export default function Auth() {
                     }
                   }}
                   placeholder={isForgot ? copy.verificationCodePlaceholder : copy.confirmPasswordPlaceholder}
-                  className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 dark:border-slate-600 dark:bg-slate-700/50 dark:text-white dark:focus:ring-indigo-900/50"
+                  className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-klein-500 focus:ring-2 focus:ring-klein-200 dark:border-slate-600 dark:bg-slate-700/50 dark:text-white dark:focus:ring-klein-900/50"
                   required
                 />
               </div>
@@ -323,7 +323,7 @@ export default function Auth() {
                   value={confirmPassword}
                   onChange={(event) => setConfirmPassword(event.target.value)}
                   placeholder={copy.confirmPasswordPlaceholder}
-                  className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 dark:border-slate-600 dark:bg-slate-700/50 dark:text-white dark:focus:ring-indigo-900/50"
+                  className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-klein-500 focus:ring-2 focus:ring-klein-200 dark:border-slate-600 dark:bg-slate-700/50 dark:text-white dark:focus:ring-klein-900/50"
                   required
                 />
               </div>
@@ -344,7 +344,7 @@ export default function Auth() {
             <button
               type="submit"
               disabled={loading || isAuthLoading}
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 py-3 font-medium text-white transition-colors hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex w-full items-center justify-center gap-2 rounded-2xl bg-klein-600 py-3 font-medium text-white transition-colors hover:bg-klein-700 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {loading || isAuthLoading ? (
                 <>
@@ -369,7 +369,7 @@ export default function Auth() {
                   setError('');
                   setSuccessMessage('');
                 }}
-                className="cursor-pointer text-sm font-medium text-indigo-600 transition-colors hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300"
+                className="cursor-pointer text-sm font-medium text-klein-600 transition-colors hover:text-klein-700 dark:text-klein-400 dark:hover:text-klein-300"
               >
                 {copy.toggle}
               </button>
@@ -386,7 +386,7 @@ export default function Auth() {
                   setConfirmPassword('');
                   setError('');
                 }}
-                className="cursor-pointer text-sm font-medium text-indigo-600 transition-colors hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300"
+                className="cursor-pointer text-sm font-medium text-klein-600 transition-colors hover:text-klein-700 dark:text-klein-400 dark:hover:text-klein-300"
               >
                 {copy.backToLogin}
               </button>

@@ -20,7 +20,7 @@ export const sortLessons: Record<string, LessonContent> = {
         title: '冒泡排序原理',
         content: (
           <div className="space-y-4">
-            <KnowledgeCard title="🫧 冒泡排序 = 相邻比较，大的往后冒" color="indigo">
+            <KnowledgeCard title="🫧 冒泡排序 = 相邻比较，大的往后冒" color="klein">
               <p>反复遍历数组，每次比较相邻元素，如果顺序错误就交换。</p>
               <p className="text-sm text-slate-500 mt-2">像气泡一样，大的元素慢慢"冒"到后面。</p>
             </KnowledgeCard>

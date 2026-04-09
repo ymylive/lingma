@@ -176,7 +176,7 @@ export default function Methodology() {
 
   return (
     <div className="page-safe-top min-h-screen pb-24">
-      <div className="mx-auto max-w-6xl px-4 sm:px-6">
+      <div className="mx-auto max-w-5xl px-4 sm:px-6">
         {/* Hero */}
         <div className="mb-12">
           <Link
@@ -207,7 +207,7 @@ export default function Methodology() {
         <div className="lg:grid lg:grid-cols-[260px_1fr] lg:gap-8">
           {/* Desktop Sidebar */}
           <aside className="hidden lg:block">
-            <div className="sticky top-24 rounded-[28px] border border-slate-200/60 bg-white/70 p-4 shadow-sm backdrop-blur-xl dark:border-slate-700/60 dark:bg-slate-800/70">
+            <div className="sticky top-24 rounded-2xl border border-slate-200/60 bg-white/70 p-4 shadow-sm backdrop-blur-xl dark:border-slate-700/60 dark:bg-slate-800/70">
               <MethodologySidebar activeId={activeId} onSelect={handleSelect} />
             </div>
           </aside>
@@ -260,7 +260,7 @@ export default function Methodology() {
                       ref={(el) => registerRef(`${unit.id}-${pi}`, el)}
                       data-section-id={unit.id}
                       variants={fadeUp}
-                      className="scroll-mt-24 rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:p-8"
+                      className="scroll-mt-24 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:p-8"
                     >
                       <div className="mb-3 flex items-center gap-3">
                         <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-klein-100 text-xs font-bold text-klein-700 dark:bg-klein-900/40 dark:text-klein-300">
@@ -293,7 +293,7 @@ export default function Methodology() {
                 {/* Practice callout */}
                 <motion.div
                   variants={fadeUp}
-                  className="mt-8 rounded-[28px] border border-emerald-200 bg-emerald-50 p-6 dark:border-emerald-900/50 dark:bg-emerald-950/20"
+                  className="mt-8 rounded-2xl border border-emerald-200 bg-emerald-50 p-6 dark:border-emerald-900/50 dark:bg-emerald-950/20"
                 >
                   <div className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700 dark:text-emerald-300">
                     {t('实战练习')}
@@ -315,7 +315,7 @@ export default function Methodology() {
                 {/* Pitfalls callout */}
                 <motion.div
                   variants={fadeUp}
-                  className="mt-4 rounded-[28px] border border-amber-200 bg-amber-50 p-6 dark:border-amber-900/50 dark:bg-amber-950/20"
+                  className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-6 dark:border-amber-900/50 dark:bg-amber-950/20"
                 >
                   <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.16em] text-amber-700 dark:text-amber-300">
                     <TriangleAlert className="h-3.5 w-3.5" />

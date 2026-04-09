@@ -107,16 +107,17 @@ export default function Algorithms() {
 
   return (
     <div className="page-safe-top min-h-screen pb-12 transition-colors duration-500">
-      <div className="mx-auto max-w-6xl px-4 sm:px-6">
+      <div className="mx-auto max-w-5xl px-4 sm:px-6">
         <motion.div
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
-          className="mb-12"
+          className="mb-14"
         >
+          <p className="section-label mb-3">Algorithm Visualizations</p>
           <h1 className="mb-4 text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white sm:text-4xl">
             {isEnglish ? <>Algorithm<span className="text-gradient"> Visualization</span></> : <>算法<span className="text-gradient">可视化</span></>}
           </h1>
-          <p className="max-w-2xl text-base text-slate-600 dark:text-slate-400 sm:text-lg">
+          <p className="max-w-xl text-base text-slate-600 dark:text-slate-400 sm:text-lg">
             {t('通过交互式动画探索数据结构与算法的魅力。点击下方卡片开始你的学习旅程。')}
           </p>
         </motion.div>
@@ -129,7 +130,7 @@ export default function Algorithms() {
         >
           {categories.map((cat) => (
             <motion.div key={cat.name} variants={itemVariants}>
-              <div className="mb-6 flex flex-wrap items-center gap-3">
+              <div className="mb-5 flex flex-wrap items-center gap-3">
                 <span className={`text-2xl p-2 rounded-xl shadow-sm border ${
                   cat.color === 'klein' 
                     ? 'bg-klein-50 dark:bg-klein-900/20 border-klein-100 dark:border-klein-800 text-klein-600 dark:text-klein-400' 
@@ -140,17 +141,17 @@ export default function Algorithms() {
                 <h2 className="text-lg font-bold text-slate-900 dark:text-white sm:text-xl">
                   {t(cat.name)}
                 </h2>
-                <div className="hidden h-px flex-1 bg-gradient-to-r from-slate-200 to-transparent dark:from-slate-700 sm:block"></div>
+                <div className="hidden h-[0.5px] flex-1 bg-gradient-to-r from-slate-200 to-transparent dark:from-slate-700 sm:block"></div>
               </div>
               
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {cat.items.map((item) => (
                   <Link
                     key={item.id}
                     to={`/algorithms/${item.id}`}
-                    className="glass-card group relative overflow-hidden p-4 hover:bg-white dark:hover:bg-slate-800/80 sm:p-5"
+                    className="group relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white/50 p-4 backdrop-blur-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-klein-300/50 hover:bg-white hover:shadow-md hover:shadow-klein-500/[0.05] dark:border-slate-700/60 dark:bg-slate-800/50 dark:hover:border-klein-500/30 dark:hover:bg-slate-800/80 sm:p-5"
                   >
-                    <div className={`absolute top-0 right-0 w-24 h-24 rounded-full blur-2xl -mr-12 -mt-12 transition-all opacity-0 group-hover:opacity-100 ${
+                    <div className={`absolute top-0 right-0 w-20 h-20 rounded-full blur-3xl -mr-12 -mt-12 transition-all opacity-0 group-hover:opacity-100 ${
                        cat.color === 'klein' ? 'bg-klein-500/10' : 'bg-pine-500/10'
                     }`} />
                     

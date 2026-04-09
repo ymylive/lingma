@@ -64,18 +64,18 @@ export default function Header() {
   return (
     <header
       ref={headerRef}
-      className={`fixed inset-x-0 top-0 z-50 transition-all duration-300 ${
+      className={`fixed inset-x-0 top-0 z-50 transition-all duration-500 ${
         scrolled
-          ? 'border-b border-slate-200/50 bg-white/70 shadow-sm backdrop-blur-xl dark:border-white/5 dark:bg-slate-950/70'
-          : 'border-transparent bg-transparent'
+          ? 'border-b border-slate-200/40 bg-white/80 shadow-[0_1px_3px_rgba(0,0,0,0.04)] backdrop-blur-xl dark:border-white/[0.06] dark:bg-slate-950/80'
+          : 'border-b border-transparent bg-transparent'
       }`}
     >
-      <nav className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6">
-        <Link to="/" className="group flex items-center gap-2">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-klein-500 to-klein-600 text-sm font-bold tracking-wider text-white shadow-lg shadow-klein-500/20 transition-transform duration-300 group-hover:scale-105">
+      <nav className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
+        <Link to="/" className="group flex items-center gap-2.5">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-klein-500 to-klein-600 text-xs font-bold tracking-wider text-white shadow-md shadow-klein-500/15 transition-transform duration-300 group-hover:scale-105">
             DS
           </div>
-          <span className="hidden text-lg font-bold tracking-tight text-slate-800 transition-colors group-hover:text-klein-600 dark:text-white dark:group-hover:text-pine-500 sm:inline">
+          <span className="hidden text-base font-bold tracking-tight text-slate-800 transition-colors group-hover:text-klein-600 dark:text-white dark:group-hover:text-pine-500 sm:inline">
             {isEnglish ? 'Data Structures' : '数据结构'}
           </span>
         </Link>
@@ -97,7 +97,7 @@ export default function Header() {
               )}
             </svg>
           </button>
-          <div className="hidden items-center rounded-full border border-slate-200/50 bg-slate-100/50 p-1 backdrop-blur-sm dark:border-white/5 dark:bg-slate-800/50 md:flex">
+          <div className="hidden items-center rounded-full border border-slate-200/40 bg-slate-100/40 p-1 backdrop-blur-sm dark:border-white/[0.06] dark:bg-slate-800/40 md:flex">
             {navItems.map((item) => {
               const isActive = location.pathname.startsWith(item.path);
               return (
@@ -125,7 +125,7 @@ export default function Header() {
           </div>
 
           <div className="flex items-center gap-1.5 border-l border-slate-200 pl-2 dark:border-slate-800 sm:gap-3 sm:pl-5">
-            <div className="hidden items-center rounded-full border border-slate-200 bg-white/70 p-1 text-xs dark:border-slate-700 dark:bg-slate-900/70 sm:flex">
+            <div className="hidden items-center rounded-full border border-slate-200 bg-white/70 backdrop-blur-sm p-1 text-xs dark:border-slate-700 dark:bg-slate-900/70 sm:flex">
               <button
                 type="button"
                 onClick={() => setLocale('zh-CN')}

@@ -101,7 +101,7 @@ export default function AlgorithmDetail() {
 
   return (
     <div className="page-safe-top min-h-screen pb-12 transition-colors duration-300">
-      <div className="mx-auto max-w-6xl px-4 sm:px-6">
+      <div className="mx-auto max-w-5xl px-4 sm:px-6">
         <div className="mb-6 flex items-center gap-2 overflow-x-auto whitespace-nowrap pb-2 text-sm text-slate-500 dark:text-slate-400">
           <Link to="/algorithms" className="hover:text-indigo-600 dark:hover:text-indigo-400">
             {t('算法列表')}

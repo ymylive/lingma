@@ -17,7 +17,7 @@ export default function LinkedListTutorial() {
           </div>
 
           <div className="grid md:grid-cols-2 gap-4">
-            <KnowledgeCard title="🔗 节点结构" color="indigo">
+            <KnowledgeCard title="🔗 节点结构" color="klein">
               <p>每个节点包含：</p>
               <ul className="list-disc list-inside mt-2 space-y-1">
                 <li><strong>data</strong>：存储的数据</li>

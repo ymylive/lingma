@@ -119,10 +119,10 @@ function GeneratorSelect({
         aria-expanded={open}
         aria-haspopup="listbox"
         onClick={() => setOpen((current) => !current)}
-        className={`flex min-h-[48px] w-full cursor-pointer items-center justify-between rounded-2xl border bg-white px-4 py-3 text-left shadow-sm transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/60 dark:bg-slate-900 ${
+        className={`flex min-h-[48px] w-full cursor-pointer items-center justify-between rounded-2xl border bg-white px-4 py-3 text-left shadow-sm transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-klein-500/60 dark:bg-slate-900 ${
           open
-            ? 'border-indigo-400 ring-2 ring-indigo-500/15 dark:border-indigo-400/70 dark:ring-indigo-500/20'
-            : 'border-slate-200 hover:border-indigo-300 hover:bg-slate-50 dark:border-slate-700 dark:hover:border-indigo-500/50 dark:hover:bg-slate-800'
+            ? 'border-klein-400 ring-2 ring-klein-500/15 dark:border-klein-400/70 dark:ring-klein-500/20'
+            : 'border-slate-200 hover:border-klein-300 hover:bg-slate-50 dark:border-slate-700 dark:hover:border-klein-500/50 dark:hover:bg-slate-800'
         }`}
       >
         <span className={`truncate text-sm font-medium ${selected ? 'text-slate-900 dark:text-slate-100' : 'text-slate-400 dark:text-slate-500'}`}>
@@ -132,7 +132,7 @@ function GeneratorSelect({
       </button>
 
       {open && (
-        <div className="absolute left-0 right-0 top-[calc(100%+0.5rem)] z-50 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_24px_60px_-32px_rgba(15,23,42,0.45)] dark:border-slate-700 dark:bg-slate-900">
+        <div className="absolute left-0 right-0 top-[calc(100%+0.5rem)] z-50 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl dark:border-slate-700 dark:bg-slate-900">
           <div className="max-h-72 overflow-y-auto p-2">
             {groups.map((group) => (
               <div key={group.label || 'default'} className="pb-2 last:pb-0">
@@ -154,7 +154,7 @@ function GeneratorSelect({
                         }}
                         className={`flex min-h-[44px] w-full cursor-pointer items-center rounded-xl px-3 py-2 text-left text-sm transition-colors ${
                           active
-                            ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-200'
+                            ? 'bg-klein-50 text-klein-700 dark:bg-klein-950/60 dark:text-klein-200'
                             : 'text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800'
                         }`}
                       >
@@ -221,11 +221,11 @@ export default function AIExerciseGenerator() {
   }, [dataStructure, isEnglish, t]);
 
   const generatorSurfaceClass =
-    'relative isolate overflow-visible rounded-[28px] border border-slate-200/80 bg-[linear-gradient(135deg,rgba(255,255,255,0.97),rgba(241,245,249,0.92)),radial-gradient(circle_at_top_right,rgba(79,70,229,0.16),transparent_34%),radial-gradient(circle_at_bottom_left,rgba(16,185,129,0.12),transparent_30%)] p-7 shadow-[0_30px_80px_-48px_rgba(15,23,42,0.45)] dark:border-slate-700/80 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.96),rgba(15,23,42,0.9)),radial-gradient(circle_at_top_right,rgba(99,102,241,0.2),transparent_36%),radial-gradient(circle_at_bottom_left,rgba(16,185,129,0.15),transparent_34%)] sm:p-8';
+    'relative isolate overflow-visible rounded-3xl border border-slate-200/80 bg-[linear-gradient(135deg,rgba(255,255,255,0.97),rgba(241,245,249,0.92)),radial-gradient(circle_at_top_right,rgba(79,70,229,0.16),transparent_34%),radial-gradient(circle_at_bottom_left,rgba(16,185,129,0.12),transparent_30%)] p-7 shadow-xl dark:border-slate-700/80 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.96),rgba(15,23,42,0.9)),radial-gradient(circle_at_top_right,rgba(99,102,241,0.2),transparent_36%),radial-gradient(circle_at_bottom_left,rgba(16,185,129,0.15),transparent_34%)] sm:p-8';
   const fieldPanelClass =
-    'relative rounded-2xl border border-slate-200/80 bg-white/85 p-6 shadow-sm backdrop-blur-sm focus-within:z-30 dark:border-slate-700/80 dark:bg-slate-900/70';
+    'relative rounded-xl border border-slate-200/80 bg-white/85 p-6 shadow-sm backdrop-blur-sm focus-within:z-30 dark:border-slate-700/80 dark:bg-slate-900/70';
   const inputClass =
-    'min-h-[48px] w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition-colors focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-500';
+    'min-h-[48px] w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition-colors focus:border-klein-400 focus:ring-2 focus:ring-klein-500/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-500';
 
   useEffect(() => {
     loadAIConfig();
@@ -283,9 +283,9 @@ export default function AIExerciseGenerator() {
       {showConfig && (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/55 p-4 backdrop-blur-sm">
           <div className="flex min-h-full items-center justify-center">
-            <div className="w-full max-w-lg rounded-[28px] border border-slate-200 bg-white p-5 shadow-2xl dark:border-slate-700 dark:bg-slate-900 sm:p-6">
+            <div className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-5 shadow-xl dark:border-slate-700 dark:bg-slate-900 sm:p-6">
               <div className="mb-5 flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-indigo-100 text-indigo-600 dark:bg-indigo-950/60 dark:text-indigo-200">
+                <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-klein-100 text-klein-600 dark:bg-klein-950/60 dark:text-klein-200">
                   <Settings2 className="h-5 w-5" />
                 </div>
                 <div>
@@ -327,7 +327,7 @@ export default function AIExerciseGenerator() {
                 <button
                   type="button"
                   onClick={handleSaveConfig}
-                  className="min-h-[44px] flex-1 cursor-pointer rounded-2xl bg-slate-900 px-4 py-2 font-medium text-white transition-colors hover:bg-slate-800 dark:bg-indigo-500 dark:hover:bg-indigo-400"
+                  className="min-h-[44px] flex-1 cursor-pointer rounded-2xl bg-slate-900 px-4 py-2 font-medium text-white transition-colors hover:bg-slate-800 dark:bg-klein-500 dark:hover:bg-klein-400"
                 >
                   {isEnglish ? 'Save model' : '保存模型'}
                 </button>
@@ -345,7 +345,7 @@ export default function AIExerciseGenerator() {
             </div>
             <div>
               <div className="flex flex-wrap items-center gap-2">
-                <span className="rounded-full bg-indigo-600 px-3 py-1 text-xs font-semibold text-white">{t('AI 智能出题')}</span>
+                <span className="rounded-full bg-klein-600 px-3 py-1 text-xs font-semibold text-white">{t('AI 智能出题')}</span>
                 <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-medium text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">{learningStateLabel}</span>
               </div>
               <h2 className="mt-5 text-3xl font-bold text-slate-900 dark:text-white">{t('AI 智能出题')}</h2>
@@ -393,7 +393,7 @@ export default function AIExerciseGenerator() {
 
             <div className={fieldPanelClass}>
               <div className="mb-4 flex items-center gap-2">
-                <Sparkles className="h-4 w-4 text-indigo-500 dark:text-indigo-300" />
+                <Sparkles className="h-4 w-4 text-klein-500 dark:text-klein-300" />
                 <span className="text-sm font-medium text-slate-700 dark:text-slate-200">{t('难度')}</span>
               </div>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -411,8 +411,8 @@ export default function AIExerciseGenerator() {
                     }}
                     className={`min-h-[44px] cursor-pointer rounded-2xl px-3 py-2 text-sm font-medium transition-all ${
                       difficulty === item.id
-                        ? 'bg-slate-900 text-white shadow-sm dark:bg-indigo-500'
-                        : 'border border-slate-200 bg-white text-slate-700 hover:border-indigo-300 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-indigo-500/50 dark:hover:bg-slate-800'
+                        ? 'bg-slate-900 text-white shadow-sm dark:bg-klein-500'
+                        : 'border border-slate-200 bg-white text-slate-700 hover:border-klein-300 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-klein-500/50 dark:hover:bg-slate-800'
                     }`}
                   >
                     {t(item.label)}
@@ -432,8 +432,8 @@ export default function AIExerciseGenerator() {
                   onClick={() => setExerciseType('coding')}
                   className={`inline-flex min-h-[44px] cursor-pointer items-center justify-center gap-2 rounded-2xl px-3 py-2 text-sm font-medium transition-all ${
                     exerciseType === 'coding'
-                      ? 'bg-slate-900 text-white shadow-sm dark:bg-indigo-500'
-                      : 'border border-slate-200 bg-white text-slate-700 hover:border-indigo-300 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-indigo-500/50 dark:hover:bg-slate-800'
+                      ? 'bg-slate-900 text-white shadow-sm dark:bg-klein-500'
+                      : 'border border-slate-200 bg-white text-slate-700 hover:border-klein-300 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-klein-500/50 dark:hover:bg-slate-800'
                   }`}
                 >
                   <FileCode className="h-4 w-4" />
@@ -444,8 +444,8 @@ export default function AIExerciseGenerator() {
                   onClick={() => setExerciseType('fillblank')}
                   className={`inline-flex min-h-[44px] cursor-pointer items-center justify-center gap-2 rounded-2xl px-3 py-2 text-sm font-medium transition-all ${
                     exerciseType === 'fillblank'
-                      ? 'bg-slate-900 text-white shadow-sm dark:bg-indigo-500'
-                      : 'border border-slate-200 bg-white text-slate-700 hover:border-indigo-300 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-indigo-500/50 dark:hover:bg-slate-800'
+                      ? 'bg-slate-900 text-white shadow-sm dark:bg-klein-500'
+                      : 'border border-slate-200 bg-white text-slate-700 hover:border-klein-300 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-klein-500/50 dark:hover:bg-slate-800'
                   }`}
                 >
                   <FileQuestionMark className="h-4 w-4" />
@@ -457,7 +457,7 @@ export default function AIExerciseGenerator() {
 
           <div className="rounded-2xl border border-slate-200/80 bg-[linear-gradient(145deg,rgba(15,23,42,0.04),rgba(79,70,229,0.1))] p-6 shadow-sm dark:border-slate-700/80 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.82),rgba(30,41,59,0.72))]">
             <div className="flex items-center gap-2">
-              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-indigo-100 text-indigo-600 dark:bg-indigo-950/60 dark:text-indigo-200">
+              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-klein-100 text-klein-600 dark:bg-klein-950/60 dark:text-klein-200">
                 <Sparkles className="h-5 w-5" />
               </div>
               <div>
@@ -467,7 +467,7 @@ export default function AIExerciseGenerator() {
             </div>
 
             <div className="mt-5 flex flex-wrap gap-3">
-              <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-indigo-600 shadow-sm dark:bg-slate-900 dark:text-indigo-200">{t(levelMeta.label)}</span>
+              <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-klein-600 shadow-sm dark:bg-slate-900 dark:text-klein-200">{t(levelMeta.label)}</span>
               <span className="rounded-full bg-slate-900 px-3 py-1 text-xs font-medium text-white dark:bg-white dark:text-slate-950">{learningStateLabel}</span>
             </div>
 
@@ -486,8 +486,8 @@ export default function AIExerciseGenerator() {
                   }}
                   className={`min-h-[40px] cursor-pointer rounded-full px-3 py-2 text-xs font-medium transition-all ${
                     dataStructure === item
-                      ? 'bg-indigo-600 text-white shadow-sm'
-                      : 'border border-slate-200 bg-white/90 text-slate-700 hover:border-indigo-300 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-indigo-500/50 dark:hover:bg-slate-800'
+                      ? 'bg-klein-600 text-white shadow-sm'
+                      : 'border border-slate-200 bg-white/90 text-slate-700 hover:border-klein-300 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-klein-500/50 dark:hover:bg-slate-800'
                   }`}
                 >
                   {categoryLabel(item)}
@@ -523,7 +523,7 @@ export default function AIExerciseGenerator() {
               value={customTopic}
               onChange={(event) => setCustomTopic(event.target.value)}
               placeholder={t('输入自定义题目主题，例如：链表反转的递归实现')}
-              className="min-h-[48px] w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition-colors focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-500"
+              className="min-h-[48px] w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition-colors focus:border-klein-400 focus:ring-2 focus:ring-klein-500/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-500"
             />
           </div>
         )}
@@ -532,7 +532,7 @@ export default function AIExerciseGenerator() {
           type="button"
           onClick={handleGenerate}
           disabled={loading}
-          className="mt-6 inline-flex min-h-[52px] w-full cursor-pointer items-center justify-center gap-2 rounded-2xl bg-slate-900 px-5 py-3 text-base font-bold text-white transition-all hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-indigo-500 dark:hover:bg-indigo-400 sm:text-lg"
+          className="mt-6 inline-flex min-h-[52px] w-full cursor-pointer items-center justify-center gap-2 rounded-2xl bg-slate-900 px-5 py-3 text-base font-bold text-white transition-all hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-klein-500 dark:hover:bg-klein-400 sm:text-lg"
         >
           {loading ? (
             <>
@@ -554,8 +554,8 @@ export default function AIExerciseGenerator() {
         )}
 
         {loading && streamingPreview && (
-          <div className="mt-6 rounded-2xl border border-indigo-200 bg-indigo-50/80 p-5 shadow-sm dark:border-indigo-800 dark:bg-indigo-950/20">
-            <div className="mb-3 flex items-center gap-2 text-indigo-700 dark:text-indigo-300">
+          <div className="mt-6 rounded-2xl border border-klein-200 bg-klein-50/80 p-5 shadow-sm dark:border-klein-800 dark:bg-klein-950/20">
+            <div className="mb-3 flex items-center gap-2 text-klein-700 dark:text-klein-300">
               <LoaderCircle className="h-4 w-4 animate-spin" />
               <span className="text-sm font-semibold">{isEnglish ? 'Streaming AI output' : 'AI 正在实时生成内容'}</span>
             </div>

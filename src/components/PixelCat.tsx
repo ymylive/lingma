@@ -159,7 +159,7 @@ export default function PixelCat({ lowMotion = false }: PixelCatProps) {
                 {/* Sleeping Eyes (Lines) */}
                 <rect x="9" y="14" width="2" height="1" fill="#1e293b" />
                 <rect x="15" y="14" width="2" height="1" fill="#1e293b" />
-                <motion.text x="22" y="10" className="text-[8px] font-bold fill-indigo-500"
+                <motion.text x="22" y="10" className="text-[8px] font-bold fill-klein-500"
                   animate={lowMotion ? undefined : { opacity: [0, 1, 0], y: -5 }}
                   transition={lowMotion ? undefined : { duration: 2, repeat: Infinity }}
                 >z</motion.text>

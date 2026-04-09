@@ -16,7 +16,7 @@ export default function SortTutorial() {
           </div>
 
           <div className="grid md:grid-cols-2 gap-4">
-            <KnowledgeCard title="📊 评价指标" color="indigo">
+            <KnowledgeCard title="📊 评价指标" color="klein">
               <ul className="space-y-1">
                 <li><strong>时间复杂度</strong>：执行所需时间</li>
                 <li><strong>空间复杂度</strong>：额外内存使用</li>
@@ -84,7 +84,7 @@ export default function SortTutorial() {
 }`} />
 
           <div className="grid md:grid-cols-3 gap-4">
-            <KnowledgeCard title="⏱️ 时间" color="indigo">
+            <KnowledgeCard title="⏱️ 时间" color="klein">
               <p>最好：O(n) 已有序</p>
               <p>最坏：O(n²) 逆序</p>
               <p>平均：O(n²)</p>
@@ -148,7 +148,7 @@ void quickSort(int a[], int low, int high) {
 }`} />
 
           <div className="grid md:grid-cols-3 gap-4">
-            <KnowledgeCard title="⏱️ 时间" color="indigo">
+            <KnowledgeCard title="⏱️ 时间" color="klein">
               <p>最好：O(n log n)</p>
               <p>最坏：O(n²) 已有序</p>
               <p>平均：O(n log n)</p>
@@ -193,7 +193,7 @@ void quickSort(int a[], int low, int high) {
           <h3 className="text-lg font-bold text-slate-800 mt-6 mb-3">如何选择排序算法？</h3>
           
           <div className="grid md:grid-cols-2 gap-4">
-            <KnowledgeCard title="📏 数据规模小 (n < 50)" color="indigo">
+            <KnowledgeCard title="📏 数据规模小 (n < 50)" color="klein">
               <p>推荐：<strong>插入排序</strong></p>
               <p>原因：常数因子小，对小规模数据效率高</p>
             </KnowledgeCard>

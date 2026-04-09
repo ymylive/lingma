@@ -19,7 +19,7 @@ export const linearLessons: Record<string, LessonContent> = {
         title: '顺序表的概念',
         content: (
           <div className="space-y-4">
-            <KnowledgeCard title="📚 顺序表 = 数组实现的线性表" color="indigo">
+            <KnowledgeCard title="📚 顺序表 = 数组实现的线性表" color="klein">
               <p>用一段<strong>连续的存储单元</strong>依次存储线性表的数据元素。</p>
               <p className="text-sm text-slate-500 mt-2">就像书架上的书，一本挨着一本，位置固定。</p>
             </KnowledgeCard>
@@ -427,7 +427,7 @@ int Length(SqQueue Q) {
               而是指向头节点，形成一个"环"。
             </p>
             <div className="grid md:grid-cols-2 gap-4">
-              <KnowledgeCard title="🔄 循环单链表" color="indigo">
+              <KnowledgeCard title="🔄 循环单链表" color="klein">
                 <p>最后节点的next指向头节点</p>
                 <p className="mt-2">可从任意节点遍历整个链表</p>
               </KnowledgeCard>
