@@ -75,7 +75,7 @@ export function LessonSidebar({ currentLink, isOpen, onOpen, onClose }: LessonSi
             className="absolute inset-0 bg-black/50 backdrop-blur-sm"
             onClick={onClose}
           />
-          <div className="absolute right-0 top-0 bottom-0 w-[min(86vw,20rem)] overflow-y-auto bg-white p-6 shadow-2xl dark:bg-slate-800">
+          <div className="absolute right-0 top-0 bottom-0 w-[min(86vw,20rem)] overflow-y-auto bg-white p-6 shadow-lg dark:bg-slate-800">
             <div className="mb-6 flex items-center justify-between">
               <h3 className="text-lg font-bold text-slate-900 dark:text-white">课程目录</h3>
               <button

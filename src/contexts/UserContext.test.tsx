@@ -37,6 +37,8 @@ function createAuthFetchMock(options: {
   login?: Response;
   register?: Response;
   logout?: Response;
+  passwordResetRequest?: Response;
+  passwordResetConfirm?: Response;
 }) {
   return vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = typeof input === 'string' ? input : input.toString();
@@ -56,6 +58,14 @@ function createAuthFetchMock(options: {
 
     if (url.endsWith('/logout') && method === 'POST') {
       return options.logout ?? textResponse('', 200);
+    }
+
+    if (url.endsWith('/password-reset/request') && method === 'POST') {
+      return options.passwordResetRequest ?? textResponse('missing password reset request response', 500);
+    }
+
+    if (url.endsWith('/password-reset/confirm') && method === 'POST') {
+      return options.passwordResetConfirm ?? textResponse('missing password reset confirm response', 500);
     }
 
     throw new Error(`Unexpected fetch request: ${method} ${url}`);
@@ -178,5 +188,34 @@ describe('UserProvider auth transitions', () => {
       api.logout();
     });
     expect(clearVibeCacheMock).toHaveBeenCalledTimes(4);
+  });
+
+  it('keeps auth state unchanged while handling password reset requests', async () => {
+    const fetchMock = createAuthFetchMock({
+      session: new Response('', { status: 401 }),
+      passwordResetRequest: jsonResponse({ ok: true }),
+      passwordResetConfirm: jsonResponse({ ok: true }),
+    });
+
+    vi.stubGlobal('fetch', fetchMock);
+
+    const api = await renderUserProvider();
+    expect(api.isLoggedIn).toBe(false);
+
+    await act(async () => {
+      await api.requestPasswordReset('recover@example.com');
+      await api.confirmPasswordReset('recover@example.com', '123456', 'UpdatedPassword123');
+    });
+
+    expect(api.isLoggedIn).toBe(false);
+    expect(api.user).toBeNull();
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining('/password-reset/request'),
+      expect.objectContaining({ method: 'POST', credentials: 'include' }),
+    );
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining('/password-reset/confirm'),
+      expect.objectContaining({ method: 'POST', credentials: 'include' }),
+    );
   });
 });

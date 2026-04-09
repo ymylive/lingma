@@ -19,8 +19,6 @@ import {
 } from 'lucide-react';
 import { useI18n } from '../../contexts/I18nContext';
 import { methodologyUnits } from '../../data/methodologyUnits';
-import useProgressiveAiObject from '../../hooks/useProgressiveAiObject';
-import useStreamingTypewriterText from '../../hooks/useStreamingTypewriterText';
 import VibeFrontendLiveBuild from './VibeFrontendLiveBuild';
 import {
   evaluateVibePromptStream,
@@ -148,28 +146,16 @@ export default function VibeCodingLab({ onOpenAiGenerator, onOpenPracticeLibrary
   const [streamingChallengePreview, setStreamingChallengePreview] = useState('');
   const [streamingEvaluationPreview, setStreamingEvaluationPreview] = useState('');
   const [frontendMode, setFrontendMode] = useState<VibeFrontendMode>('prompt-scoring');
-  const progressiveChallengeText = useProgressiveAiObject(
-    challenge
-      ? {
-          title: challenge.title,
-          scenario: challenge.scenario,
-          requirements: challenge.requirements,
-          constraints: challenge.constraints,
-          successCriteria: challenge.successCriteria,
-        }
-      : null,
-    Boolean(challenge),
-  );
-  const progressiveEvaluationText = useProgressiveAiObject(
-    evaluation
-      ? {
-          strengths: evaluation.strengths,
-          weaknesses: evaluation.weaknesses,
-          rewriteExample: evaluation.rewrite_example,
-        }
-      : null,
-    Boolean(evaluation),
-  );
+  const challengeTrack = challenge?.track || selectedTrack;
+  const challengeDifficulty = challenge?.difficulty || profile.recommendedDifficulty;
+  const displayChallengeTitle = challenge?.title || '';
+  const displayChallengeScenario = challenge?.scenario || '';
+  const displayChallengeRequirements = challenge?.requirements || [];
+  const displayChallengeConstraints = challenge?.constraints || [];
+  const displayChallengeSuccessCriteria = challenge?.successCriteria || [];
+  const displayEvaluationStrengths = evaluation?.strengths || [];
+  const displayEvaluationWeaknesses = evaluation?.weaknesses || [];
+  const displayEvaluationRewriteExample = evaluation?.rewrite_example || '';
 
   const loadArenaData = async () => {
     setLoading(true);
@@ -227,15 +213,17 @@ export default function VibeCodingLab({ onOpenAiGenerator, onOpenPracticeLibrary
     try {
       const nextEvaluation = await evaluateVibePromptStream(challenge.id, draftPrompt, locale, setStreamingEvaluationPreview);
       setEvaluation(nextEvaluation);
+      setEvaluating(false);
       setStreamingEvaluationPreview('');
-      const [profileData, historyData] = await Promise.all([fetchVibeProfile(), fetchVibeHistory()]);
-      setProfile(profileData);
-      setHistory(historyData);
-      setSelectedTrack(profileData.recommendedTrack);
+      void Promise.all([fetchVibeProfile(), fetchVibeHistory()]).then(([profileData, historyData]) => {
+        setProfile(profileData);
+        setHistory(historyData);
+      }).catch(() => {
+        // Keep the successful evaluation visible even if background refresh fails.
+      });
     } catch (evaluationError) {
       const message = evaluationError instanceof Error ? evaluationError.message : t('评分失败');
       setError(message);
-    } finally {
       setEvaluating(false);
     }
   };
@@ -251,7 +239,7 @@ export default function VibeCodingLab({ onOpenAiGenerator, onOpenPracticeLibrary
 
   return (
     <div className="space-y-6">
-      <motion.section {...fadeInUp} className="relative isolate overflow-visible rounded-[32px] border border-slate-200/80 bg-[linear-gradient(130deg,rgba(2,6,23,0.98),rgba(15,23,42,0.97)),radial-gradient(circle_at_top_left,rgba(34,197,94,0.22),transparent_34%),radial-gradient(circle_at_bottom_right,rgba(56,189,248,0.2),transparent_32%)] p-6 text-slate-100 shadow-[0_40px_100px_-56px_rgba(15,23,42,0.9)] dark:border-slate-700/70 sm:p-7">
+      <motion.section {...fadeInUp} className="relative isolate overflow-visible rounded-3xl border border-slate-200/80 bg-[linear-gradient(130deg,rgba(2,6,23,0.98),rgba(15,23,42,0.97)),radial-gradient(circle_at_top_left,rgba(34,197,94,0.22),transparent_34%),radial-gradient(circle_at_bottom_right,rgba(56,189,248,0.2),transparent_32%)] p-6 text-slate-100 shadow-2xl dark:border-slate-700/70 sm:p-8">
         <div className="relative grid gap-6 xl:grid-cols-[1.12fr_0.88fr]">
           <div>
             <div className="flex flex-wrap items-center gap-2">
@@ -316,7 +304,7 @@ export default function VibeCodingLab({ onOpenAiGenerator, onOpenPracticeLibrary
                 value: latestScore == null ? t('暂无记录') : `${Math.round(latestScore)}/100`,
               },
             ].map((card) => (
-              <div key={card.title} className="rounded-3xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm">
+              <div key={card.title} className="rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm">
                 <card.icon className="h-5 w-5 text-emerald-300" />
                 <div className="mt-3 text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">{card.title}</div>
                 <div className="mt-2 text-lg font-semibold text-white">{card.value}</div>
@@ -328,16 +316,16 @@ export default function VibeCodingLab({ onOpenAiGenerator, onOpenPracticeLibrary
 
       <AnimatePresence>
       {error ? (
-        <motion.div role="alert" initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.25 }} className="rounded-3xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-900 dark:border-rose-900/50 dark:bg-rose-950/20 dark:text-rose-100">
+        <motion.div role="alert" initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.25 }} className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-900 dark:border-rose-900/50 dark:bg-rose-950/20 dark:text-rose-100">
           {error}
         </motion.div>
       ) : null}
       </AnimatePresence>
 
       <motion.section initial="initial" animate="animate" variants={stagger} className="grid gap-6 lg:grid-cols-2">
-        <motion.div variants={fadeInUp} className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:p-7">
+        <motion.div variants={fadeInUp} className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:p-7">
           <div className="flex items-center gap-2 text-base font-semibold text-slate-900 dark:text-white">
-            <Workflow className="h-4 w-4 text-indigo-500" />
+            <Workflow className="h-4 w-4 text-klein-500" />
             {t('训练赛道')}
           </div>
           <p className="mt-3 text-base leading-8 text-slate-600 dark:text-slate-300">
@@ -353,9 +341,9 @@ export default function VibeCodingLab({ onOpenAiGenerator, onOpenPracticeLibrary
                   key={track}
                   type="button"
                   onClick={() => setSelectedTrack(track)}
-                  className={`cursor-pointer rounded-3xl border p-4 text-left transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/60 ${
+                  className={`cursor-pointer rounded-2xl border p-4 text-left transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-klein-500/60 ${
                     isActive
-                      ? 'border-slate-900 bg-slate-900 text-white dark:border-indigo-500 dark:bg-indigo-500'
+                      ? 'border-slate-900 bg-slate-900 text-white dark:border-klein-500 dark:bg-klein-500'
                       : 'border-slate-200 bg-slate-50 text-slate-900 hover:border-slate-300 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:border-slate-500'
                   }`}
                 >
@@ -375,7 +363,7 @@ export default function VibeCodingLab({ onOpenAiGenerator, onOpenPracticeLibrary
             })}
           </div>
 
-          <div className="mt-5 rounded-3xl border border-slate-200 bg-slate-50 p-5 dark:border-slate-700 dark:bg-slate-900/80">
+          <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-5 dark:border-slate-700 dark:bg-slate-900/80">
             <div className="text-sm font-semibold text-slate-900 dark:text-white">{t('AI 推荐画像')}</div>
             <div className="mt-3 grid gap-3 sm:grid-cols-2">
               <div className="rounded-2xl bg-white px-4 py-3 dark:bg-slate-800">
@@ -390,9 +378,9 @@ export default function VibeCodingLab({ onOpenAiGenerator, onOpenPracticeLibrary
           </div>
         </motion.div>
 
-        <motion.div variants={fadeInUp} className={`rounded-[28px] border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800 ${selectedTrack === 'frontend' && frontendMode === 'live-build' ? 'p-0 lg:col-span-1' : 'p-6 sm:p-7'}`}>
+        <motion.div variants={fadeInUp} className={`rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800 ${selectedTrack === 'frontend' && frontendMode === 'live-build' ? 'p-0 lg:col-span-1' : 'p-6 sm:p-7'}`}>
           {selectedTrack === 'frontend' && (
-            <div className={`${frontendMode === 'live-build' ? 'border-b border-slate-200 p-5 dark:border-slate-700 sm:p-6' : 'mb-5 rounded-3xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-900/80'}`}>
+            <div className={`${frontendMode === 'live-build' ? 'border-b border-slate-200 p-5 dark:border-slate-700 sm:p-6' : 'mb-5 rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-900/80'}`}>
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <div className="text-sm font-semibold text-slate-900 dark:text-white">{t('前端模式')}</div>
@@ -406,7 +394,7 @@ export default function VibeCodingLab({ onOpenAiGenerator, onOpenPracticeLibrary
                     onClick={() => setFrontendMode('prompt-scoring')}
                     className={`min-h-[44px] cursor-pointer rounded-2xl px-4 py-2 text-sm font-medium transition-colors duration-200 ${
                       frontendMode === 'prompt-scoring'
-                        ? 'bg-slate-900 text-white dark:bg-indigo-500'
+                        ? 'bg-slate-900 text-white dark:bg-klein-500'
                         : 'border border-slate-200 bg-white text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200'
                     }`}
                   >
@@ -417,7 +405,7 @@ export default function VibeCodingLab({ onOpenAiGenerator, onOpenPracticeLibrary
                     onClick={() => setFrontendMode('live-build')}
                     className={`min-h-[44px] cursor-pointer rounded-2xl px-4 py-2 text-sm font-medium transition-colors duration-200 ${
                       frontendMode === 'live-build'
-                        ? 'bg-slate-900 text-white dark:bg-indigo-500'
+                        ? 'bg-slate-900 text-white dark:bg-klein-500'
                         : 'border border-slate-200 bg-white text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200'
                     }`}
                   >
@@ -428,12 +416,12 @@ export default function VibeCodingLab({ onOpenAiGenerator, onOpenPracticeLibrary
             </div>
           )}
 
-          {selectedTrack === 'frontend' && frontendMode === 'live-build' ? (
+          {challengeTrack === 'frontend' && frontendMode === 'live-build' ? (
             <VibeFrontendLiveBuild />
           ) : (
             <>
           <div className="flex items-center gap-2 text-base font-semibold text-slate-900 dark:text-white">
-            <MessageSquareQuote className="h-4 w-4 text-indigo-500" />
+            <MessageSquareQuote className="h-4 w-4 text-klein-500" />
             {t('Prompt Arena 训练场')}
           </div>
           <p className="mt-3 text-base leading-8 text-slate-600 dark:text-slate-300">
@@ -441,16 +429,16 @@ export default function VibeCodingLab({ onOpenAiGenerator, onOpenPracticeLibrary
           </p>
 
           <div className="mt-5 space-y-4">
-            <div className="rounded-3xl border border-slate-200 bg-slate-50 p-5 dark:border-slate-700 dark:bg-slate-900/80">
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 dark:border-slate-700 dark:bg-slate-900/80">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <div className="text-sm font-semibold text-slate-900 dark:text-white">
                     {challenge
-                      ? (progressiveChallengeText?.title ?? challenge.title)
+                      ? displayChallengeTitle
                       : (generating ? t('AI 正在生成题目...') : t('尚未生成题目'))}
                   </div>
                   <div className="mt-1 text-xs uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">
-                    {trackMeta[selectedTrack].label} · {difficultyLabel(profile.recommendedDifficulty)}
+                    {trackMeta[challengeTrack].label} · {difficultyLabel(challengeDifficulty)}
                   </div>
                 </div>
                 <button
@@ -469,12 +457,12 @@ export default function VibeCodingLab({ onOpenAiGenerator, onOpenPracticeLibrary
                 <div className="mt-4 space-y-4">
                   <div>
                     <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">{t('场景')}</div>
-                    <p className="mt-2 text-sm leading-8 text-slate-700 dark:text-slate-200">{progressiveChallengeText?.scenario}</p>
+                    <p className="mt-2 text-sm leading-8 text-slate-700 dark:text-slate-200">{displayChallengeScenario}</p>
                   </div>
                   <div className="grid gap-3 xl:grid-cols-2">
-                    <BulletPanel title={t('要求')} items={progressiveChallengeText?.requirements || challenge.requirements} />
-                    <BulletPanel title={t('限制')} items={progressiveChallengeText?.constraints || challenge.constraints} />
-                    <BulletPanel title={t('成功标准')} items={progressiveChallengeText?.successCriteria || challenge.successCriteria} className="xl:col-span-2" />
+                    <BulletPanel title={t('要求')} items={displayChallengeRequirements} />
+                    <BulletPanel title={t('限制')} items={displayChallengeConstraints} />
+                    <BulletPanel title={t('成功标准')} items={displayChallengeSuccessCriteria} className="xl:col-span-2" />
                   </div>
                 </div>
               ) : (
@@ -484,7 +472,7 @@ export default function VibeCodingLab({ onOpenAiGenerator, onOpenPracticeLibrary
                 />
               )}
             </div>
-            <div className="rounded-3xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
               <div className="flex items-center justify-between gap-3">
                 <div className="text-sm font-semibold text-slate-900 dark:text-white">{t('Prompt 编辑器')}</div>
                 <div className="text-xs text-slate-500 dark:text-slate-400">{draftPrompt.trim().length} {t('字符')}</div>
@@ -494,7 +482,7 @@ export default function VibeCodingLab({ onOpenAiGenerator, onOpenPracticeLibrary
                 onChange={(event) => setDraftPrompt(event.target.value)}
                 aria-label={t('Prompt 编辑器')}
                 placeholder={t('写出你的专业 prompt：目标、范围、验证、输出格式都要有。')}
-                className="mt-2 min-h-[200px] w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm leading-8 text-slate-800 transition-colors duration-200 placeholder:text-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/60 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-500"
+                className="mt-2 min-h-[200px] w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm leading-8 text-slate-800 transition-colors duration-200 placeholder:text-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-klein-500/60 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-500"
               />
               <div className="mt-3 flex flex-wrap gap-3">
                 <button
@@ -502,7 +490,7 @@ export default function VibeCodingLab({ onOpenAiGenerator, onOpenPracticeLibrary
                   disabled={!canEvaluate}
                   aria-busy={evaluating}
                   onClick={() => void evaluatePrompt()}
-                  className="inline-flex min-h-[48px] cursor-pointer items-center gap-2 rounded-2xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition-all duration-200 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-indigo-500 dark:hover:bg-indigo-400"
+                  className="inline-flex min-h-[48px] cursor-pointer items-center gap-2 rounded-2xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition-all duration-200 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-klein-500 dark:hover:bg-klein-400"
                 >
                   {evaluating ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
                   {t('提交评分')}
@@ -523,9 +511,9 @@ export default function VibeCodingLab({ onOpenAiGenerator, onOpenPracticeLibrary
         </motion.div>
 
         {!(selectedTrack === 'frontend' && frontendMode === 'live-build') && (
-        <motion.div variants={fadeInUp} className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:p-7 lg:col-span-2">
+        <motion.div variants={fadeInUp} className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:p-7 lg:col-span-2">
           <div className="flex items-center gap-2 text-base font-semibold text-slate-900 dark:text-white">
-            <ShieldCheck className="h-4 w-4 text-indigo-500" />
+            <ShieldCheck className="h-4 w-4 text-klein-500" />
             {t('评分结果')}
           </div>
           <AnimatePresence mode="wait">
@@ -535,7 +523,7 @@ export default function VibeCodingLab({ onOpenAiGenerator, onOpenPracticeLibrary
             </motion.div>
           ) : evaluation ? (
             <motion.div key="eval" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }} className="mt-5 space-y-5">
-              <div role="status" aria-live="polite" className="rounded-3xl border border-emerald-200 bg-emerald-50 p-5 dark:border-emerald-900/50 dark:bg-emerald-950/20">
+              <div role="status" aria-live="polite" className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 dark:border-emerald-900/50 dark:bg-emerald-950/20">
                 <div className="text-xs uppercase tracking-[0.16em] text-emerald-700 dark:text-emerald-300">{t('总分')}</div>
                 <ScoreDisplay score={evaluation.total_score} />
                 <div className="mt-2 text-sm text-emerald-900 dark:text-emerald-100">
@@ -549,7 +537,7 @@ export default function VibeCodingLab({ onOpenAiGenerator, onOpenPracticeLibrary
                     const value = evaluation.dimension_scores[dimension];
                     const meta = dimensionMeta[dimension];
                     return (
-                      <div key={dimension} className="rounded-3xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-900">
+                      <div key={dimension} className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-900">
                         <div className="flex items-center justify-between gap-3">
                           <div className="text-sm font-semibold text-slate-900 dark:text-white">{meta.label}</div>
                           <div className="text-sm text-slate-600 dark:text-slate-300">{value}/{meta.max}</div>
@@ -566,14 +554,14 @@ export default function VibeCodingLab({ onOpenAiGenerator, onOpenPracticeLibrary
                 </div>
 
                 <div className="space-y-4">
-                  <FeedbackPanel title={t('做得好的地方')} items={progressiveEvaluationText?.strengths || evaluation.strengths} tone="emerald" />
-                  <FeedbackPanel title={t('需要补强的地方')} items={progressiveEvaluationText?.weaknesses || evaluation.weaknesses} tone="amber" />
+                  <FeedbackPanel title={t('做得好的地方')} items={displayEvaluationStrengths} tone="emerald" />
+                  <FeedbackPanel title={t('需要补强的地方')} items={displayEvaluationWeaknesses} tone="amber" />
                 </div>
               </div>
 
-              <div className="rounded-3xl border border-slate-900 bg-slate-950 p-4 text-slate-100 shadow-[0_20px_60px_-40px_rgba(15,23,42,0.9)]">
+              <div className="rounded-2xl border border-slate-900 bg-slate-950 p-4 text-slate-100 shadow-xl">
                 <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">{t('改写示范')}</div>
-                <pre className="mt-3 whitespace-pre-wrap text-sm leading-7 text-slate-200">{progressiveEvaluationText?.rewriteExample ?? evaluation.rewrite_example}</pre>
+                <pre className="mt-3 whitespace-pre-wrap text-sm leading-7 text-slate-200">{displayEvaluationRewriteExample}</pre>
                 <button
                   type="button"
                   aria-label={t('用示范重练')}
@@ -599,7 +587,7 @@ export default function VibeCodingLab({ onOpenAiGenerator, onOpenPracticeLibrary
       </motion.section>
 
       <section className="grid gap-6 xl:grid-cols-[1fr_0.92fr]">
-        <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:p-6">
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:p-6">
           <div className="flex items-center justify-between gap-3">
             <div className="text-sm font-semibold text-slate-900 dark:text-white">{t('训练历史')}</div>
             <button
@@ -617,7 +605,7 @@ export default function VibeCodingLab({ onOpenAiGenerator, onOpenPracticeLibrary
           {history.length ? (
             <div className="mt-4 space-y-3">
               {history.slice(0, 6).map((item) => (
-                <div key={item.id} className="rounded-3xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-900">
+                <div key={item.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-900">
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div>
                       <div className="text-sm font-semibold text-slate-900 dark:text-white">{item.challenge.title}</div>
@@ -657,7 +645,7 @@ export default function VibeCodingLab({ onOpenAiGenerator, onOpenPracticeLibrary
         </div>
 
         <div className="space-y-6">
-          <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:p-6">
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:p-6">
             <div className="text-sm font-semibold text-slate-900 dark:text-white">{t('方法论模块')}</div>
             <div className="mt-1 flex items-center justify-between">
               <p className="text-xs text-slate-500 dark:text-slate-400">{t('点击卡片展开完整学习单元')}</p>
@@ -672,7 +660,7 @@ export default function VibeCodingLab({ onOpenAiGenerator, onOpenPracticeLibrary
             <MethodologyGuide t={t} />
           </div>
 
-          <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:p-6">
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:p-6">
             <div className="text-sm font-semibold text-slate-900 dark:text-white">{t('一句话记忆法')}</div>
             <div className="mt-4 space-y-3">
               {memoryRules.map((rule) => (
@@ -696,7 +684,7 @@ function ScoreDisplay({ score }: { score: number }) {
 function BulletPanel({ title, items, className }: { title: string; items: string[]; className?: string }) {
   const visibleItems = items.filter(Boolean);
   return (
-    <div className={`rounded-3xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-800 ${className ?? ''}`}>
+    <div className={`rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-800 ${className ?? ''}`}>
       <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">{title}</div>
       <div className="mt-3 space-y-2">
         {visibleItems.map((item, index) => (
@@ -726,11 +714,11 @@ function FeedbackPanel({
   const visibleItems = items.filter(Boolean);
 
   return (
-    <div className={`rounded-3xl border p-4 ${toneClasses}`}>
+    <div className={`rounded-2xl border p-4 ${toneClasses}`}>
       <div className="text-sm font-semibold">{title}</div>
       <div className="mt-3 space-y-2">
         {visibleItems.map((item, index) => (
-          <div key={`${title}-${index}`} className="rounded-2xl bg-white/70 px-4 py-3 text-sm leading-7 dark:bg-slate-900/40">
+          <div key={`${title}-${index}`} className="rounded-2xl bg-white/70 backdrop-blur-sm px-4 py-3 text-sm leading-7 dark:bg-slate-900/40">
             {item}
           </div>
         ))}
@@ -740,16 +728,14 @@ function FeedbackPanel({
 }
 
 function LiveStreamingPanel({ title, text }: { title: string; text: string }) {
-  const typedText = useStreamingTypewriterText(text, true);
-
   return (
-    <div aria-live="polite" className="mt-4 rounded-3xl border border-indigo-200 bg-indigo-50/80 p-4 shadow-sm dark:border-indigo-800 dark:bg-indigo-950/20">
-      <div className="mb-2 flex items-center gap-2 text-indigo-700 dark:text-indigo-300">
+    <div aria-live="polite" className="mt-4 rounded-2xl border border-klein-200 bg-klein-50/80 p-4 shadow-sm dark:border-klein-800 dark:bg-klein-950/20">
+      <div className="mb-2 flex items-center gap-2 text-klein-700 dark:text-klein-300">
         <LoaderCircle className="h-4 w-4 animate-spin" />
         <span className="text-sm font-semibold">{title}</span>
       </div>
-      <pre className="max-h-80 overflow-auto whitespace-pre-wrap break-words rounded-2xl bg-white/80 p-4 text-xs leading-6 text-slate-700 dark:bg-slate-900/70 dark:text-slate-200">
-        {typedText}
+      <pre className="max-h-80 overflow-auto whitespace-pre-wrap break-words rounded-2xl bg-white/80 backdrop-blur-sm p-4 text-xs leading-6 text-slate-700 dark:bg-slate-900/70 dark:text-slate-200">
+        {text}
       </pre>
     </div>
   );
@@ -757,7 +743,7 @@ function LiveStreamingPanel({ title, text }: { title: string; text: string }) {
 
 function EmptyState({ title, description }: { title: string; description: string }) {
   return (
-    <div className="rounded-3xl border border-dashed border-slate-300 bg-slate-50 p-5 text-center dark:border-slate-700 dark:bg-slate-900/60">
+    <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-5 text-center dark:border-slate-700 dark:bg-slate-900/60">
       <div className="text-sm font-semibold text-slate-900 dark:text-white">{title}</div>
       <p className="mt-2 text-sm leading-7 text-slate-600 dark:text-slate-300">{description}</p>
     </div>
@@ -782,13 +768,13 @@ function MethodologyGuide({ t }: { t: (s: string) => string }) {
       {methodologyUnits.map((unit) => {
         const isOpen = activeUnit === unit.id;
         return (
-          <div key={unit.id} className="rounded-3xl border border-slate-200 bg-slate-50 transition-all dark:border-slate-700 dark:bg-slate-900">
+          <div key={unit.id} className="rounded-2xl border border-slate-200 bg-slate-50 transition-all dark:border-slate-700 dark:bg-slate-900">
             <button
               type="button"
               onClick={() => toggle(unit.id)}
               className="flex w-full cursor-pointer items-center gap-3 p-4 text-left"
             >
-              <unit.icon className="h-5 w-5 shrink-0 text-indigo-500" />
+              <unit.icon className="h-5 w-5 shrink-0 text-klein-500" />
               <div className="min-w-0 flex-1">
                 <div className="text-sm font-semibold text-slate-900 dark:text-white">{t(unit.title)}</div>
                 <p className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">{t(unit.summary)}</p>
@@ -809,7 +795,7 @@ function MethodologyGuide({ t }: { t: (s: string) => string }) {
                     <p className="text-sm leading-7 text-slate-700 dark:text-slate-200">{t(unit.overview)}</p>
 
                     <div className="space-y-2">
-                      <div className="text-xs font-semibold uppercase tracking-[0.16em] text-indigo-600 dark:text-indigo-400">{t('知识点')}</div>
+                      <div className="text-xs font-semibold uppercase tracking-[0.16em] text-klein-600 dark:text-klein-400">{t('知识点')}</div>
                       {unit.points.map((pt, i) => {
                         const key = `${unit.id}-${i}`;
                         const ptOpen = expandedPoint === key;
@@ -820,7 +806,7 @@ function MethodologyGuide({ t }: { t: (s: string) => string }) {
                               onClick={() => togglePoint(key)}
                               className="flex w-full cursor-pointer items-center gap-2 px-4 py-3 text-left"
                             >
-                              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-[10px] font-bold text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300">{i + 1}</span>
+                              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-klein-100 text-[10px] font-bold text-klein-700 dark:bg-klein-900/40 dark:text-klein-300">{i + 1}</span>
                               <span className="flex-1 text-sm font-medium text-slate-900 dark:text-white">{t(pt.title)}</span>
                               <ChevronDown className={`h-3.5 w-3.5 shrink-0 text-slate-400 transition-transform duration-200 ${ptOpen ? 'rotate-180' : ''}`} />
                             </button>

@@ -59,7 +59,7 @@ export const introLessons: Record<string, LessonContent> = {
         content: (
           <div className="space-y-4">
             <div className="grid md:grid-cols-2 gap-4">
-              <KnowledgeCard title="� 线性结构" color="indigo">
+              <KnowledgeCard title="� 线性结构" color="klein">
                 <p className="mb-2"><strong>生活例子：</strong>排队买奶茶</p>
                 <p className="text-sm text-slate-500">每个人只有一个"前面的人"和一个"后面的人"</p>
                 <div className="mt-2 flex items-center gap-1 text-lg">
@@ -120,7 +120,7 @@ export const introLessons: Record<string, LessonContent> = {
               </div>
             </div>
             <div className="grid md:grid-cols-3 gap-4">
-              <KnowledgeCard title="🚀 性能提升1000倍" color="indigo">
+              <KnowledgeCard title="🚀 性能提升1000倍" color="klein">
                 <p>选对数据结构，从等1小时变成等1秒</p>
               </KnowledgeCard>
               <KnowledgeCard title="� 大厂面试必考" color="emerald">
@@ -150,7 +150,7 @@ export const introLessons: Record<string, LessonContent> = {
         title: '什么是算法',
         content: (
           <div className="space-y-4">
-            <KnowledgeCard title="📋 算法的定义" color="indigo">
+            <KnowledgeCard title="📋 算法的定义" color="klein">
               <p className="mb-2">算法是解决特定问题的<strong>有限步骤</strong>的精确描述。</p>
               <p className="text-sm text-slate-500">就像做菜的菜谱、组装家具的说明书一样，算法告诉计算机"怎么做"。</p>
             </KnowledgeCard>
@@ -187,7 +187,7 @@ export const introLessons: Record<string, LessonContent> = {
         content: (
           <div className="space-y-4">
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-              <KnowledgeCard title="1️⃣ 有穷性" color="indigo">
+              <KnowledgeCard title="1️⃣ 有穷性" color="klein">
                 <p className="text-sm">算法必须在有限步骤后结束</p>
                 <p className="text-xs text-slate-500 mt-2">❌ 反例：while(true) 死循环</p>
               </KnowledgeCard>
@@ -203,7 +203,7 @@ export const introLessons: Record<string, LessonContent> = {
                 <p className="text-sm">有零个或多个输入</p>
                 <p className="text-xs text-slate-500 mt-2">可以没有输入（如打印Hello）</p>
               </KnowledgeCard>
-              <KnowledgeCard title="5️⃣ 输出" color="indigo">
+              <KnowledgeCard title="5️⃣ 输出" color="klein">
                 <p className="text-sm">有一个或多个输出</p>
                 <p className="text-xs text-slate-500 mt-2">必须有输出，否则没意义</p>
               </KnowledgeCard>
@@ -383,7 +383,7 @@ export const introLessons: Record<string, LessonContent> = {
               空间复杂度是衡量算法运行过程中<strong>额外占用存储空间</strong>随输入规模增长的变化趋势。
               同样用大O表示法。
             </p>
-            <KnowledgeCard title="📦 空间开销组成" color="indigo">
+            <KnowledgeCard title="📦 空间开销组成" color="klein">
               <ul className="list-disc list-inside space-y-1">
                 <li><strong>输入数据</strong>：存储输入本身的空间（通常不计入）</li>
                 <li><strong>程序本身</strong>：存储代码的空间（通常不计入）</li>

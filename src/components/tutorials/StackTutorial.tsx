@@ -16,7 +16,7 @@ export default function StackTutorial() {
           </div>
 
           <div className="grid md:grid-cols-2 gap-4">
-            <KnowledgeCard title="📥 入栈 Push" color="indigo">
+            <KnowledgeCard title="📥 入栈 Push" color="klein">
               <p>将元素放入栈顶</p>
               <p className="mt-2">操作：top++，然后存入元素</p>
               <p className="text-slate-500">时间复杂度：O(1)</p>
@@ -99,7 +99,7 @@ bool GetTop(Stack S, int &x) {
 }`} />
 
           <div className="grid md:grid-cols-2 gap-4 mt-6">
-            <KnowledgeCard title="🔢 顺序栈" color="indigo">
+            <KnowledgeCard title="🔢 顺序栈" color="klein">
               <ul className="space-y-1">
                 <li>用数组实现</li>
                 <li>需要预先分配空间</li>
@@ -134,7 +134,7 @@ bool GetTop(Stack S, int &x) {
           <h3 className="text-lg font-bold text-slate-800 mb-3">栈的典型应用</h3>
 
           <div className="space-y-4">
-            <KnowledgeCard title="🧮 表达式求值" color="indigo">
+            <KnowledgeCard title="🧮 表达式求值" color="klein">
               <p><strong>中缀转后缀：</strong>使用运算符栈</p>
               <p><strong>后缀求值：</strong>使用操作数栈</p>
               <p className="mt-2">例：3 + 4 * 5 → 3 4 5 * + → 结果23</p>
@@ -199,7 +199,7 @@ bool isValid(string s) {
           />
 
           <div className="grid md:grid-cols-2 gap-4 mt-6">
-            <KnowledgeCard title="📚 栈的类比" color="indigo">
+            <KnowledgeCard title="📚 栈的类比" color="klein">
               <ul className="space-y-1">
                 <li>一摞盘子</li>
                 <li>子弹夹</li>

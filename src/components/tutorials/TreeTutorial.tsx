@@ -16,7 +16,7 @@ export default function TreeTutorial() {
           </div>
 
           <div className="grid md:grid-cols-2 gap-4">
-            <KnowledgeCard title="🌳 基本术语" color="indigo">
+            <KnowledgeCard title="🌳 基本术语" color="klein">
               <ul className="space-y-1">
                 <li><strong>根节点</strong>：最顶层的节点</li>
                 <li><strong>叶子节点</strong>：没有子节点的节点</li>
@@ -71,7 +71,7 @@ TreeNode* createNode(int val) {
           </div>
 
           <div className="grid md:grid-cols-2 gap-4">
-            <KnowledgeCard title="1️⃣ 先序遍历 (Pre-order)" color="indigo">
+            <KnowledgeCard title="1️⃣ 先序遍历 (Pre-order)" color="klein">
               <p className="font-medium">根 → 左 → 右</p>
               <p className="mt-2">应用：复制树、前缀表达式</p>
               <p className="text-slate-500 mt-1">记忆：根在"先"</p>
@@ -206,7 +206,7 @@ TreeNode* insert(TreeNode* root, int key) {
           <h3 className="text-lg font-bold text-slate-800 mb-3">遍历的实际应用</h3>
 
           <div className="space-y-4">
-            <KnowledgeCard title="📁 文件系统" color="indigo">
+            <KnowledgeCard title="📁 文件系统" color="klein">
               <p><strong>先序遍历</strong>：列出目录结构（先显示文件夹，再显示子文件夹）</p>
               <p><strong>后序遍历</strong>：计算目录大小（需要先知道子目录大小）</p>
             </KnowledgeCard>

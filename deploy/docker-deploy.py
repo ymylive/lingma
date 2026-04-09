@@ -26,6 +26,7 @@ INCLUDE_PATHS = [
     "deploy/docker-deploy.py",
     "deploy/lingma.conf",
     "deploy/nginx.conf",
+    "deploy/snippets/",
     "deploy/runtime_config.py",
     "deploy/setup-env.py",
     "deploy/setup-judge.sh",
@@ -92,9 +93,30 @@ def ssh_exec(ssh, cmd, check=True):
     err = stderr.read().decode().strip()
     rc = stdout.channel.recv_exit_status()
     if check and rc != 0:
+        if out:
+            print("  [STDOUT]")
+            for line in out.split("\n")[-15:]:
+                print(f"    {line}")
         print(f"  [STDERR] {err}")
         raise RuntimeError(f"Command failed (rc={rc}): {cmd}")
     return out
+
+
+def ssh_exec_to_log(ssh, cmd, log_path, check=True):
+    print(f"  $ {cmd[:120]}{'...' if len(cmd) > 120 else ''} > {log_path}")
+    wrapped_cmd = f"{cmd} > {log_path} 2>&1"
+    _, stdout, stderr = ssh.exec_command(wrapped_cmd, timeout=None)
+    rc = stdout.channel.recv_exit_status()
+    err = stderr.read().decode().strip()
+    log_output = ssh_exec(ssh, f"tail -n 60 {log_path}", check=False)
+    if log_output:
+        for line in log_output.split("\n"):
+            print(f"    {line}")
+    if check and rc != 0:
+        if err:
+            print(f"  [STDERR] {err}")
+        raise RuntimeError(f"Command failed (rc={rc}): {cmd}")
+    return log_output
 
 
 def build_remote_env_updates():
@@ -172,8 +194,8 @@ def main():
     os.unlink(tar_path)
     print("  Upload complete.")
 
-    print("\n[3/6] Extracting...")
-    ssh_exec(ssh, f"cd {REMOTE_DIR} && tar xzf deploy-bundle.tar.gz && rm deploy-bundle.tar.gz")
+    print("\n[3/6] Cleaning old source & extracting...")
+    ssh_exec(ssh, f"cd {REMOTE_DIR} && rm -rf src/ public/ api-proxy/ judge-server/ && tar xzf deploy-bundle.tar.gz && rm deploy-bundle.tar.gz")
 
     print("\n[4/6] Stopping old services...")
     ssh_exec(ssh, "systemctl stop ai-proxy 2>/dev/null; systemctl disable ai-proxy 2>/dev/null; true", check=False)
@@ -183,11 +205,12 @@ def main():
     print("\n[5/6] Building Docker containers (this may take a few minutes)...")
     sync_remote_env(ssh, remote_env_updates)
 
-    out = ssh_exec(ssh, f"cd {REMOTE_DIR}/deploy && docker-compose build --no-cache 2>&1", check=False)
-    for line in out.split("\n")[-15:]:
-        print(f"    {line}")
+    build_log = f"{REMOTE_DIR}/deploy-build.log"
+    up_log = f"{REMOTE_DIR}/deploy-up.log"
 
-    out = ssh_exec(ssh, f"cd {REMOTE_DIR}/deploy && docker-compose up -d 2>&1", check=False)
+    out = ssh_exec_to_log(ssh, f"cd {REMOTE_DIR}/deploy && docker-compose build --no-cache", build_log)
+
+    out = ssh_exec_to_log(ssh, f"cd {REMOTE_DIR}/deploy && docker-compose up -d", up_log)
     print(f"  {out}")
 
     print("\n[6/6] Pruning old images...")

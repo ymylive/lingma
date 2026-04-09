@@ -1,61 +1,89 @@
-# Tumafang 项目规范
+# CLAUDE.md
 
-## 技术栈
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-- 前端：React 19 + TypeScript + Vite + Tailwind CSS + framer-motion
-- 后端代理：FastAPI (Python 3.11) + uvicorn
-- 判题服务：Node.js 18 + judge-server
-- 部署：Docker Compose（3 服务：frontend / api-proxy / judge-server）
+## Project Overview
 
-## 生产服务器
+Lingma (灵码) is an interactive data structure and algorithm learning platform. It combines visual demos, guided tutorials, AI-assisted practice, and methodology training in a single web app. Live at `https://lingma.cornna.xyz`.
 
-- 地址与登录凭据：通过安全渠道单独分发，不在仓库记录
-- 项目路径：`/var/www/lingma`
-- 前端端口：`18081`（nginx → 0.0.0.0:18081:80）
-- Docker Compose 文件：`/var/www/lingma/deploy/docker-compose.yml`
-- 环境变量：`/var/www/lingma/deploy/.env`
+## Tech Stack
 
-## 部署流程
+- Frontend: React 19 + TypeScript + Vite (rolldown-vite) + Tailwind CSS + framer-motion
+- API proxy: FastAPI (Python 3.11+) + uvicorn + SQLite
+- Judge service: Node.js + Express (sandboxed code execution)
+- Deployment: Docker Compose (3 services: frontend / api-proxy / judge-server)
+- Bilingual: Chinese (primary) and English via `src/i18n/` translation modules
 
-服务器没有 `docker compose`（v2 plugin），必须使用 `docker-compose`（连字符版本）。
-
-### 标准部署步骤
-
-1. 本地打 tarball（仅包含 deploy 下受控部署文件、api-proxy/、judge-server/、src/、public/ 及配置文件；禁止把本地 `deploy/.env`、日志、证书、临时产物打包上传）
-2. 通过 paramiko SFTP 上传到 `/var/www/lingma/deploy-bundle.tar.gz`
-3. 远程解压：`cd /var/www/lingma && tar xzf deploy-bundle.tar.gz && rm deploy-bundle.tar.gz`
-4. 仅前端改动时：`docker-compose build --no-cache frontend && docker-compose up -d frontend`
-5. 全量重建时：`docker-compose down && docker-compose build --no-cache && docker-compose up -d`
-6. 清理旧镜像：`docker image prune -af`
-7. 验证：`docker ps | grep deploy` + `curl -sf http://127.0.0.1:18081/api/health`
-
-### 部署脚本
-
-`deploy/docker-deploy.py` — 基于 paramiko 的自动化部署脚本（Windows 兼容）。
+## Common Commands
 
 ```bash
+# Frontend dev server
+npm run dev
+
+# Type check + build (must pass before deploy)
+npx tsc -b            # stricter than tsc --noEmit; matches server behavior
+npx vite build
+
+# Lint
+npm run lint           # ESLint with typescript-eslint + react-hooks + react-refresh
+
+# Tests (vitest, jsdom environment)
+npm run test           # all tests
+npx vitest run src/path/to/file.test.tsx   # single test file
+
+# API proxy (from repo root)
+cd api-proxy && pip install -r requirements.txt
+python -m uvicorn main:app --host 127.0.0.1 --port 3001 --reload
+
+# Judge server (from repo root)
+cd judge-server && npm install && node server.js
+```
+
+## Architecture
+
+### Frontend (`src/`)
+
+- **Pages** (`src/pages/`): Route-level components, all lazy-loaded via `React.lazy` in `App.tsx`. Most pages behind `ProtectedRoute` (auth required). Key routes: `/` Home, `/algorithms` listing, `/book` tutorials, `/practice` AI workspace, `/mindmap`, `/methodology`, `/dashboard`.
+- **Components** (`src/components/`): Shared UI (`Header`, `Footer`, `PixelCat`), plus subdirectories for `lesson/`, `tutorials/`, `visualizations/`.
+- **Contexts** (`src/contexts/`): `UserContext` (auth/progress), `ThemeContext` (dark mode), `I18nContext` (locale switching).
+- **Services** (`src/services/`): Backend communication — `aiService.ts` (AI endpoints), `judgeService.ts` (code execution), `docService.ts`, `vibeCodingService.ts`, `streamingSse.ts` (SSE streaming helper), `mindMapService.ts`.
+- **Data** (`src/data/`): Curriculum content, exercise banks, lesson content, methodology units. Exercise data is split across multiple files (`classicExercises.ts`, `leetcodeClassics.ts`, `digitalLogicExercises.ts`, etc.).
+- **i18n** (`src/i18n/`): Translation strings organized by domain (page, content, exercise titles, visualization, etc.). `I18nContext` consumes these.
+- **Hooks** (`src/hooks/`): `useLowMotionMode` (accessibility), `useProgressiveAiObject`, `useStreamingTypewriterText`.
+
+### API Proxy (`api-proxy/`)
+
+FastAPI app in `main.py` with modular route handlers in `app_modules/`. Proxies AI requests and handles user auth/progress. Uses SQLite for persistence. Has its own test suite in `api-proxy/tests/`.
+
+### Judge Server (`judge-server/`)
+
+Node.js/Express service (`server.js`) that executes user-submitted code in a sandboxed environment. Runs read-only in Docker with strict security constraints (cap_drop ALL, pids_limit, tmpfs). Has tests in `judge-server/tests/`.
+
+### Docker Services (`deploy/`)
+
+`docker-compose.yml` orchestrates three containers. Frontend is served by Nginx on port 18081. API proxy on internal port 3001, judge server on internal port 3002. Judge server communicates with api-proxy via `JUDGE_BASE_URL` env var.
+
+## Design System
+
+Brand colors: Klein Blue (`#002FA7`) as primary, Pine Yellow (`#FFE135`) as accent. See `src/DESIGN_SYSTEM.md` for full spec including dark mode layers, border radii, animation patterns, and button styles.
+
+## Deployment
+
+Server uses `docker-compose` (hyphenated v1 command, not `docker compose` v2 plugin).
+
+```bash
+# Automated deployment (Windows-compatible, uses paramiko)
 python deploy/docker-deploy.py
 ```
 
-运行前要求：
+Requires VPS credentials and `LINGMA_JUDGE_INTERNAL_TOKEN` via environment variables — never commit these. The deploy script packages workspace files, uploads via SFTP, rebuilds Docker images, and runs a health check.
 
-- 先通过本地 shell、CI secret store 或未纳管的本地环境文件注入 VPS 凭据，禁止把真实值写进命令历史、文档或仓库
-- 通过环境变量显式提供 `LINGMA_JUDGE_INTERNAL_TOKEN`，部署脚本会把它同步到服务器 `deploy/.env`，判题链路不再接受默认回退 token
-- 首次连接前先把生产服务器 host key 写入可信 `known_hosts`；如需显式指定，可设置 `LINGMA_SSH_KNOWN_HOSTS`
-- 如果凭据曾经出现在仓库或聊天记录中，先轮换再部署
+**Pre-deploy checklist**: `npx tsc -b` and `npx vite build` must both pass. Server `tsc -b` is stricter than local `tsc --noEmit` (catches unused imports).
 
-### 注意事项
+## Key Conventions
 
-- 本地 Windows 环境没有 sshpass，必须用 paramiko
-- 服务器 `tsc -b` 比本地 `tsc --noEmit` 更严格（会报 unused imports），部署前用 `npx tsc -b` 验证
-- tarball 必须包含 `judge-server/` 目录（server.js、package.json、package-lock.json）
-- 服务器上还运行着其他服务（shuake、renling、easytier、headscale），部署时不要影响它们
-
-## 构建验证
-
-部署前必须通过：
-
-```bash
-npx tsc -b          # 类型检查（与服务器一致的严格模式）
-npx vite build      # 构建产物
-```
+- Commit messages: conventional style (`feat:`, `fix:`, `docs:`)
+- Frontend changes: verify both desktop and mobile layouts
+- Keep diffs minimal and scoped to the task
+- Pages that require auth use `ProtectedRoute` wrapper in `App.tsx`
+- Page transitions use framer-motion with `useLowMotionMode` accessibility fallback

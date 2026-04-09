@@ -1,5 +1,6 @@
 import base64
 import hashlib
+import hmac
 import html
 import http.client
 import ipaddress
@@ -15,9 +16,10 @@ import sys
 import threading
 from collections import defaultdict
 from contextlib import contextmanager
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Dict, Iterator, List, Optional, Tuple
+import urllib.parse
 from urllib.parse import urlparse
 
 import requests
@@ -43,6 +45,21 @@ from app_modules.judge_review import (
     normalize_judge_ai_review_payload,
     should_trigger_judge_ai_review,
 )
+from app_modules.auth_recovery import (
+    PASSWORD_RESET_CODE_TTL_SECONDS,
+    PASSWORD_RESET_MAX_ATTEMPTS,
+    PASSWORD_RESET_REQUEST_COOLDOWN_SECONDS,
+    create_password_reset_code_record,
+    generate_password_reset_code,
+    send_password_reset_email,
+    sanitize_password_reset_code,
+    verify_password_reset_code,
+)
+from app_modules.exercise_payloads import (
+    normalize_generated_exercise_payload,
+    normalize_generated_fill_blank_payload,
+)
+from app_modules.structured_json import parse_structured_json_object
 
 DEFAULT_ALLOWED_ORIGINS = [
     "http://localhost:5173",
@@ -51,10 +68,6 @@ DEFAULT_ALLOWED_ORIGINS = [
     "http://127.0.0.1:3000",
     "https://lingma.cornna.xyz",
     "http://lingma.cornna.xyz",
-    "http://8.134.33.19",
-    "https://8.134.33.19",
-    "http://8.134.33.19:8080",
-    "https://8.134.33.19:8080",
 ]
 
 logger = logging.getLogger("lingma.api_proxy")
@@ -86,7 +99,7 @@ def first_env(*names: str) -> str:
     return ""
 
 AI_API_KEY = os.getenv("AI_API_KEY", "").strip()
-AI_BASE_URL = (os.getenv("AI_BASE_URL") or os.getenv("AI_API_URL") or "https://gmn.chuangzuoli.com/v1/responses").strip()
+AI_BASE_URL = (os.getenv("AI_BASE_URL") or os.getenv("AI_API_URL") or "https://api.cornna.xyz/v1").strip()
 AI_MODEL = os.getenv("AI_MODEL", "gpt-5.4").strip()
 AI_SITE_URL = os.getenv("AI_SITE_URL", "https://lingma.cornna.xyz").strip()
 AI_SITE_NAME = os.getenv("AI_SITE_NAME", "LingMa").strip()
@@ -113,6 +126,7 @@ JUDGE_AI_REVIEW_DIMENSION_LIMITS = {
 }
 JUDGE_AI_REVIEW_MAX_OUTPUT_TOKENS = 1400
 
+AI_PROTOCOL_COMPAT = "compat"
 AI_PROTOCOL_RESPONSES = "responses"
 SUPPORTED_REASONING_EFFORTS = {"low", "medium", "high"}
 
@@ -214,6 +228,21 @@ def init_auth_db() -> None:
                 );
                 CREATE INDEX IF NOT EXISTS idx_user_sessions_user_id ON user_sessions(user_id);
                 CREATE INDEX IF NOT EXISTS idx_user_sessions_expires_at ON user_sessions(expires_at);
+                CREATE TABLE IF NOT EXISTS password_reset_codes (
+                    id TEXT PRIMARY KEY,
+                    user_id TEXT NOT NULL,
+                    email TEXT NOT NULL,
+                    code_hash TEXT NOT NULL,
+                    code_salt TEXT NOT NULL,
+                    created_at TEXT NOT NULL,
+                    expires_at TEXT NOT NULL,
+                    consumed_at TEXT,
+                    attempt_count INTEGER NOT NULL DEFAULT 0,
+                    FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+                );
+                CREATE INDEX IF NOT EXISTS idx_password_reset_codes_user_id ON password_reset_codes(user_id);
+                CREATE INDEX IF NOT EXISTS idx_password_reset_codes_email ON password_reset_codes(email);
+                CREATE INDEX IF NOT EXISTS idx_password_reset_codes_expires_at ON password_reset_codes(expires_at);
                 CREATE TABLE IF NOT EXISTS vibe_challenges (
                     id TEXT PRIMARY KEY,
                     user_id TEXT NOT NULL,
@@ -410,13 +439,9 @@ def parse_upstream_json_object(data: Dict[str, Any]) -> Dict[str, Any]:
         raw_payload = json.dumps(data, ensure_ascii=False)
 
     try:
-        parsed = json.loads(raw_payload)
-    except Exception as exc:
+        return parse_structured_json_object(raw_payload)
+    except ValueError as exc:
         raise HTTPException(status_code=502, detail="invalid structured AI output") from exc
-
-    if not isinstance(parsed, dict):
-        raise HTTPException(status_code=502, detail="invalid structured AI output")
-    return parsed
 
 
 def normalize_generated_challenge_payload(payload: Dict[str, Any], track: str, difficulty: str, user_id: str) -> Dict[str, Any]:
@@ -432,7 +457,8 @@ def normalize_generated_challenge_payload(payload: Dict[str, Any], track: str, d
         success_criteria = sanitize_string_list(payload.get("success_criteria"), "success_criteria")
         expected_focus = normalize_expected_focus(payload.get("expected_focus"))
     except ValueError as exc:
-        raise HTTPException(status_code=502, detail=f"invalid challenge payload: {exc}") from exc
+        logger.error("invalid challenge payload: %s", exc)
+        raise HTTPException(status_code=502, detail="invalid request format") from exc
 
     return {
         "id": f"challenge_{secrets.token_urlsafe(12)}",
@@ -477,7 +503,8 @@ def normalize_evaluation_payload(payload: Dict[str, Any], challenge_id: str) -> 
             raise ValueError("rewrite_example is required")
         next_difficulty = sanitize_vibe_difficulty(payload.get("next_difficulty_recommendation"))
     except ValueError as exc:
-        raise HTTPException(status_code=502, detail=f"invalid evaluation payload: {exc}") from exc
+        logger.error("invalid evaluation payload: %s", exc)
+        raise HTTPException(status_code=502, detail="invalid request format") from exc
 
     return {
         "challengeId": challenge_id,
@@ -525,7 +552,8 @@ def normalize_frontend_build_payload(payload: Dict[str, Any], session_id: str, t
             raise ValueError("html is required")
         next_suggestions = sanitize_string_list(payload.get("nextSuggestions"), "nextSuggestions", min_items=1, max_items=6)
     except ValueError as exc:
-        raise HTTPException(status_code=502, detail=f"invalid frontend build payload: {exc}") from exc
+        logger.error("invalid frontend build payload: %s", exc)
+        raise HTTPException(status_code=502, detail="invalid request format") from exc
 
     return {
         "id": f"artifact_{secrets.token_urlsafe(12)}",
@@ -1318,6 +1346,20 @@ def build_vibe_evaluation_prompt(challenge: Dict[str, Any], prompt_text: str, mo
 def normalize_node(node: Any) -> Dict[str, Any]:
     if not isinstance(node, dict):
         raise ValueError("Invalid node")
+
+    def parse_collapsed(value: Any) -> bool:
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, str):
+            normalized = value.strip().lower()
+            if normalized in {"true", "1", "yes", "on"}:
+                return True
+            if normalized in {"false", "0", "no", "off", ""}:
+                return False
+        if isinstance(value, (int, float)):
+            return value != 0
+        return False
+
     title = str(node.get("title", "")).strip() or "Untitled Node"
     note = str(node.get("note", ""))[:8000]
     children_raw = node.get("children", [])
@@ -1327,7 +1369,7 @@ def normalize_node(node: Any) -> Dict[str, Any]:
         "id": node_id,
         "title": title,
         "note": note,
-        "collapsed": bool(node.get("collapsed", False)),
+        "collapsed": parse_collapsed(node.get("collapsed", False)),
         "children": children,
     }
 
@@ -1441,7 +1483,7 @@ def create_password_record(password: str) -> Dict[str, str]:
 
 
 def verify_password(password: str, password_hash: str, password_salt: str) -> bool:
-    return derive_password_hash(password, password_salt) == password_hash
+    return hmac.compare_digest(derive_password_hash(password, password_salt), password_hash)
 
 
 AUTH_REGISTRATION_FAILURE_DETAIL = "unable to create account"
@@ -1757,6 +1799,8 @@ def detect_protocol_from_url(api_url: str) -> str:
     lower = (api_url or "").lower()
     if "/responses" in lower:
         return AI_PROTOCOL_RESPONSES
+    if lower.endswith("/chat/completions") or lower.endswith("/v1"):
+        return AI_PROTOCOL_COMPAT
     return AI_PROTOCOL_RESPONSES
 
 
@@ -1770,11 +1814,15 @@ def apply_protocol_to_url(api_url: str, protocol: str) -> str:
             return base[: -len("/chat/completions")] + "/responses"
         return base
     if lower.endswith("/responses"):
+        if protocol == AI_PROTOCOL_COMPAT:
+            return base[: -len("/responses")] + "/chat/completions"
         return base
     if "/responses" in lower or "/chat/completions" in lower:
         return base
     if protocol == AI_PROTOCOL_RESPONSES:
         return f"{base}/responses"
+    if protocol == AI_PROTOCOL_COMPAT and lower.endswith("/v1"):
+        return f"{base}/chat/completions"
     return base
 
 
@@ -1784,7 +1832,7 @@ def resolve_responses_upstream_url() -> str:
 
 def is_openai_official(api_url: str) -> bool:
     host = urlparse(api_url or "").netloc.lower()
-    return host == "api.openai.com"
+    return host in {"api.openai.com", "api.cornna.xyz"}
 
 
 def should_force_responses_stream(api_url: str, protocol: str) -> bool:
@@ -1793,7 +1841,7 @@ def should_force_responses_stream(api_url: str, protocol: str) -> bool:
 
 def responses_token_key(api_url: str) -> str:
     host = urlparse(api_url or "").netloc.lower()
-    if host in {"api.openai.com", "gmn.chuangzuoli.com"}:
+    if host in {"api.openai.com", "api.cornna.xyz", "gmn.chuangzuoli.com"}:
         return "max_output_tokens"
     return "max_tokens"
 
@@ -1941,6 +1989,73 @@ def build_responses_payload(body: Dict[str, Any], stream: Optional[bool] = None)
     return payload
 
 
+def normalize_compat_role(role: Any) -> str:
+    value = str(role or "user").strip().lower() or "user"
+    if value == "developer":
+        return "system"
+    if value not in {"system", "user", "assistant", "tool"}:
+        return "user"
+    return value
+
+
+def build_compat_messages(payload: Dict[str, Any]) -> List[Dict[str, Any]]:
+    messages: List[Dict[str, Any]] = []
+    input_items = payload.get("input")
+    if isinstance(input_items, list) and input_items:
+        for item in input_items:
+            if not isinstance(item, dict):
+                continue
+            text = extract_text_content(item.get("content"))
+            if not text:
+                continue
+            messages.append(
+                {
+                    "role": normalize_compat_role(item.get("role")),
+                    "content": text,
+                }
+            )
+    raw_messages = payload.get("messages")
+    if not messages and isinstance(raw_messages, list):
+        for item in raw_messages:
+            if not isinstance(item, dict):
+                continue
+            text = extract_text_content(item.get("content"))
+            if not text:
+                continue
+            messages.append(
+                {
+                    "role": normalize_compat_role(item.get("role")),
+                    "content": text,
+                }
+            )
+    if not messages:
+        raise HTTPException(status_code=400, detail="messages is required")
+    return messages
+
+
+def build_compat_request_payload(payload: Dict[str, Any], stream: bool) -> Dict[str, Any]:
+    request_payload: Dict[str, Any] = {
+        "model": str(payload.get("model") or AI_MODEL).strip() or AI_MODEL,
+        "messages": build_compat_messages(payload),
+        "stream": stream,
+    }
+    if "temperature" in payload:
+        request_payload["temperature"] = payload["temperature"]
+    if isinstance(payload.get("metadata"), dict):
+        request_payload["metadata"] = payload["metadata"]
+
+    token_value = payload.get("max_tokens", payload.get("max_output_tokens"))
+    if token_value is not None:
+        request_payload["max_tokens"] = normalize_token_value(token_value)
+
+    reasoning = payload.get("reasoning")
+    if isinstance(reasoning, dict):
+        effort = str(reasoning.get("effort") or "").strip().lower()
+        if effort in SUPPORTED_REASONING_EFFORTS:
+            request_payload["reasoning_effort"] = effort
+    return request_payload
+
+
 def build_legacy_request_payload(body: Dict[str, Any], stream: bool) -> Dict[str, Any]:
     messages = body.get("messages")
     if not isinstance(messages, list) or not messages:
@@ -2026,19 +2141,22 @@ def downgrade_reasoning_on_timeout(payload: Dict[str, Any]) -> Optional[Dict[str
     return next_payload
 
 
-def prepare_upstream_request(payload: Dict[str, Any]) -> Tuple[str, Dict[str, Any], Dict[str, str], bool]:
+def prepare_upstream_request(payload: Dict[str, Any]) -> Tuple[str, Dict[str, Any], Dict[str, str], bool, str]:
     upstream_url = resolve_responses_upstream_url()
     protocol = detect_protocol_from_url(upstream_url)
     stream_requested = parse_boolish(payload.get("stream"))
     effective_stream = stream_requested or should_force_responses_stream(upstream_url, protocol)
 
-    request_payload = dict(payload)
-    if effective_stream:
-        request_payload["stream"] = True
+    if protocol == AI_PROTOCOL_COMPAT:
+        request_payload = build_compat_request_payload(payload, effective_stream)
+    else:
+        request_payload = dict(payload)
+        if effective_stream:
+            request_payload["stream"] = True
 
     headers = build_upstream_headers()
     headers["Accept"] = "text/event-stream" if effective_stream else "application/json"
-    return upstream_url, request_payload, headers, effective_stream
+    return upstream_url, request_payload, headers, effective_stream, protocol
 
 
 def decode_response_text(response: requests.Response) -> str:
@@ -2049,6 +2167,112 @@ def decode_response_text(response: requests.Response) -> str:
         return raw.decode("utf-8")
     except UnicodeDecodeError:
         return raw.decode("utf-8", errors="replace")
+
+
+def extract_compat_message_text(data: Dict[str, Any]) -> str:
+    choices = data.get("choices")
+    if not isinstance(choices, list):
+        return ""
+    for choice in choices:
+        if not isinstance(choice, dict):
+            continue
+        message = choice.get("message")
+        if isinstance(message, dict):
+            text = extract_text_content(message.get("content"))
+            if text:
+                return text
+        delta = choice.get("delta")
+        if isinstance(delta, dict):
+            text = extract_text_content(delta.get("content"))
+            if text:
+                return text
+    return ""
+
+
+def build_synthetic_responses_payload_from_compat(data: Dict[str, Any], fallback_text: str = "") -> Dict[str, Any]:
+    text = extract_compat_message_text(data) or str(fallback_text or "").strip()
+    return {
+        "id": str(data.get("id") or f"resp_{secrets.token_urlsafe(12)}"),
+        "object": "response",
+        "created_at": int(datetime.now(timezone.utc).timestamp()),
+        "model": str(data.get("model") or AI_MODEL),
+        "output_text": text,
+        "output": [
+            {
+                "type": "message",
+                "role": "assistant",
+                "content": [{"type": "output_text", "text": text}],
+            }
+        ],
+        "usage": data.get("usage"),
+    }
+ 
+
+def iter_compat_stream_events(response: Any) -> Iterator[Tuple[str, Optional[str], Dict[str, Any]]]:
+    last_event: Dict[str, Any] = {}
+    for event_block in iter_sse_events(response):
+        data_text = extract_sse_data(event_block)
+        if not data_text:
+            continue
+        if data_text == "[DONE]":
+            break
+        try:
+            event = json.loads(data_text)
+        except Exception:
+            continue
+        if not isinstance(event, dict):
+            continue
+        last_event = event
+        choices = event.get("choices")
+        if not isinstance(choices, list) or not choices:
+            continue
+        choice = choices[0] if isinstance(choices[0], dict) else {}
+        delta = choice.get("delta") if isinstance(choice, dict) else {}
+        if isinstance(delta, dict):
+            text = extract_text_content(delta.get("content"))
+            if text:
+                yield "delta", text, event
+        finish_reason = choice.get("finish_reason") if isinstance(choice, dict) else None
+        if finish_reason:
+            yield "done", None, event
+            return
+    yield "done", None, last_event
+
+
+def iter_standardized_upstream_events(payload: Dict[str, Any]) -> Iterator[Dict[str, Any]]:
+    accumulated = ""
+    request_payload = dict(payload or {})
+    request_payload["stream"] = True
+    with open_upstream_responses(request_payload) as upstream:
+        protocol = getattr(upstream, "_lingma_protocol", detect_protocol_from_url(resolve_responses_upstream_url()))
+        if protocol == AI_PROTOCOL_COMPAT:
+            last_event: Dict[str, Any] = {}
+            for event_type, delta_text, raw_event in iter_compat_stream_events(upstream):
+                if raw_event:
+                    last_event = raw_event
+                if event_type == "delta" and isinstance(delta_text, str) and delta_text:
+                    accumulated += delta_text
+                    yield {
+                        "type": "response.output_text.delta",
+                        "delta": delta_text,
+                        "response": build_synthetic_responses_payload_from_compat(raw_event, fallback_text=accumulated),
+                    }
+                elif event_type == "done":
+                    response_obj = build_synthetic_responses_payload_from_compat(last_event, fallback_text=accumulated)
+                    yield {"type": "response.completed", "response": response_obj}
+                    return
+            return
+
+        for event_block in iter_sse_events(upstream):
+            data_text = extract_sse_data(event_block)
+            if not data_text or data_text == "[DONE]":
+                continue
+            try:
+                event = json.loads(data_text)
+            except Exception:
+                continue
+            if isinstance(event, dict):
+                yield event
 
 
 def extract_responses_sse_json(body_text: str) -> Dict[str, Any]:
@@ -2080,17 +2304,33 @@ def extract_responses_sse_json(body_text: str) -> Dict[str, Any]:
         if event_type == "response.failed":
             error = event.get("error") if isinstance(event.get("error"), dict) else {}
             message = str(error.get("message") or "upstream stream failed").strip()
-            raise HTTPException(status_code=502, detail=message or "upstream stream failed")
+            logger.warning("upstream stream error: %s", message)
+            raise HTTPException(status_code=502, detail="upstream stream failed")
 
     if isinstance(last_response, dict):
         return last_response
     if isinstance(last_payload, dict) and isinstance(last_payload.get("error"), dict):
         message = str(last_payload["error"].get("message") or "upstream stream failed").strip()
-        raise HTTPException(status_code=502, detail=message or "upstream stream failed")
-    raise HTTPException(status_code=502, detail=f"invalid upstream response: {(body_text or '').strip()[:500]}")
+        logger.warning("upstream stream error: %s", message)
+        raise HTTPException(status_code=502, detail="upstream stream failed")
+    logger.warning("invalid upstream response: %s", (body_text or "").strip()[:500])
+    raise HTTPException(status_code=502, detail="invalid upstream response")
 
 
-def perform_upstream_responses_request(payload: Dict[str, Any]) -> Tuple[requests.Session, requests.Response]:
+def extract_compat_sse_json(body_text: str) -> Dict[str, Any]:
+    accumulated = ""
+    last_event: Dict[str, Any] = {}
+    for event_type, delta_text, raw_event in iter_compat_stream_events((body_text or "").splitlines()):
+        if raw_event:
+            last_event = raw_event
+        if event_type == "delta" and isinstance(delta_text, str) and delta_text:
+            accumulated += delta_text
+        elif event_type == "done":
+            return build_synthetic_responses_payload_from_compat(last_event, fallback_text=accumulated)
+    return build_synthetic_responses_payload_from_compat(last_event, fallback_text=accumulated)
+
+
+def perform_upstream_responses_request(payload: Dict[str, Any]) -> Tuple[requests.Session, requests.Response, str]:
     explicit_proxies = resolve_explicit_upstream_proxies()
     fallback_tokens = normalize_token_value(
         payload.get("max_output_tokens", payload.get("max_tokens", 8192)),
@@ -2099,7 +2339,7 @@ def perform_upstream_responses_request(payload: Dict[str, Any]) -> Tuple[request
     token_override_attempted = False
 
     while True:
-        request_url, request_payload, headers, effective_stream = prepare_upstream_request(current_payload)
+        request_url, request_payload, headers, effective_stream, protocol = prepare_upstream_request(current_payload)
         session = build_upstream_session(explicit_proxies)
         try:
             response = session.post(
@@ -2116,34 +2356,42 @@ def perform_upstream_responses_request(payload: Dict[str, Any]) -> Tuple[request
             if downgraded_payload is not None:
                 current_payload = downgraded_payload
                 continue
-            raise HTTPException(status_code=504, detail=str(exc)) from exc
+            logger.warning("upstream request timeout: %s", exc)
+            raise HTTPException(status_code=504, detail="upstream request timed out") from exc
         except requests.RequestException as exc:
             session.close()
-            raise HTTPException(status_code=502, detail=str(exc)) from exc
+            logger.warning("upstream request failed: %s", exc)
+            raise HTTPException(status_code=502, detail="upstream request failed") from exc
 
         if response.status_code < 400:
-            return session, response
+            return session, response, protocol
 
         body_text = decode_response_text(response)
         response.close()
         session.close()
 
-        override_key = None if token_override_attempted else resolve_responses_token_key_override(body_text)
-        if override_key is not None:
-            current_payload = override_responses_token_key(current_payload, override_key, fallback_tokens)
-            token_override_attempted = True
-            continue
+        if protocol == AI_PROTOCOL_RESPONSES:
+            override_key = None if token_override_attempted else resolve_responses_token_key_override(body_text)
+            if override_key is not None:
+                current_payload = override_responses_token_key(current_payload, override_key, fallback_tokens)
+                token_override_attempted = True
+                continue
         if response.status_code == 524:
             downgraded_payload = downgrade_reasoning_on_timeout(current_payload)
             if downgraded_payload is not None:
                 current_payload = downgraded_payload
                 continue
-        raise HTTPException(status_code=response.status_code, detail=extract_error_message(body_text))
+        logger.warning("upstream error %d: %s", response.status_code, extract_error_message(body_text))
+        raise HTTPException(status_code=response.status_code, detail="upstream request failed")
 
 
 @contextmanager
 def open_upstream_responses(payload: Dict[str, Any]) -> Iterator[requests.Response]:
-    session, response = perform_upstream_responses_request(payload)
+    session, response, protocol = perform_upstream_responses_request(payload)
+    try:
+        setattr(response, "_lingma_protocol", protocol)
+    except Exception:
+        pass
     try:
         yield response
     finally:
@@ -2152,15 +2400,35 @@ def open_upstream_responses(payload: Dict[str, Any]) -> Iterator[requests.Respon
 
 
 def read_upstream_responses_json(payload: Dict[str, Any]) -> Dict[str, Any]:
-    with open_upstream_responses(payload) as response:
+    request_payload = dict(payload or {})
+    request_payload["stream"] = True
+    session, response, protocol = perform_upstream_responses_request(request_payload)
+    try:
         body_text = decode_response_text(response)
         content_type = (response.headers.get("Content-Type") or "").lower()
+    finally:
+        response.close()
+        session.close()
+
+    if protocol == AI_PROTOCOL_COMPAT:
+        if "text/event-stream" in content_type or "data:" in body_text:
+            return extract_compat_sse_json(body_text)
+        try:
+            data = json.loads(body_text)
+        except Exception as exc:
+            logger.warning("invalid upstream response: %s", body_text[:500])
+            raise HTTPException(status_code=502, detail="invalid upstream response") from exc
+        if not isinstance(data, dict):
+            raise HTTPException(status_code=502, detail="invalid upstream response payload")
+        return build_synthetic_responses_payload_from_compat(data)
+
     if "text/event-stream" in content_type or "data:" in body_text:
         return extract_responses_sse_json(body_text)
     try:
         data = json.loads(body_text)
     except Exception as exc:
-        raise HTTPException(status_code=502, detail=f"invalid upstream response: {body_text[:500]}") from exc
+        logger.warning("invalid upstream response: %s", body_text[:500])
+        raise HTTPException(status_code=502, detail="invalid upstream response") from exc
     if not isinstance(data, dict):
         raise HTTPException(status_code=502, detail="invalid upstream response payload")
     return data
@@ -2270,8 +2538,9 @@ def build_sse_done() -> str:
 
 def build_standard_streaming_headers() -> Dict[str, str]:
     return {
-        "Cache-Control": "no-cache",
+        "Cache-Control": "no-cache, no-transform",
         "Connection": "keep-alive",
+        "X-Accel-Buffering": "no",
     }
 
 
@@ -2279,58 +2548,76 @@ def parse_streamed_json_object(final_text: str, fallback_response: Optional[Dict
     raw_payload = str(final_text or "").strip()
     if raw_payload:
         try:
-            parsed = json.loads(raw_payload)
-        except Exception as exc:
+            return parse_structured_json_object(raw_payload)
+        except ValueError as exc:
             if fallback_response is None:
                 raise HTTPException(status_code=502, detail="invalid structured AI output") from exc
-        else:
-            if isinstance(parsed, dict):
-                return parsed
-            raise HTTPException(status_code=502, detail="invalid structured AI output")
 
     if fallback_response is not None:
         return parse_upstream_json_object(fallback_response)
     raise HTTPException(status_code=502, detail="invalid structured AI output")
 
 
+MAX_EXERCISE_PROMPT_LENGTH = 10000
+
+
+def build_exercise_prompt_payload(kind: str, prompt: str, model: str, locale: str) -> Dict[str, Any]:
+    normalized_kind = str(kind or "").strip()
+    if normalized_kind not in {"coding", "fillBlank"}:
+        raise HTTPException(status_code=400, detail="invalid exercise stream kind")
+    if len(str(prompt or "")) > MAX_EXERCISE_PROMPT_LENGTH:
+        raise HTTPException(status_code=400, detail="prompt exceeds maximum length")
+
+    instructions = (
+        "You are an expert ACM/OJ problem designer. Return valid JSON only, with no markdown or explanation."
+        if sanitize_app_locale(locale) == "en-US"
+        else "你是专业的 ACM/OJ 题目设计专家。只返回合法 JSON，不要输出 markdown 或额外解释。"
+    )
+
+    return {
+        "model": resolve_requested_model(model),
+        "input": [
+            {
+                "role": "system",
+                "content": [{"type": "input_text", "text": instructions}],
+            },
+            {
+                "role": "user",
+                "content": [{"type": "input_text", "text": prompt}],
+            },
+        ],
+        "metadata": {"exercise_kind": normalized_kind},
+        "max_output_tokens": 3200,
+    }
+
+
 def iter_upstream_text_stream(payload: Dict[str, Any]) -> Iterator[Tuple[str, str, Optional[Dict[str, Any]]]]:
     accumulated = ""
-    with open_upstream_responses(payload) as upstream:
-        for event_block in iter_sse_events(upstream):
-            data_text = extract_sse_data(event_block)
-            if not data_text or data_text == "[DONE]":
-                continue
-            try:
-                event = json.loads(data_text)
-            except Exception:
-                continue
-            if not isinstance(event, dict):
-                continue
-
-            response_obj = event.get("response") if isinstance(event.get("response"), dict) else None
-            event_type = str(event.get("type") or "")
-            if event_type == "response.output_text.delta":
-                delta = event.get("delta")
-                if isinstance(delta, str) and delta:
-                    accumulated += delta
+    for event in iter_standardized_upstream_events(payload):
+        response_obj = event.get("response") if isinstance(event.get("response"), dict) else None
+        event_type = str(event.get("type") or "")
+        if event_type == "response.output_text.delta":
+            delta = event.get("delta")
+            if isinstance(delta, str) and delta:
+                accumulated += delta
+                yield "preview", accumulated, None
+        elif event_type == "response.output_text.done":
+            done_text = event.get("text")
+            if isinstance(done_text, str) and done_text and not accumulated:
+                accumulated = done_text
+                yield "preview", accumulated, None
+        elif event_type == "response.completed":
+            if response_obj is not None:
+                final_text, _ = extract_responses_json_text(response_obj)
+                if final_text and final_text != accumulated:
+                    accumulated = final_text
                     yield "preview", accumulated, None
-            elif event_type == "response.output_text.done":
-                done_text = event.get("text")
-                if isinstance(done_text, str) and done_text and not accumulated:
-                    accumulated = done_text
-                    yield "preview", accumulated, None
-            elif event_type == "response.completed":
-                if response_obj is not None:
-                    final_text, _ = extract_responses_json_text(response_obj)
-                    if final_text and final_text != accumulated:
-                        accumulated = final_text
-                        yield "preview", accumulated, None
-                yield "final", accumulated, response_obj
-                return
-            elif event_type == "response.failed" or isinstance(event.get("error"), dict):
-                error = event.get("error") if isinstance(event.get("error"), dict) else {}
-                message = str(error.get("message") or "upstream stream failed").strip()
-                raise HTTPException(status_code=502, detail=message or "upstream stream failed")
+            yield "final", accumulated, response_obj
+            return
+        elif event_type == "response.failed" or isinstance(event.get("error"), dict):
+            error = event.get("error") if isinstance(event.get("error"), dict) else {}
+            message = str(error.get("message") or "upstream stream failed").strip()
+            raise HTTPException(status_code=502, detail=message or "upstream stream failed")
 
     yield "final", accumulated, None
 
@@ -2365,10 +2652,9 @@ async def responses_proxy(request: Request):
     if stream:
         def event_stream() -> Iterator[bytes]:
             try:
-                with open_upstream_responses(payload) as upstream:
-                    for chunk in upstream.iter_content(chunk_size=8192):
-                        if chunk:
-                            yield chunk
+                for event in iter_standardized_upstream_events(payload):
+                    yield build_sse_data(event).encode("utf-8")
+                yield build_sse_done().encode("utf-8")
             except HTTPException as exc:
                 yield f"data: {json.dumps({'error': {'message': str(exc.detail)}}, ensure_ascii=False)}\n\n".encode("utf-8")
                 yield b"data: [DONE]\n\n"
@@ -2402,72 +2688,90 @@ async def chat_completion_stream(request: Request):
         raise HTTPException(status_code=500, detail="AI_API_KEY is not configured")
 
     body = await request.json()
+    kind = str(body.get("kind") or "").strip()
+    prompt = str(body.get("prompt") or "").strip()
+
+    if kind and prompt:
+        model_name = resolve_requested_model(body.get("model"))
+        locale = sanitize_app_locale(body.get("locale"))
+        payload = build_exercise_prompt_payload(kind, prompt, model_name, locale)
+
+        def event_stream() -> Iterator[str]:
+            try:
+                for phase, text, response_obj in iter_upstream_text_stream(payload):
+                    if phase == "preview":
+                        if text:
+                            yield build_sse_data({"type": "preview", "text": text})
+                        continue
+
+                    parsed = parse_streamed_json_object(text, response_obj)
+                    normalized = (
+                        normalize_generated_fill_blank_payload(parsed)
+                        if kind == "fillBlank"
+                        else normalize_generated_exercise_payload(parsed)
+                    )
+                    yield build_sse_data({"type": "final", "payload": normalized})
+                    yield build_sse_done()
+                    return
+            except HTTPException as exc:
+                yield build_sse_data({"type": "error", "message": str(exc.detail)})
+                yield build_sse_done()
+                return
+            except Exception as exc:
+                logger.exception("exercise stream error: %s", exc)
+                yield build_sse_data({"type": "error", "message": "AI service encountered an error"})
+                yield build_sse_done()
+                return
+
+        return StreamingResponse(event_stream(), media_type="text/event-stream", headers=build_standard_streaming_headers())
+
     payload = build_legacy_request_payload(body, stream=True)
 
     def event_stream() -> Iterator[str]:
-        chunk_id = f"chatcmpl-{secrets.token_urlsafe(12)}"
-        model_name = str(payload.get("model") or AI_MODEL)
-        sent_delta = False
-        stop_sent = False
+        accumulated = ""
         try:
-            with open_upstream_responses(payload) as upstream:
-                for event_block in iter_sse_events(upstream):
-                    data_text = extract_sse_data(event_block)
-                    if not data_text or data_text == "[DONE]":
-                        continue
-                    try:
-                        event = json.loads(data_text)
-                    except Exception:
-                        continue
-                    if not isinstance(event, dict):
-                        continue
-
-                    response_obj = event.get("response")
-                    if isinstance(response_obj, dict):
-                        chunk_id = str(response_obj.get("id") or chunk_id)
-                        model_name = str(response_obj.get("model") or model_name)
-
-                    event_type = str(event.get("type") or "")
-                    if event_type == "response.output_text.delta":
-                        delta = event.get("delta")
-                        if isinstance(delta, str) and delta:
-                            sent_delta = True
-                            yield f"data: {json.dumps(build_legacy_stream_chunk(chunk_id, model_name, delta=delta), ensure_ascii=False)}\n\n"
-                    elif event_type == "response.output_text.done":
-                        done_text = event.get("text")
-                        if isinstance(done_text, str) and done_text and not sent_delta:
-                            sent_delta = True
-                            yield f"data: {json.dumps(build_legacy_stream_chunk(chunk_id, model_name, delta=done_text), ensure_ascii=False)}\n\n"
-                    elif event_type == "response.completed":
-                        if isinstance(response_obj, dict) and not sent_delta:
-                            final_text, _ = extract_responses_json_text(response_obj)
-                            if final_text:
-                                yield f"data: {json.dumps(build_legacy_stream_chunk(chunk_id, model_name, delta=final_text), ensure_ascii=False)}\n\n"
-                        yield f"data: {json.dumps(build_legacy_stream_chunk(chunk_id, model_name, finish_reason='stop'), ensure_ascii=False)}\n\n"
-                        yield "data: [DONE]\n\n"
-                        stop_sent = True
-                        return
-                    elif event_type == "response.failed" or isinstance(event.get("error"), dict):
-                        error = event.get("error") if isinstance(event.get("error"), dict) else {}
-                        message = str(error.get("message") or "upstream stream failed")
-                        yield f"data: {json.dumps({'error': message}, ensure_ascii=False)}\n\n"
-                        return
+            for event in iter_standardized_upstream_events(payload):
+                response_obj = event.get("response") if isinstance(event.get("response"), dict) else None
+                event_type = str(event.get("type") or "")
+                if event_type == "response.output_text.delta":
+                    delta = event.get("delta")
+                    if isinstance(delta, str) and delta:
+                        accumulated += delta
+                        yield build_sse_data({"type": "preview", "text": accumulated})
+                elif event_type == "response.output_text.done":
+                    done_text = event.get("text")
+                    if isinstance(done_text, str) and done_text and not accumulated:
+                        accumulated = done_text
+                        yield build_sse_data({"type": "preview", "text": accumulated})
+                elif event_type == "response.completed":
+                    if response_obj is not None:
+                        final_text, _ = extract_responses_json_text(response_obj)
+                        if final_text and final_text != accumulated:
+                            accumulated = final_text
+                            yield build_sse_data({"type": "preview", "text": accumulated})
+                    yield build_sse_data({"type": "final", "payload": {"text": accumulated}})
+                    yield build_sse_done()
+                    return
+                elif event_type == "response.failed" or isinstance(event.get("error"), dict):
+                    error = event.get("error") if isinstance(event.get("error"), dict) else {}
+                    logger.warning("upstream stream failed: %s", error.get("message", "unknown"))
+                    yield build_sse_data({"type": "error", "message": "AI service encountered an error"})
+                    yield build_sse_done()
+                    return
         except HTTPException as exc:
-            yield f"data: {json.dumps({'error': str(exc.detail)}, ensure_ascii=False)}\n\n"
+            yield build_sse_data({"type": "error", "message": str(exc.detail)})
+            yield build_sse_done()
             return
         except Exception as exc:
-            yield f"data: {json.dumps({'error': str(exc)}, ensure_ascii=False)}\n\n"
+            logger.exception("legacy stream error: %s", exc)
+            yield build_sse_data({"type": "error", "message": "AI service encountered an error"})
+            yield build_sse_done()
             return
 
-        if not stop_sent:
-            yield f"data: {json.dumps(build_legacy_stream_chunk(chunk_id, model_name, finish_reason='stop'), ensure_ascii=False)}\n\n"
-            yield "data: [DONE]\n\n"
+        yield build_sse_data({"type": "final", "payload": {"text": accumulated}})
+        yield build_sse_done()
 
-    headers = {
-        "Cache-Control": "no-cache",
-        "Connection": "keep-alive",
-    }
-    return StreamingResponse(event_stream(), media_type="text/event-stream", headers=headers)
+    return StreamingResponse(event_stream(), media_type="text/event-stream", headers=build_standard_streaming_headers())
 
 
 @app.post("/api/doc")
@@ -2483,7 +2787,8 @@ async def doc_fetch(request: Request):
         document = await run_in_threadpool(fetch_document, target_url, max_length)
         return JSONResponse(content=document)
     except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        logger.warning("Document fetch validation error for %s: %s", target_url, exc)
+        raise HTTPException(status_code=400, detail="invalid request format") from exc
     except Exception as exc:
         logger.warning("Document fetch failed for %s: %s", target_url, exc)
         raise HTTPException(status_code=502, detail="document fetch failed") from exc
@@ -2668,7 +2973,8 @@ async def vibe_coding_generate(request: Request):
         track = sanitize_vibe_track(body.get("track"), fallback=profile["recommendedTrack"] or fallback_track)
         difficulty = sanitize_vibe_difficulty(body.get("difficulty"), fallback=profile["recommendedDifficulty"] or fallback_difficulty)
     except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        logger.warning("vibe-coding/generate validation error: %s", exc)
+        raise HTTPException(status_code=400, detail="invalid request format") from exc
 
     payload = build_vibe_generation_prompt(track, difficulty, profile, user, model_name, locale)
     data = await run_in_threadpool(read_upstream_responses_json, payload)
@@ -2709,7 +3015,8 @@ async def vibe_coding_generate_stream(request: Request):
         track = sanitize_vibe_track(body.get("track"), fallback=profile["recommendedTrack"] or fallback_track)
         difficulty = sanitize_vibe_difficulty(body.get("difficulty"), fallback=profile["recommendedDifficulty"] or fallback_difficulty)
     except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        logger.warning("vibe-coding/generate/stream validation error: %s", exc)
+        raise HTTPException(status_code=400, detail="invalid request format") from exc
 
     payload = build_vibe_generation_prompt(track, difficulty, profile, user, model_name, locale)
 
@@ -2737,7 +3044,8 @@ async def vibe_coding_generate_stream(request: Request):
             yield build_sse_data({"type": "error", "message": str(exc.detail)})
             yield build_sse_done()
         except Exception as exc:
-            yield build_sse_data({"type": "error", "message": str(exc)})
+            logger.exception("SSE stream error: %s", exc)
+            yield build_sse_data({"type": "error", "message": "AI service encountered an error"})
             yield build_sse_done()
 
     return StreamingResponse(event_stream(), media_type="text/event-stream", headers=build_standard_streaming_headers())
@@ -2758,7 +3066,8 @@ async def vibe_coding_evaluate(request: Request):
     try:
         prompt_text = sanitize_vibe_prompt(body.get("user_prompt"))
     except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        logger.warning("vibe-coding/evaluate prompt validation error: %s", exc)
+        raise HTTPException(status_code=400, detail="invalid request format") from exc
 
     with db_lock:
         conn = get_db_connection(AUTH_DB_PATH)
@@ -2818,7 +3127,8 @@ async def vibe_coding_evaluate_stream(request: Request):
     try:
         prompt_text = sanitize_vibe_prompt(body.get("user_prompt"))
     except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        logger.warning("vibe-coding/evaluate/stream prompt validation error: %s", exc)
+        raise HTTPException(status_code=400, detail="invalid request format") from exc
 
     with db_lock:
         conn = get_db_connection(AUTH_DB_PATH)
@@ -2875,7 +3185,8 @@ async def vibe_coding_evaluate_stream(request: Request):
             yield build_sse_data({"type": "error", "message": str(exc.detail)})
             yield build_sse_done()
         except Exception as exc:
-            yield build_sse_data({"type": "error", "message": str(exc)})
+            logger.exception("SSE stream error: %s", exc)
+            yield build_sse_data({"type": "error", "message": "AI service encountered an error"})
             yield build_sse_done()
 
     return StreamingResponse(event_stream(), media_type="text/event-stream", headers=build_standard_streaming_headers())
@@ -2947,7 +3258,13 @@ async def vibe_coding_profile(request: Request):
                     snapshot = calculate_vibe_profile_snapshot(recent_rows, fallback_track, fallback_difficulty)
                     upsert_vibe_profile(conn, user["id"], snapshot)
                     conn.commit()
-                    row = get_stored_vibe_profile(conn, user["id"])
+                    return JSONResponse(content={
+                        "recommendedTrack": snapshot["recommended_track"],
+                        "recommendedDifficulty": snapshot["recommended_difficulty"],
+                        "weakestDimension": snapshot["weakest_dimension"],
+                        "recentAverageScore": snapshot["recent_average_score"],
+                        "trackScores": snapshot["track_scores"],
+                    })
         finally:
             conn.close()
 
@@ -2966,7 +3283,8 @@ async def vibe_frontend_build_create_session(request: Request):
     try:
         prompt_text = sanitize_vibe_prompt(body.get("prompt"))
     except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        logger.warning("frontend/session create prompt validation error: %s", exc)
+        raise HTTPException(status_code=400, detail="invalid request format") from exc
 
     session_id = f"frontend_session_{secrets.token_urlsafe(12)}"
     assistant_turn_id = f"frontend_turn_{secrets.token_urlsafe(12)}"
@@ -2988,7 +3306,8 @@ async def vibe_frontend_build_append_turn(session_id: str, request: Request):
     try:
         prompt_text = sanitize_vibe_prompt(body.get("prompt"))
     except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        logger.warning("frontend/session/%s/turns prompt validation error: %s", session_id, exc)
+        raise HTTPException(status_code=400, detail="invalid request format") from exc
 
     with db_lock:
         conn = get_db_connection(AUTH_DB_PATH)
@@ -3028,7 +3347,8 @@ async def vibe_frontend_build_create_session_stream(request: Request):
     try:
         prompt_text = sanitize_vibe_prompt(body.get("prompt"))
     except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        logger.warning("frontend/session/stream create prompt validation error: %s", exc)
+        raise HTTPException(status_code=400, detail="invalid request format") from exc
 
     session_id = f"frontend_session_{secrets.token_urlsafe(12)}"
     assistant_turn_id = f"frontend_turn_{secrets.token_urlsafe(12)}"
@@ -3052,7 +3372,8 @@ async def vibe_frontend_build_create_session_stream(request: Request):
             yield build_sse_data({"type": "error", "message": str(exc.detail)})
             yield build_sse_done()
         except Exception as exc:
-            yield build_sse_data({"type": "error", "message": str(exc)})
+            logger.exception("SSE stream error: %s", exc)
+            yield build_sse_data({"type": "error", "message": "AI service encountered an error"})
             yield build_sse_done()
 
     return StreamingResponse(event_stream(), media_type="text/event-stream", headers=build_standard_streaming_headers())
@@ -3070,7 +3391,8 @@ async def vibe_frontend_build_append_turn_stream(session_id: str, request: Reque
     try:
         prompt_text = sanitize_vibe_prompt(body.get("prompt"))
     except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        logger.warning("frontend/session/%s/turns/stream prompt validation error: %s", session_id, exc)
+        raise HTTPException(status_code=400, detail="invalid request format") from exc
 
     with db_lock:
         conn = get_db_connection(AUTH_DB_PATH)
@@ -3112,7 +3434,8 @@ async def vibe_frontend_build_append_turn_stream(session_id: str, request: Reque
             yield build_sse_data({"type": "error", "message": str(exc.detail)})
             yield build_sse_done()
         except Exception as exc:
-            yield build_sse_data({"type": "error", "message": str(exc)})
+            logger.exception("SSE stream error: %s", exc)
+            yield build_sse_data({"type": "error", "message": "AI service encountered an error"})
             yield build_sse_done()
 
     return StreamingResponse(event_stream(), media_type="text/event-stream", headers=build_standard_streaming_headers())
@@ -3162,11 +3485,14 @@ async def vibe_frontend_build_download(session_id: str, request: Request):
     if artifact_row is None:
         raise HTTPException(status_code=404, detail="frontend build artifact not found")
 
-    filename = f"{str(artifact_row['title'] or 'frontend-build').strip() or 'frontend-build'}.html"
+    raw_title = str(artifact_row['title'] or 'frontend-build').strip() or 'frontend-build'
+    safe_title = re.sub(r'[\x00-\x1f\x7f"\\/:*?<>|]', '', raw_title).strip() or 'frontend-build'
+    filename = f"{safe_title}.html"
+    encoded = urllib.parse.quote(filename, safe='')
     return Response(
         content=artifact_row["merged_html"],
         media_type="text/html; charset=utf-8",
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        headers={"Content-Disposition": f"attachment; filename=\"{filename}\"; filename*=UTF-8''{encoded}"},
     )
 
 
@@ -3188,7 +3514,8 @@ async def auth_register(request: Request):
         skill_level = sanitize_skill_level(body.get("skillLevel"))
         target_language = sanitize_target_language(body.get("targetLanguage"))
     except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        logger.warning("auth/register validation error: %s", exc)
+        raise HTTPException(status_code=400, detail="invalid request format") from exc
 
     password_record = create_password_record(password)
     created_at = now_iso()
@@ -3248,7 +3575,8 @@ async def auth_login(request: Request):
         email = sanitize_email(body.get("email"))
         password = sanitize_password(body.get("password"))
     except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        logger.warning("auth/login validation error: %s", exc)
+        raise HTTPException(status_code=400, detail="invalid request format") from exc
 
     with db_lock:
         conn = get_db_connection(AUTH_DB_PATH)
@@ -3275,6 +3603,157 @@ async def auth_login(request: Request):
     return response
 
 
+@app.post("/api/auth/password-reset/request")
+async def auth_password_reset_request(request: Request):
+    body = await request.json()
+    try:
+        email = sanitize_email(body.get("email"))
+    except ValueError as exc:
+        logger.warning("auth/password-reset/request validation error: %s", exc)
+        raise HTTPException(status_code=400, detail="invalid request format") from exc
+
+    code = ""
+    reset_code_id = ""
+    with db_lock:
+        conn = get_db_connection(AUTH_DB_PATH)
+        try:
+            now_value = now_iso()
+            now_dt = datetime.now(timezone.utc)
+            conn.execute("DELETE FROM password_reset_codes WHERE expires_at <= ?", (now_value,))
+            user = conn.execute(
+                "SELECT id, email FROM users WHERE email = ?",
+                (email,),
+            ).fetchone()
+            if user is None:
+                conn.commit()
+                return JSONResponse(content={"ok": True})
+
+            latest_row = conn.execute(
+                """
+                SELECT created_at
+                FROM password_reset_codes
+                WHERE email = ? AND consumed_at IS NULL
+                ORDER BY created_at DESC
+                LIMIT 1
+                """,
+                (email,),
+            ).fetchone()
+            if latest_row is not None:
+                created_at_dt = datetime.fromisoformat(str(latest_row["created_at"]))
+                if (now_dt - created_at_dt).total_seconds() < PASSWORD_RESET_REQUEST_COOLDOWN_SECONDS:
+                    conn.commit()
+                    return JSONResponse(content={"ok": True})
+
+            conn.execute(
+                "DELETE FROM password_reset_codes WHERE email = ? AND consumed_at IS NULL",
+                (email,),
+            )
+            code = generate_password_reset_code()
+            reset_code_id = f"prc_{secrets.token_urlsafe(12)}"
+            record = create_password_reset_code_record(code)
+            created_at = now_dt.isoformat()
+            expires_at = (now_dt + timedelta(seconds=PASSWORD_RESET_CODE_TTL_SECONDS)).isoformat()
+            conn.execute(
+                """
+                INSERT INTO password_reset_codes(
+                    id, user_id, email, code_hash, code_salt, created_at, expires_at, consumed_at, attempt_count
+                )
+                VALUES(?, ?, ?, ?, ?, ?, ?, NULL, 0)
+                """,
+                (
+                    reset_code_id,
+                    user["id"],
+                    email,
+                    record["code_hash"],
+                    record["code_salt"],
+                    created_at,
+                    expires_at,
+                ),
+            )
+            conn.commit()
+        finally:
+            conn.close()
+
+    try:
+        await run_in_threadpool(
+            send_password_reset_email,
+            to_email=email,
+            code=code,
+            expires_in_minutes=PASSWORD_RESET_CODE_TTL_SECONDS // 60,
+        )
+    except Exception:
+        with db_lock:
+            conn = get_db_connection(AUTH_DB_PATH)
+            try:
+                conn.execute("DELETE FROM password_reset_codes WHERE id = ?", (reset_code_id,))
+                conn.commit()
+            finally:
+                conn.close()
+        raise
+
+    return JSONResponse(content={"ok": True})
+
+
+@app.post("/api/auth/password-reset/confirm")
+async def auth_password_reset_confirm(request: Request):
+    body = await request.json()
+    try:
+        email = sanitize_email(body.get("email"))
+        code = sanitize_password_reset_code(body.get("code"))
+        new_password = sanitize_password(body.get("newPassword"))
+    except ValueError as exc:
+        logger.warning("auth/password-reset/confirm validation error: %s", exc)
+        raise HTTPException(status_code=400, detail="invalid request format") from exc
+
+    with db_lock:
+        conn = get_db_connection(AUTH_DB_PATH)
+        try:
+            now_value = now_iso()
+            conn.execute("DELETE FROM password_reset_codes WHERE expires_at <= ?", (now_value,))
+            row = conn.execute(
+                """
+                SELECT id, user_id, code_hash, code_salt, expires_at, attempt_count
+                FROM password_reset_codes
+                WHERE email = ? AND consumed_at IS NULL
+                ORDER BY created_at DESC
+                LIMIT 1
+                """,
+                (email,),
+            ).fetchone()
+            if row is None or int(row["attempt_count"]) >= PASSWORD_RESET_MAX_ATTEMPTS:
+                raise HTTPException(status_code=400, detail="invalid or expired verification code")
+
+            if not verify_password_reset_code(code, str(row["code_hash"]), str(row["code_salt"])):
+                conn.execute(
+                    "UPDATE password_reset_codes SET attempt_count = attempt_count + 1 WHERE id = ?",
+                    (row["id"],),
+                )
+                conn.commit()
+                raise HTTPException(status_code=400, detail="invalid or expired verification code")
+
+            password_record = create_password_record(new_password)
+            conn.execute(
+                """
+                UPDATE users
+                SET password_hash = ?, password_salt = ?
+                WHERE id = ?
+                """,
+                (password_record["password_hash"], password_record["password_salt"], row["user_id"]),
+            )
+            conn.execute(
+                "UPDATE password_reset_codes SET consumed_at = ? WHERE id = ?",
+                (now_value, row["id"]),
+            )
+            conn.execute("DELETE FROM user_sessions WHERE user_id = ?", (row["user_id"],))
+            conn.commit()
+        finally:
+            conn.close()
+
+    response = JSONResponse(content={"ok": True})
+    clear_session_cookie(response, request)
+    return response
+
+
 @app.post("/api/auth/profile")
 async def auth_update_profile(request: Request):
     user = require_authenticated_user(request)
@@ -3283,7 +3762,8 @@ async def auth_update_profile(request: Request):
         skill_level = sanitize_skill_level(body.get("skillLevel", user["skill_level"]))
         target_language = sanitize_target_language(body.get("targetLanguage", user["target_language"]))
     except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        logger.warning("auth/profile update validation error: %s", exc)
+        raise HTTPException(status_code=400, detail="invalid request format") from exc
 
     with db_lock:
         conn = get_db_connection(AUTH_DB_PATH)
@@ -3351,7 +3831,8 @@ async def load_mindmaps(request: Request):
     try:
         maps = normalize_maps_payload(json.loads(row[0]))
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"stored data is invalid: {exc}") from exc
+        logger.error("stored mindmap data is invalid: %s", exc)
+        raise HTTPException(status_code=500, detail="internal error") from exc
     return JSONResponse(content={"maps": maps, "updatedAt": row[1]})
 
 
@@ -3364,7 +3845,8 @@ async def save_mindmaps(request: Request):
         user_id = current_user["id"]
         maps = normalize_maps_payload(body.get("maps"))
     except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        logger.warning("mindmaps/save validation error: %s", exc)
+        raise HTTPException(status_code=400, detail="invalid request format") from exc
 
     updated_at = now_iso()
     maps_json = json.dumps(maps, ensure_ascii=False)

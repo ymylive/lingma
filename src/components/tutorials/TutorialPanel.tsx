@@ -19,7 +19,7 @@ export default function TutorialPanel({ title, sections }: TutorialPanelProps) {
   return (
     <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
       {/* 标题 */}
-      <div className="bg-gradient-to-r from-indigo-600 to-purple-600 px-4 py-4 sm:px-6">
+      <div className="bg-gradient-to-r from-klein-600 to-purple-600 px-4 py-4 sm:px-6">
         <h2 className="flex flex-wrap items-center gap-2 text-lg font-bold text-white sm:text-xl">
           <span>📚</span> {t(title)} - {t('学习教程')}
         </h2>
@@ -33,8 +33,8 @@ export default function TutorialPanel({ title, sections }: TutorialPanelProps) {
               <button
                 key={i}
                 onClick={() => setActiveTab(i)}
-                className={`flex min-h-[44px] items-center gap-2 whitespace-nowrap px-4 py-3 text-[15px] font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/60 focus-visible:ring-inset sm:text-sm ${activeTab === i
-                  ? 'border-b-2 border-indigo-600 bg-white text-indigo-600 dark:bg-slate-800 dark:text-indigo-400'
+                className={`flex min-h-[44px] items-center gap-2 whitespace-nowrap px-4 py-3 text-[15px] font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-klein-500/60 focus-visible:ring-inset sm:text-sm ${activeTab === i
+                  ? 'border-b-2 border-klein-600 bg-white text-klein-600 dark:bg-slate-800 dark:text-klein-400'
                   : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200'
                 }`}
               >
@@ -72,13 +72,13 @@ function MobileScrollHint() {
 }
 
 // 工具组件：知识点卡片
-export function KnowledgeCard({ title, children, color = 'indigo' }: { 
+export function KnowledgeCard({ title, children, color = 'klein' }: { 
   title: string; 
   children: React.ReactNode; 
-  color?: 'indigo' | 'emerald' | 'amber' | 'rose' 
+  color?: 'klein' | 'emerald' | 'amber' | 'rose' 
 }) {
   const colors = {
-    indigo: 'border-indigo-200 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-900/30',
+    klein: 'border-klein-200 dark:border-klein-800 bg-klein-50 dark:bg-klein-900/30',
     emerald: 'border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/30',
     amber: 'border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/30',
     rose: 'border-rose-200 dark:border-rose-800 bg-rose-50 dark:bg-rose-900/30',
@@ -98,7 +98,7 @@ export function StepList({ steps }: { steps: { title: string; desc: string }[] }
     <div className="space-y-4">
       {steps.map((step, i) => (
         <div key={i} className="flex gap-3">
-          <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-indigo-600 text-sm font-bold text-white">
+          <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-klein-600 text-sm font-bold text-white">
             {i + 1}
           </div>
           <div>
@@ -178,7 +178,7 @@ export function MultiLangCode({ codes, title }: {
             <button
               key={l}
               onClick={() => setLang(l)}
-              className={`min-h-[40px] rounded-lg px-3 py-2 text-sm font-medium transition-all sm:py-1 sm:text-xs ${lang === l ? 'bg-indigo-600 text-white' : 'bg-slate-600 text-slate-300 hover:bg-slate-500'}`}
+              className={`min-h-[40px] rounded-lg px-3 py-2 text-sm font-medium transition-all sm:py-1 sm:text-xs ${lang === l ? 'bg-klein-600 text-white' : 'bg-slate-600 text-slate-300 hover:bg-slate-500'}`}
             >
               {langNames[l]}
             </button>
@@ -200,7 +200,7 @@ export function DemoLink({ to, text, icon = '🎬' }: { to: string; text: string
   return (
     <a
       href={to}
-      className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-indigo-500 to-purple-500 px-4 py-3 text-sm font-medium text-white shadow-md transition-all hover:from-indigo-600 hover:to-purple-600 sm:justify-start sm:py-2"
+      className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-klein-500 to-purple-500 px-4 py-3 text-sm font-medium text-white shadow-md transition-all hover:from-klein-600 hover:to-purple-600 sm:justify-start sm:py-2"
     >
       <span>{icon}</span>
       {text}
@@ -226,7 +226,7 @@ export function Diagram({ title, children }: { title: string; children: React.Re
 // 工具组件：术语解释
 export function Term({ word, meaning }: { word: string; meaning: string }) {
   return (
-    <span className="group relative cursor-help border-b border-dashed border-indigo-400 text-indigo-600">
+    <span className="group relative cursor-help border-b border-dashed border-klein-400 text-klein-600">
       {word}
       <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-slate-800 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
         {meaning}
@@ -302,7 +302,7 @@ export function QuizQuestion({ question, options, answer, explanation }: {
                     ? 'bg-rose-100 dark:bg-rose-900/30 text-rose-800 dark:text-rose-300 border border-rose-300 dark:border-rose-700'
                     : 'bg-slate-50 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
                 : selected === i
-                  ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-800 dark:text-indigo-300 border border-indigo-300 dark:border-indigo-700'
+                  ? 'bg-klein-100 dark:bg-klein-900/30 text-klein-800 dark:text-klein-300 border border-klein-300 dark:border-klein-700'
                   : 'bg-slate-50 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-600'
               }`}
           >

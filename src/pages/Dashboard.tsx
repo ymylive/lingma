@@ -1,27 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { motion, type Variants } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { useI18n } from '../contexts/I18nContext';
 import { useUser } from '../contexts/UserContext';
 import { SKILL_LEVEL_META, type UserSkillLevel } from '../utils/userPersonalization';
 import { TARGET_LANGUAGE_OPTIONS, type TargetLanguage } from '../utils/targetLanguages';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../components/Card';
+import { Container } from '../components/Container';
+import { Grid, GridItem } from '../components/Grid';
 
-const containerVariants: Variants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: { staggerChildren: 0.08, delayChildren: 0.1 }
-  }
-};
-
-const itemVariants: Variants = {
-  hidden: { y: 20, opacity: 0 },
-  visible: {
-    y: 0,
-    opacity: 1,
-    transition: { type: "spring", stiffness: 100 }
-  }
-};
 
 export default function Dashboard() {
   const { user, progress, isLoggedIn, logout, updatePreferences } = useUser();
@@ -97,8 +84,8 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen pb-12 pt-24 transition-colors duration-300">
-      <div className="mx-auto max-w-6xl px-4 sm:px-6">
+    <div className="page-safe-top min-h-screen pb-12 transition-colors duration-300">
+      <Container size="lg" className="!max-w-5xl">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -106,15 +93,15 @@ export default function Dashboard() {
           className="mb-8 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between"
         >
           <div>
-            <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-white sm:text-3xl">
               {greeting}, {user.username}
             </h1>
-            <p className="mt-1 text-slate-600 dark:text-slate-400">{copy.subtitle}</p>
+            <p className="mt-1 text-sm text-slate-600 dark:text-slate-400 sm:text-base">{copy.subtitle}</p>
           </div>
           <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center sm:justify-end sm:gap-4">
             <Link
               to="/book"
-              className="inline-flex min-h-[44px] w-full items-center justify-center rounded-xl bg-klein-500 px-4 py-2 font-medium text-white transition-colors hover:bg-klein-600 sm:w-auto"
+              className="inline-flex min-h-[44px] w-full items-center justify-center rounded-xl bg-klein-500 px-5 py-2.5 font-medium text-white transition-all hover:bg-klein-600 hover:shadow-lg hover:shadow-klein-500/30 sm:w-auto"
             >
               {copy.continueLearning}
             </Link>
@@ -124,139 +111,160 @@ export default function Dashboard() {
                 logout();
                 navigate('/');
               }}
-              className="inline-flex min-h-[44px] w-full items-center justify-center px-4 py-2 text-slate-600 transition-colors hover:text-slate-900 dark:text-slate-400 dark:hover:text-white sm:w-auto"
+              className="inline-flex min-h-[44px] w-full items-center justify-center rounded-xl px-5 py-2.5 text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white sm:w-auto"
             >
               {copy.signOut}
             </button>
           </div>
         </motion.div>
 
-        <motion.div
-          variants={containerVariants}
-          initial="hidden"
-          animate="visible"
-          className="mb-8 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4"
-        >
-          {stats.map((item) => (
-            <motion.div key={item.label} variants={itemVariants} className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-800 sm:p-5">
-              <div className="flex items-start gap-3 sm:items-center">
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-slate-100 text-2xl dark:bg-slate-700/60">
-                  {item.icon}
+        <Grid cols={{ default: 1, sm: 2, xl: 4 }} gap="md" className="mb-8">
+          {stats.map((item, index) => (
+            <GridItem key={item.label} delay={index * 0.1}>
+              <Card variant="default" hover padding="md">
+                <div className="flex items-start gap-3 sm:items-center">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-klein-100 to-klein-50 text-2xl dark:from-klein-900/30 dark:to-klein-800/20">
+                    {item.icon}
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-xl font-bold text-slate-900 dark:text-white sm:text-2xl">{item.value}</div>
+                    <div className="truncate text-sm leading-5 text-slate-500 dark:text-slate-400">{item.label}</div>
+                  </div>
                 </div>
-                <div>
-                  <div className="text-xl font-bold text-slate-900 dark:text-white sm:text-2xl">{item.value}</div>
-                  <div className="text-sm leading-5 text-slate-500 dark:text-slate-400">{item.label}</div>
-                </div>
-              </div>
-            </motion.div>
+              </Card>
+            </GridItem>
           ))}
-        </motion.div>
+        </Grid>
 
-        <div className="grid gap-6 md:grid-cols-3">
+        <div className="grid gap-8 lg:grid-cols-3">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.5 }}
-            className="space-y-6 md:col-span-2"
+            className="space-y-6 lg:col-span-2"
           >
-            <div className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-800 sm:p-6">
-              <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                <h2 className="text-lg font-bold text-slate-900 dark:text-white">{copy.recentLearning}</h2>
-                <Link to="/book" className="inline-flex min-h-[44px] items-center self-start text-sm text-klein-500 hover:text-klein-600 dark:text-klein-400 dark:hover:text-klein-300">
-                  {copy.viewAll}
-                </Link>
-              </div>
+            <Card variant="default" padding="md">
+              <CardHeader>
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <CardTitle>{copy.recentLearning}</CardTitle>
+                  <Link to="/book" className="inline-flex min-h-[44px] items-center self-start text-sm font-medium text-klein-500 transition-colors hover:text-klein-600 dark:text-klein-400 dark:hover:text-klein-300">
+                    {copy.viewAll} →
+                  </Link>
+                </div>
+              </CardHeader>
 
-              {recentLessons.length > 0 ? (
-                <div className="space-y-3">
-                  {recentLessons.map((record) => (
-                    <Link
-                      key={`${record.lessonId}-${record.completedAt}`}
-                      to={`/book/${record.lessonId}`}
-                      className="flex flex-col gap-3 rounded-lg bg-slate-50 p-3 transition-colors hover:bg-slate-100 dark:bg-slate-700/30 dark:hover:bg-slate-700/50 sm:flex-row sm:items-center sm:justify-between"
+              <CardContent>
+                {recentLessons.length > 0 ? (
+                  <div className="space-y-2">
+                    {recentLessons.map((record, index) => (
+                      <motion.div
+                        key={`${record.lessonId}-${record.completedAt}`}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: index * 0.1 }}
+                      >
+                        <Link
+                          to={`/book/${record.lessonId}`}
+                          className="flex flex-col gap-3 rounded-xl bg-slate-50 p-3 transition-all hover:bg-slate-100 hover:shadow-sm dark:bg-slate-700/30 dark:hover:bg-slate-700/50 sm:flex-row sm:items-center sm:justify-between sm:p-4"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-klein-100 to-klein-50 text-sm font-semibold text-klein-600 dark:from-klein-900/30 dark:to-klein-800/20 dark:text-klein-300">
+                              {record.category.slice(0, 2)}
+                            </div>
+                            <div className="min-w-0">
+                              <div className="truncate font-medium text-slate-900 dark:text-white">{record.lessonTitle}</div>
+                              <div className="text-xs text-slate-500 dark:text-slate-400">{record.category}</div>
+                            </div>
+                          </div>
+                          <div className="self-end text-xs text-slate-400 dark:text-slate-500 sm:self-auto sm:text-right">
+                            {formatDate(record.completedAt, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                          </div>
+                        </Link>
+                      </motion.div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="py-12 text-center">
+                    <div className="mb-3 text-5xl">📚</div>
+                    <p className="text-slate-500 dark:text-slate-400">{copy.noLessons}</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card variant="default" padding="md">
+              <CardHeader>
+                <CardTitle>{copy.preferences}</CardTitle>
+                <CardDescription className="mt-1">调整你的学习偏好设置</CardDescription>
+              </CardHeader>
+
+              <CardContent>
+                <div className="grid gap-6 sm:grid-cols-2">
+                  <div>
+                    <div className="mb-3 text-sm font-medium text-slate-700 dark:text-slate-300">{copy.currentLevel}</div>
+                    <div className="grid gap-2">
+                      {Object.values(SKILL_LEVEL_META).map((item) => (
+                        <button
+                          key={item.id}
+                          type="button"
+                          onClick={() => setSkillLevel(item.id)}
+                          className={`min-h-[44px] cursor-pointer rounded-xl border px-4 py-3 text-left text-sm transition-all hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-klein-500/60 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900 ${
+                            skillLevel === item.id
+                              ? 'border-klein-500 bg-klein-50 text-klein-700 shadow-sm dark:border-klein-400 dark:bg-klein-900/20 dark:text-klein-200'
+                              : 'border-slate-200 bg-slate-50 text-slate-700 hover:border-slate-300 dark:border-slate-700 dark:bg-slate-900/40 dark:text-slate-200 dark:hover:border-slate-600'
+                          }`}
+                        >
+                          <div className="font-semibold">{item.label}</div>
+                          <div className="mt-1 text-xs opacity-80">{item.recommendedTrack}</div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="mb-3 text-sm font-medium text-slate-700 dark:text-slate-300">{copy.targetLanguage}</div>
+                    <div className="grid gap-2">
+                      {TARGET_LANGUAGE_OPTIONS.map((item) => (
+                        <button
+                          key={item.id}
+                          type="button"
+                          onClick={() => setTargetLanguage(item.id)}
+                          className={`min-h-[44px] cursor-pointer rounded-xl border px-4 py-3 text-left text-sm transition-all hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/60 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900 ${
+                            targetLanguage === item.id
+                              ? 'border-emerald-500 bg-emerald-50 text-emerald-700 shadow-sm dark:border-emerald-400 dark:bg-emerald-900/20 dark:text-emerald-200'
+                              : 'border-slate-200 bg-slate-50 text-slate-700 hover:border-slate-300 dark:border-slate-700 dark:bg-slate-900/40 dark:text-slate-200 dark:hover:border-slate-600'
+                          }`}
+                        >
+                          <div className="font-semibold">{item.label}</div>
+                          <div className="mt-1 text-xs opacity-80">{isEnglish ? item.descriptionEn : item.description}</div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-6 flex flex-wrap items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={handleSave}
+                    disabled={saving}
+                    className="min-h-[44px] cursor-pointer rounded-xl bg-klein-500 px-5 py-2.5 text-sm font-semibold text-white transition-all hover:bg-klein-600 hover:shadow-lg hover:shadow-klein-500/30 disabled:opacity-60 disabled:hover:shadow-none"
+                  >
+                    {copy.save}
+                  </button>
+                  {saveMessage && (
+                    <motion.div
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      className="text-sm font-medium text-emerald-600 dark:text-emerald-400"
                     >
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-klein-100 text-sm font-medium text-klein-500 dark:bg-klein-900/30 dark:text-klein-300">
-                          {record.category.slice(0, 2)}
-                        </div>
-                        <div>
-                          <div className="font-medium text-slate-900 dark:text-white">{record.lessonTitle}</div>
-                          <div className="text-xs text-slate-500 dark:text-slate-400">{record.category}</div>
-                        </div>
-                      </div>
-                      <div className="self-end text-xs text-slate-400 dark:text-slate-500 sm:self-auto sm:text-right">
-                        {formatDate(record.completedAt, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                      </div>
-                    </Link>
-                  ))}
+                      ✓ {saveMessage}
+                    </motion.div>
+                  )}
                 </div>
-              ) : (
-                <div className="py-8 text-center">
-                  <div className="mb-3 text-4xl">📚</div>
-                  <p className="text-slate-500 dark:text-slate-400">{copy.noLessons}</p>
-                </div>
-              )}
-            </div>
-
-            <div className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-800 sm:p-6">
-              <h2 className="mb-4 text-lg font-bold text-slate-900 dark:text-white">{copy.preferences}</h2>
-              <div className="grid gap-6 lg:grid-cols-2">
-                <div>
-                  <div className="mb-3 text-sm font-medium text-slate-700 dark:text-slate-300">{copy.currentLevel}</div>
-                  <div className="grid gap-2">
-                    {Object.values(SKILL_LEVEL_META).map((item) => (
-                      <button
-                        key={item.id}
-                        type="button"
-                        onClick={() => setSkillLevel(item.id)}
-                        className={`min-h-[44px] cursor-pointer rounded-xl border px-4 py-3 text-left text-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-klein-500/60 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900 ${
-                          skillLevel === item.id
-                            ? 'border-klein-500 bg-klein-50 text-klein-700 dark:border-klein-400 dark:bg-klein-900/20 dark:text-klein-200'
-                            : 'border-slate-200 bg-slate-50 text-slate-700 dark:border-slate-700 dark:bg-slate-900/40 dark:text-slate-200'
-                        }`}
-                      >
-                        <div className="font-semibold">{item.label}</div>
-                        <div className="mt-1 text-xs opacity-80">{item.recommendedTrack}</div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <div className="mb-3 text-sm font-medium text-slate-700 dark:text-slate-300">{copy.targetLanguage}</div>
-                  <div className="grid gap-2">
-                    {TARGET_LANGUAGE_OPTIONS.map((item) => (
-                      <button
-                        key={item.id}
-                        type="button"
-                        onClick={() => setTargetLanguage(item.id)}
-                        className={`min-h-[44px] cursor-pointer rounded-xl border px-4 py-3 text-left text-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/60 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900 ${
-                          targetLanguage === item.id
-                            ? 'border-emerald-500 bg-emerald-50 text-emerald-700 dark:border-emerald-400 dark:bg-emerald-900/20 dark:text-emerald-200'
-                            : 'border-slate-200 bg-slate-50 text-slate-700 dark:border-slate-700 dark:bg-slate-900/40 dark:text-slate-200'
-                        }`}
-                      >
-                        <div className="font-semibold">{item.label}</div>
-                        <div className="mt-1 text-xs opacity-80">{isEnglish ? item.descriptionEn : item.description}</div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              <div className="mt-5 flex flex-wrap items-center gap-3">
-                <button
-                  type="button"
-                  onClick={handleSave}
-                  disabled={saving}
-                  className="min-h-[44px] cursor-pointer rounded-xl bg-klein-500 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-klein-600 disabled:opacity-60"
-                >
-                  {copy.save}
-                </button>
-                {saveMessage && <div className="text-sm text-emerald-600 dark:text-emerald-400">{saveMessage}</div>}
-              </div>
-            </div>
+              </CardContent>
+            </Card>
           </motion.div>
 
           <motion.div
@@ -266,69 +274,85 @@ export default function Dashboard() {
             transition={{ duration: 0.5, delay: 0.15 }}
             className="space-y-6"
           >
-            <div className="rounded-2xl bg-gradient-to-br from-klein-500 to-klein-600 p-5 text-white shadow-lg shadow-klein-500/20 sm:p-6">
-              <div className="mb-4 flex items-start gap-4">
-                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-white/20 text-2xl">
-                  👤
+            <Card variant="elevated" padding="none" className="overflow-hidden bg-gradient-to-br from-klein-500 to-klein-600 text-white shadow-xl shadow-klein-500/20">
+              <div className="p-5 sm:p-6">
+                <div className="mb-4 flex items-start gap-4">
+                  <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-white/20 text-2xl backdrop-blur-sm">
+                    👤
+                  </div>
+                  <div className="min-w-0">
+                    <div className="truncate text-lg font-bold">{user.username}</div>
+                    <div className="break-all text-sm text-klein-100">{user.email}</div>
+                  </div>
                 </div>
-                <div>
-                  <div className="text-lg font-bold">{user.username}</div>
-                  <div className="break-all text-sm text-klein-200">{user.email}</div>
+                <div className="text-sm text-klein-100">
+                  {copy.joinedOn} {formatDate(user.createdAt, { year: 'numeric', month: 'short', day: 'numeric' })}
                 </div>
               </div>
-              <div className="text-sm text-klein-100">
-                {copy.joinedOn} {formatDate(user.createdAt, { year: 'numeric', month: 'short', day: 'numeric' })}
-              </div>
-            </div>
+            </Card>
 
-            <div className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-800 sm:p-6">
-              <h3 className="mb-4 font-bold text-slate-900 dark:text-white">{copy.quickLinks}</h3>
-              <div className="space-y-2">
-                <Link to="/algorithms" className="flex min-h-[44px] items-center gap-3 rounded-lg p-3 transition-colors hover:bg-slate-50 dark:hover:bg-slate-700/50">
-                  <span className="text-xl">🎬</span>
-                  <span className="text-slate-700 dark:text-slate-300">{copy.algorithms}</span>
-                </Link>
-                <Link to="/practice" className="flex min-h-[44px] items-center gap-3 rounded-lg p-3 transition-colors hover:bg-slate-50 dark:hover:bg-slate-700/50">
-                  <span className="text-xl">🤖</span>
-                  <span className="text-slate-700 dark:text-slate-300">{copy.aiPractice}</span>
-                </Link>
-                <Link to="/book" className="flex min-h-[44px] items-center gap-3 rounded-lg p-3 transition-colors hover:bg-slate-50 dark:hover:bg-slate-700/50">
-                  <span className="text-xl">📚</span>
-                  <span className="text-slate-700 dark:text-slate-300">{copy.tutorials}</span>
-                </Link>
-              </div>
-            </div>
-
-            <div className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-800 sm:p-6">
-              <h3 className="mb-4 font-bold text-slate-900 dark:text-white">{copy.practiceHistory}</h3>
-              {recentExercises.length > 0 ? (
-                <div className="space-y-2">
-                  {recentExercises.map((record) => (
-                    <div
-                      key={`${record.exerciseId}-${record.completedAt}`}
-                      className="flex items-start justify-between gap-3 rounded-lg bg-slate-50 p-3 dark:bg-slate-700/30"
-                    >
-                      <div className="flex min-w-0 items-center gap-2">
-                        <span className={record.isCorrect ? 'text-emerald-500 dark:text-emerald-400' : 'text-rose-500 dark:text-rose-400'}>
-                          {record.isCorrect ? '✅' : '❌'}
-                        </span>
-                        <span className="max-w-[140px] truncate text-sm text-slate-700 dark:text-slate-300">
-                          {t(record.exerciseTitle)}
-                        </span>
-                      </div>
-                      <span className="text-xs text-slate-400 dark:text-slate-500">
-                        {formatDate(record.completedAt, { month: 'short', day: 'numeric' })}
-                      </span>
-                    </div>
-                  ))}
+            <Card variant="default" padding="md">
+              <CardHeader>
+                <CardTitle className="text-base">{copy.quickLinks}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-1">
+                  <Link to="/algorithms" className="flex min-h-[44px] items-center gap-3 rounded-xl p-3 transition-all hover:bg-slate-50 hover:shadow-sm dark:hover:bg-slate-700/50">
+                    <span className="text-xl">🎬</span>
+                    <span className="font-medium text-slate-700 dark:text-slate-300">{copy.algorithms}</span>
+                  </Link>
+                  <Link to="/practice" className="flex min-h-[44px] items-center gap-3 rounded-xl p-3 transition-all hover:bg-slate-50 hover:shadow-sm dark:hover:bg-slate-700/50">
+                    <span className="text-xl">🤖</span>
+                    <span className="font-medium text-slate-700 dark:text-slate-300">{copy.aiPractice}</span>
+                  </Link>
+                  <Link to="/book" className="flex min-h-[44px] items-center gap-3 rounded-xl p-3 transition-all hover:bg-slate-50 hover:shadow-sm dark:hover:bg-slate-700/50">
+                    <span className="text-xl">📚</span>
+                    <span className="font-medium text-slate-700 dark:text-slate-300">{copy.tutorials}</span>
+                  </Link>
                 </div>
-              ) : (
-                <p className="py-4 text-center text-sm text-slate-500 dark:text-slate-400">{copy.noExercises}</p>
-              )}
-            </div>
+              </CardContent>
+            </Card>
+
+            <Card variant="default" padding="md">
+              <CardHeader>
+                <CardTitle className="text-base">{copy.practiceHistory}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {recentExercises.length > 0 ? (
+                  <div className="space-y-2">
+                    {recentExercises.map((record, index) => (
+                      <motion.div
+                        key={`${record.exerciseId}-${record.completedAt}`}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: index * 0.1 }}
+                        className="flex items-start justify-between gap-3 rounded-xl bg-slate-50 p-3 transition-all hover:bg-slate-100 dark:bg-slate-700/30 dark:hover:bg-slate-700/50"
+                      >
+                        <div className="flex min-w-0 items-center gap-2">
+                          <span className={`text-lg ${record.isCorrect ? 'text-emerald-500 dark:text-emerald-400' : 'text-rose-500 dark:text-rose-400'}`}>
+                            {record.isCorrect ? '✅' : '❌'}
+                          </span>
+                          <span className="truncate text-sm font-medium text-slate-700 dark:text-slate-300">
+                            {t(record.exerciseTitle)}
+                          </span>
+                        </div>
+                        <span className="shrink-0 text-xs text-slate-400 dark:text-slate-500">
+                          {formatDate(record.completedAt, { month: 'short', day: 'numeric' })}
+                        </span>
+                      </motion.div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="py-8 text-center">
+                    <div className="mb-2 text-4xl">📝</div>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">{copy.noExercises}</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </motion.div>
         </div>
-      </div>
+      </Container>
     </div>
   );
 }

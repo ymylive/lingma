@@ -94,7 +94,7 @@ export const searchLessons: Record<string, LessonContent> = {
         title: '顺序查找',
         content: (
           <div className="space-y-4">
-            <KnowledgeCard title="🔍 顺序查找 = 从头到尾逐个比较" color="indigo">
+            <KnowledgeCard title="🔍 顺序查找 = 从头到尾逐个比较" color="klein">
               <p>适用于<strong>无序</strong>或<strong>链式存储</strong>的线性表</p>
               <p className="text-sm text-slate-500 mt-2">时间复杂度：O(n)</p>
             </KnowledgeCard>
@@ -166,7 +166,7 @@ int seqSearchWithGuard(int arr[], int n, int key) {
               <strong>哈希冲突：</strong>不同的key映射到相同的位置。必须处理！
             </TipBox>
             <div className="grid md:grid-cols-2 gap-4">
-              <KnowledgeCard title="🔗 链地址法" color="indigo">
+              <KnowledgeCard title="🔗 链地址法" color="klein">
                 <p className="text-sm">每个位置是一个链表</p>
                 <p className="text-sm">冲突元素挂在同一链表</p>
                 <p className="text-xs text-slate-500 mt-2">Java HashMap采用此法</p>

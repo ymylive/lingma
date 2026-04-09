@@ -66,7 +66,7 @@ export default function AlgorithmDetail() {
 
   if (!info) {
     return (
-      <div className="min-h-screen bg-slate-50 px-4 pt-24 transition-colors duration-300 dark:bg-slate-900 sm:px-6">
+      <div className="page-safe-top min-h-screen px-4 transition-colors duration-300 sm:px-6">
         <div className="max-w-4xl mx-auto text-center">
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-4">
             {t('算法不存在')}
@@ -100,8 +100,8 @@ export default function AlgorithmDetail() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 pt-20 pb-12 transition-colors duration-300">
-      <div className="mx-auto max-w-6xl px-4 sm:px-6">
+    <div className="page-safe-top min-h-screen pb-12 transition-colors duration-300">
+      <div className="mx-auto max-w-5xl px-4 sm:px-6">
         <div className="mb-6 flex items-center gap-2 overflow-x-auto whitespace-nowrap pb-2 text-sm text-slate-500 dark:text-slate-400">
           <Link to="/algorithms" className="hover:text-indigo-600 dark:hover:text-indigo-400">
             {t('算法列表')}

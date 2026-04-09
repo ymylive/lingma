@@ -28,3 +28,4 @@ api-proxy/data/
 __pycache__/
 *.pyc
 server_js.txt
+.worktrees/

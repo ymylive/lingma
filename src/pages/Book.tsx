@@ -96,34 +96,34 @@ export default function Book() {
   };
 
   return (
-    <div className="min-h-screen transition-colors duration-300 pt-24 pb-12">
-      <div className="mx-auto max-w-6xl px-4 sm:px-6">
+    <div className="page-safe-top min-h-screen pb-12 transition-colors duration-300">
+      <div className="mx-auto max-w-5xl px-4 sm:px-6">
         {/* 页面标题 */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="mb-10 text-center"
+          className="mb-12 text-center"
         >
           <h1 className="mb-3 text-3xl font-bold text-slate-900 dark:text-white sm:text-4xl">📖 {isEnglish ? 'Data Structure Tutorials' : '数据结构教程'}</h1>
           <p className="text-base text-slate-600 dark:text-slate-300 sm:text-lg">{t('系统学习数据结构与算法，从入门到精通')}</p>
-          <div className="mt-6 grid grid-cols-2 gap-4 sm:flex sm:justify-center sm:gap-6">
+          <div className="mt-8 grid grid-cols-2 gap-5 sm:flex sm:justify-center sm:gap-6">
             <div className="text-center">
-              <div className="text-3xl font-bold text-klein-500 dark:text-klein-400">{curriculum.length}</div>
+              <div className="text-2xl font-bold text-klein-500 dark:text-klein-400">{curriculum.length}</div>
               <div className="text-sm text-slate-500 dark:text-slate-400">{chapterCountLabel}</div>
             </div>
             <div className="text-center">
-              <div className="text-3xl font-bold text-emerald-600 dark:text-emerald-400">{totalTopics}</div>
+              <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{totalTopics}</div>
               <div className="text-sm text-slate-500 dark:text-slate-400">{topicCountLabel}</div>
             </div>
             {isLoggedIn && (
               <div className="text-center">
-                <div className="text-3xl font-bold text-amber-600 dark:text-amber-400">{completedCount}</div>
+                <div className="text-2xl font-bold text-amber-600 dark:text-amber-400">{completedCount}</div>
                 <div className="text-sm text-slate-500 dark:text-slate-400">{learnedCountLabel}</div>
               </div>
             )}
             <div className="text-center">
-              <div className="text-3xl font-bold text-rose-600 dark:text-rose-400">15+</div>
+              <div className="text-2xl font-bold text-rose-600 dark:text-rose-400">15+</div>
               <div className="text-sm text-slate-500 dark:text-slate-400">{hourCountLabel}</div>
             </div>
           </div>
@@ -135,7 +135,7 @@ export default function Book() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.5 }}
-          className="mb-8 rounded-2xl bg-gradient-to-r from-klein-500 to-klein-600 p-5 text-white shadow-lg shadow-klein-500/20 sm:p-6"
+          className="mb-10 rounded-3xl bg-gradient-to-r from-klein-500 to-klein-600 p-5 text-white shadow-md shadow-klein-500/15 sm:p-6"
         >
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:gap-4">
             <span className="text-3xl sm:text-4xl">🎯</span>
@@ -165,7 +165,7 @@ export default function Book() {
               <motion.div
                 key={chapter.id}
                 variants={itemVariants}
-                className={`bg-white dark:bg-slate-800 rounded-2xl border-2 transition-all duration-300 overflow-hidden ${
+                className={`bg-white dark:bg-slate-800 rounded-2xl border transition-all duration-300 overflow-hidden ${
                   isExpanded ? `${colors.border} ${colors.darkBorder}` : 'border-slate-200 dark:border-slate-700'
                 }`}
               >
@@ -209,7 +209,7 @@ export default function Book() {
                 {/* 章节内容 */}
                 {isExpanded && (
                   <div className="border-t border-slate-100 px-4 pb-4 dark:border-slate-700 sm:px-5 sm:pb-5">
-                    <div className="grid gap-3 mt-4">
+                    <div className="grid gap-4 mt-5">
                       {chapter.topics.map((topic, topicIndex) => (
                         <Link
                           key={t(topic.name)}
@@ -276,7 +276,7 @@ export default function Book() {
 
         {/* 底部提示 */}
         <div className="mt-10 text-center">
-          <div className="inline-flex items-center gap-2 bg-slate-100 dark:bg-slate-800 rounded-full px-4 py-2 text-sm text-slate-600 dark:text-slate-400">
+          <div className="inline-flex items-center gap-2 bg-slate-100/80 dark:bg-slate-800/80 rounded-full px-5 py-2.5 backdrop-blur-sm text-sm text-slate-600 dark:text-slate-400">
             <span>💡</span>
             <span>{isEnglish ? 'Expand a chapter to browse lessons, then open a topic to start learning.' : '点击章节展开查看详细内容，点击具体知识点进入学习'}</span>
           </div>

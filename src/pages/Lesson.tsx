@@ -16,8 +16,8 @@ function LessonLoadingShell({ currentLink, isSidebarOpen, onOpen, onClose }: {
   onClose: () => void;
 }) {
   return (
-    <div className="min-h-screen bg-slate-50 pt-20 transition-colors duration-300 dark:bg-slate-900 sm:pt-24">
-      <div className="mx-auto flex max-w-7xl min-w-0">
+    <div className="page-safe-top min-h-screen transition-colors duration-300">
+      <div className="mx-auto flex max-w-5xl min-w-0">
         <LessonSidebar
           currentLink={currentLink}
           isOpen={isSidebarOpen}
@@ -154,7 +154,7 @@ export default function Lesson() {
 
   if (!lesson) {
     return (
-      <div className="min-h-screen px-4 pt-24 sm:px-6">
+      <div className="page-safe-top min-h-screen px-4 sm:px-6">
         <div className="mx-auto max-w-4xl text-center">
           <h1 className="mb-4 text-2xl font-bold text-slate-900">课程不存在</h1>
           <Link to="/book" className="text-indigo-600 hover:underline">
@@ -175,8 +175,8 @@ export default function Lesson() {
   };
 
   return (
-    <div key={path} className="min-h-screen bg-slate-50 pt-20 transition-colors duration-300 dark:bg-slate-900 sm:pt-24">
-      <div className="mx-auto flex max-w-7xl min-w-0">
+    <div key={path} className="page-safe-top min-h-screen transition-colors duration-300">
+      <div className="mx-auto flex max-w-5xl min-w-0">
         <LessonSidebar
           currentLink={currentLink}
           isOpen={isSidebarOpen}

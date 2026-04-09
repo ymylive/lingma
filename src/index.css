@@ -49,6 +49,31 @@
 }
 
 @layer utilities {
+  .page-safe-top {
+    padding-top: calc(var(--app-header-height, 64px) + 2rem);
+  }
+
+  @media (min-width: 640px) {
+    .page-safe-top {
+      padding-top: calc(var(--app-header-height, 64px) + 2.5rem);
+    }
+  }
+
+  /* Consistent section label — small caps above section titles */
+  .section-label {
+    @apply text-xs font-semibold uppercase tracking-[0.18em] text-klein-500 dark:text-klein-400;
+  }
+
+  /* Subtle horizontal rule with gradient fade */
+  .divider-fade {
+    @apply h-px border-0;
+    background: linear-gradient(90deg, transparent, rgba(148, 163, 184, 0.3) 20%, rgba(148, 163, 184, 0.3) 80%, transparent);
+  }
+
+  .dark .divider-fade {
+    background: linear-gradient(90deg, transparent, rgba(71, 85, 105, 0.4) 20%, rgba(71, 85, 105, 0.4) 80%, transparent);
+  }
+
   /* 液态玻璃 (Liquid Glass) - Glossy & Wet */
   .glass {
     @apply bg-white/40 dark:bg-slate-950/60 backdrop-blur-xl border border-white/60 dark:border-white/10;
@@ -59,19 +84,19 @@
   }
   
   .glass-card {
-    @apply bg-white/30 dark:bg-white/5 backdrop-blur-lg border border-white/50 dark:border-white/10 transition-transform duration-300 will-change-transform rounded-2xl;
-    box-shadow: 
-      0 4px 20px rgba(0, 0, 0, 0.05),
-      inset 0 1px 1px rgba(255, 255, 255, 0.6), /* Top edge highlight */
-      inset 0 -1px 20px rgba(255, 255, 255, 0.1); /* Bottom glossy depth */
+    @apply bg-white/40 dark:bg-white/[0.04] backdrop-blur-lg border border-white/50 dark:border-white/10 transition-all duration-300 will-change-transform rounded-2xl;
+    box-shadow:
+      0 1px 3px rgba(0, 0, 0, 0.04),
+      0 4px 20px rgba(0, 0, 0, 0.03),
+      inset 0 1px 0 rgba(255, 255, 255, 0.6);
   }
-  
+
   .glass-card:hover {
-    @apply -translate-y-1 border-klein-500/30 dark:border-pine-500/30;
-    box-shadow: 
-      0 15px 35px rgba(0, 47, 167, 0.15),
-      inset 0 0 0 1px rgba(255, 255, 255, 0.4),
-      inset 0 0 30px rgba(255, 255, 255, 0.2);
+    @apply -translate-y-1 border-klein-500/20 dark:border-pine-500/20;
+    box-shadow:
+      0 8px 30px rgba(0, 47, 167, 0.08),
+      0 1px 3px rgba(0, 0, 0, 0.04),
+      inset 0 1px 0 rgba(255, 255, 255, 0.5);
   }
 
   /* 克莱因蓝-松花黄 艺术渐变 */
@@ -588,4 +613,3 @@
     padding-left: 0.7rem;
   }
 }
-
