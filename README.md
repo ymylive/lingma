@@ -1,81 +1,72 @@
 # Lingma / 灵码
 
-Lingma is an interactive data structure and algorithm learning platform that combines visual demos, guided tutorials, AI-assisted practice, and methodology training in a single web app.
+Interactive data structure and algorithm learning platform — visual demos, guided tutorials, AI-assisted practice, mind mapping, and methodology training in one web app.
 
-灵码是一个面向数据结构与算法学习的交互式平台，把可视化演示、教程学习、AI 辅助练习和方法论文档整合在同一个 Web 应用中。
+交互式数据结构与算法学习平台——可视化演示、教程学习、AI 辅助练习、思维导图和方法论训练，集于同一个 Web 应用。
 
-Live site / 在线地址: `https://lingma.cornna.xyz`
+**Live / 在线体验**: [lingma.cornna.xyz](https://lingma.cornna.xyz)
 
-## Overview / 项目概览
+## Features / 功能亮点
 
-- Interactive algorithm visualizations and step-by-step explanations
-- Structured tutorial content under `/book`
-- Protected learner dashboard and progress tracking
-- AI practice workspace for coding exercises
-- `Vibe Coding Lab` and `Prompt Arena` for prompt-driven training
-- Dedicated methodology documentation at `/methodology`
-- Responsive frontend optimized for desktop and mobile
-- Bilingual UI foundation with Chinese and English support
-
-- 交互式算法动画与分步骤讲解
-- `/book` 下的结构化教程内容
-- 受保护的学习仪表盘与进度追踪
-- 面向编码练习的 AI Practice 工作区
-- `Vibe Coding Lab` 与 `Prompt Arena` 提示词训练模块
-- 独立的 `/methodology` 方法论文档页面
-- 已适配桌面端与移动端的响应式前端
-- 支持中英文双语基础能力
+- Algorithm visualizations with step-by-step animations / 算法动画与分步讲解
+- Structured tutorials and lesson content (`/book`) / 结构化教程内容
+- AI Practice workspace with streaming code review / AI 练习工作区，支持流式代码评审
+- Vibe Coding Lab & Prompt Arena for prompt-driven training / 提示词驱动训练模块
+- Interactive mind map editor (`/mindmap`) / 交互式思维导图编辑器
+- Methodology documentation (`/methodology`) / 方法论文档
+- Learner dashboard with progress tracking / 学习仪表盘与进度追踪
+- Dark mode & bilingual UI (Chinese / English) / 暗色模式与中英双语
+- Responsive design for desktop and mobile / 桌面端与移动端适配
 
 ## Tech Stack / 技术栈
 
-- Frontend / 前端: React 19, TypeScript, Vite, Tailwind CSS, Framer Motion
-- API proxy / 代理后端: FastAPI, Uvicorn, SQLite
-- Judge service / 判题服务: Node.js, Express
-- Deployment / 部署: Docker Compose, Nginx, HTTPS
+| Layer | Tech |
+|-------|------|
+| Frontend | React 19, TypeScript, Vite, Tailwind CSS, Framer Motion |
+| API Proxy | FastAPI, Uvicorn, SQLite |
+| Judge Service | Node.js, Express (sandboxed execution) |
+| Deployment | Docker Compose, Nginx, HTTPS |
 
 ## Project Structure / 目录结构
 
 ```text
 src/
-  components/        shared UI and tutorial components
-  contexts/          auth, i18n, and app state
-  data/              curriculum and methodology content
-  pages/             route-level pages
+  pages/              route-level components (lazy-loaded)
+  components/         shared UI, lesson, tutorial, visualization components
+  contexts/           UserContext, ThemeContext, I18nContext
+  services/           API communication (AI, judge, mindmap, SSE streaming)
+  hooks/              custom hooks (low-motion, streaming, progressive AI)
+  data/               curriculum content, exercise banks, methodology units
+  i18n/               translation strings by domain
 api-proxy/
-  main.py            FastAPI backend proxy
+  main.py             FastAPI backend with modular route handlers
+  app_modules/        route handler modules
 judge-server/
-  server.js          code judging service
+  server.js           sandboxed code execution service
 deploy/
-  docker-compose.yml production services
-  docker-deploy.py   VPS deployment script
-  nginx.conf         reverse proxy config
+  docker-compose.yml  production services (3 containers)
+  docker-deploy.py    automated VPS deployment script
+  nginx.conf          reverse proxy config
 ```
 
-## Local Development / 本地开发
+## Getting Started / 快速开始
+
+### Prerequisites / 前置依赖
+
+- Node.js 20+, npm 10+
+- Python 3.11+ (for API proxy)
 
 ### Frontend / 前端
 
-Requirements / 依赖要求:
-
-- Node.js 20+
-- npm 10+
-
 ```bash
 npm install
-npm run dev
+npm run dev       # dev server
+npm run build     # type check + production build
+npm run lint      # ESLint
+npm run test      # vitest
 ```
 
-### Production Build / 生产构建
-
-```bash
-npm run build
-```
-
-### API Proxy / API 代理服务
-
-Requirements / 依赖要求:
-
-- Python 3.11+
+### API Proxy / API 代理
 
 ```bash
 cd api-proxy
@@ -91,87 +82,53 @@ npm install
 node server.js
 ```
 
-## Environment Notes / 环境说明
+## Deployment / 部署
 
-Docker deployment expects `deploy/.env` for backend runtime values.
+Three Docker containers orchestrated by `deploy/docker-compose.yml`:
 
-Docker 部署依赖 `deploy/.env` 提供后端运行时变量。
+由 `deploy/docker-compose.yml` 编排的三个 Docker 容器：
 
-Minimum example / 最小示例:
+| Container | Role | Port |
+|-----------|------|------|
+| `frontend` | Nginx static serving | 18081 |
+| `api-proxy` | FastAPI backend | 3001 (internal) |
+| `judge-server` | Code judging | 3002 (internal) |
+
+### Environment / 环境变量
+
+Create `deploy/.env` with runtime variables. Minimum:
+
+在 `deploy/.env` 中配置运行时变量，最小示例：
 
 ```env
 FRONTEND_BIND_HOST=0.0.0.0
 FRONTEND_BIND_PORT=18081
 ```
 
-If you use AI-related features in production, add the corresponding API variables in `deploy/.env` on the server.
+For AI features, add the corresponding API keys in `deploy/.env` on the server.
 
-如果你需要在生产环境启用 AI 相关能力，需要在服务器上的 `deploy/.env` 中补充对应的 API 环境变量。
+启用 AI 功能需要在服务器的 `deploy/.env` 中配置对应的 API 密钥。
 
-## Deploy to VPS / VPS 部署
-
-This repository includes a Windows-friendly deployment script based on `paramiko`.
-
-仓库内置了基于 `paramiko` 的 Windows 友好型 VPS 部署脚本。
-
-Default target from the script / 脚本默认目标:
-
-- Host: `8.134.33.19`
-- User: `root`
-- Remote path: `/var/www/lingma`
-
-Run / 执行命令:
+### Deploy to VPS / VPS 部署
 
 ```bash
-LINGMA_VPS_PASSWORD=<your-password> python deploy/docker-deploy.py
+python deploy/docker-deploy.py
 ```
 
-The script will / 脚本会自动执行:
+The script packages the workspace, uploads via SFTP, rebuilds Docker images, starts containers, and runs a health check.
 
-1. Package the current workspace
-2. Upload it to the VPS
-3. Extract the bundle into `/var/www/lingma`
-4. Stop old services
-5. Rebuild Docker images and start containers
-6. Run a health check against `http://127.0.0.1:18081/api/health`
+脚本会自动打包工作区、上传 SFTP、重建镜像、启动容器并执行健康检查。
 
-1. 打包当前工作区
-2. 上传到 VPS
-3. 解压到 `/var/www/lingma`
-4. 停止旧服务
-5. 重建 Docker 镜像并启动容器
-6. 对 `http://127.0.0.1:18081/api/health` 做健康检查
+## Design System / 设计语言
 
-## Production Services / 生产服务
+Brand colors: **Klein Blue** (`#002FA7`) as primary, **Pine Yellow** (`#FFE135`) as accent. Full spec in `src/DESIGN_SYSTEM.md`.
 
-`deploy/docker-compose.yml` starts three containers:
+品牌色：**克莱因蓝** (`#002FA7`) 为主色，**松花黄** (`#FFE135`) 为强调色。完整规范见 `src/DESIGN_SYSTEM.md`。
 
-`deploy/docker-compose.yml` 会启动 3 个容器:
-
-- `frontend`: static frontend served by Nginx on port `18081`
-- `api-proxy`: FastAPI service on internal port `3001`
-- `judge-server`: judging service on internal port `3002`
-
-- `frontend`: 由 Nginx 提供静态前端，暴露端口 `18081`
-- `api-proxy`: FastAPI 服务，容器内端口 `3001`
-- `judge-server`: 判题服务，容器内端口 `3002`
-
-## Contributing / 贡献说明
+## Contributing / 贡献
 
 See [CONTRIBUTING.md](./CONTRIBUTING.md).
 
-详细贡献流程见 [CONTRIBUTING.md](./CONTRIBUTING.md)。
-
-## Current Verification / 当前验证
-
-Latest checks completed:
-
-最近一次已完成验证:
-
-- `npm run build`
-- VPS deployment via `python deploy/docker-deploy.py`
-- Health check: `curl http://127.0.0.1:18081/api/health`
-
 ## License / 许可证
 
-MIT
+[MIT](./LICENSE)

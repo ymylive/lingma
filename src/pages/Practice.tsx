@@ -16,13 +16,9 @@ import {
   sortExercisesForPractice,
 } from '../utils/practiceProgression';
 import { buildDailyRecommendation, getSkillLevelMeta } from '../utils/userPersonalization';
-import type { VibeTrack } from '../types/vibeCoding';
-
-const VALID_TABS = new Set(['preset', 'ai', 'vibe']);
-const VALID_TRACKS = new Set<VibeTrack>(['frontend', 'backend', 'debugging', 'refactoring', 'review']);
+const VALID_TABS = new Set(['preset', 'ai']);
 
 const tutorialPanelImport = () => import('../components/tutorials/TutorialPanel');
-const vibeCodingLabImport = () => import('../components/tutorials/VibeCodingLab');
 
 const AIExerciseGenerator = lazy(async () => {
   const module = await tutorialPanelImport();
@@ -39,7 +35,6 @@ const FillInBlank = lazy(async () => {
   return { default: module.FillInBlank };
 });
 
-const VibeCodingLab = lazy(vibeCodingLabImport);
 
 const LANGUAGE_SUPPORT = [
   {
@@ -125,9 +120,6 @@ function preloadExerciseDetailPanels() {
   void tutorialPanelImport();
 }
 
-function preloadVibeCodingLab() {
-  void vibeCodingLabImport();
-}
 
 function AsyncPanelFallback({ label }: { label: string }) {
   return (
@@ -216,10 +208,8 @@ export default function Practice() {
   const { formatDate, isEnglish, t } = useI18n();
   const [searchParams] = useSearchParams();
   const paramTab = searchParams.get('tab');
-  const paramTrack = searchParams.get('track');
-  const initialTab = paramTab && VALID_TABS.has(paramTab) ? (paramTab as 'preset' | 'ai' | 'vibe') : 'preset';
-  const initialTrack = paramTrack && VALID_TRACKS.has(paramTrack as VibeTrack) ? (paramTrack as VibeTrack) : undefined;
-  const [tab, setTab] = useState<'preset' | 'ai' | 'vibe'>(initialTab);
+  const initialTab = paramTab && VALID_TABS.has(paramTab) ? (paramTab as 'preset' | 'ai') : 'preset';
+  const [tab, setTab] = useState<'preset' | 'ai'>(initialTab);
   const [category, setCategory] = useState('all');
   const [difficulty, setDifficulty] = useState<'all' | 'easy' | 'medium' | 'hard'>('all');
   const [typeFilter, setTypeFilter] = useState<'all' | 'coding' | 'fillblank'>('all');
@@ -431,27 +421,15 @@ export default function Practice() {
           </div>
         </div>
 
-        <div className="mb-8 grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-3">
+        <div className="mb-8 grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-3">
           <button onClick={() => setTab('preset')} onMouseEnter={preloadAllExercises} onFocus={preloadAllExercises} className={`min-h-[48px] cursor-pointer rounded-2xl px-6 py-3 text-sm font-semibold transition-all ${tab === 'preset' ? 'bg-klein-600 text-white shadow-sm' : 'border border-slate-200/80 bg-white/70 text-slate-600 backdrop-blur-sm dark:border-slate-700/60 dark:bg-slate-800/70 dark:text-slate-300'}`}>{t('题库练习')}</button>
           <button onClick={() => setTab('ai')} onMouseEnter={preloadExerciseDetailPanels} onFocus={preloadExerciseDetailPanels} className={`min-h-[48px] cursor-pointer rounded-2xl px-6 py-3 text-sm font-semibold transition-all ${tab === 'ai' ? 'bg-klein-600 text-white shadow-sm' : 'border border-slate-200/80 bg-white/70 text-slate-600 backdrop-blur-sm dark:border-slate-700/60 dark:bg-slate-800/70 dark:text-slate-300'}`}>{t('AI 智能出题')}</button>
-          <button onClick={() => setTab('vibe')} onMouseEnter={preloadVibeCodingLab} onFocus={preloadVibeCodingLab} className={`min-h-[48px] cursor-pointer rounded-2xl px-6 py-3 text-sm font-semibold transition-all ${tab === 'vibe' ? 'bg-klein-600 text-white shadow-sm' : 'border border-slate-200/80 bg-white/70 text-slate-600 backdrop-blur-sm dark:border-slate-700/60 dark:bg-slate-800/70 dark:text-slate-300'}`}>{isEnglish ? 'Vibe Coding Lab' : 'Vibe Coding 学习'}</button>
         </div>
 
         <div className="space-y-8">
           {tab === 'ai' ? (
           <Suspense fallback={<AsyncPanelFallback label={isEnglish ? 'Loading AI practice tools...' : '正在加载 AI 出题工具...'} />}>
             <AIExerciseGenerator />
-          </Suspense>
-        ) : tab === 'vibe' ? (
-          <Suspense fallback={<AsyncPanelFallback label={isEnglish ? 'Loading Vibe Coding Lab...' : '正在加载 Vibe Coding 实验室...'} />}>
-            <VibeCodingLab
-              onOpenAiGenerator={() => setTab('ai')}
-              onOpenPracticeLibrary={() => {
-                setSelectedExercise(null);
-                setTab('preset');
-              }}
-              initialTrack={initialTrack}
-            />
           </Suspense>
         ) : (
           <>

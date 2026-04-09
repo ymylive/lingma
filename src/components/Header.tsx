@@ -20,6 +20,7 @@ export default function Header() {
     { path: '/book', label: isEnglish ? 'Tutorials' : '教程', icon: '📚' },
     { path: '/methodology', label: isEnglish ? 'Methodology' : '方法论', icon: '📖' },
     { path: '/practice', label: isEnglish ? 'AI Practice' : 'AI练习', icon: '🤖' },
+    { path: '/vibecoding', label: 'Vibe Coding', icon: '✨' },
     { path: '/mindmap', label: 'MindMap', icon: '🧠' },
   ], [isEnglish]);
 

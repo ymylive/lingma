@@ -275,7 +275,7 @@ export default function Methodology() {
                       </p>
                       {pt.example && (
                         <pre className="mt-4 overflow-x-auto whitespace-pre-wrap rounded-xl bg-slate-50 px-4 py-4 text-sm leading-6 text-slate-700 dark:bg-slate-900 dark:text-slate-300 sm:text-xs">
-                          {pt.example}
+                          {t(pt.example)}
                         </pre>
                       )}
                       {pt.tips && (

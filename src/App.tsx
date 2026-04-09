@@ -22,6 +22,7 @@ const MindMap = lazy(() => import('./pages/MindMap'));
 const Auth = lazy(() => import('./pages/Auth'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const Methodology = lazy(() => import('./pages/Methodology'));
+const VibeCoding = lazy(() => import('./pages/VibeCoding'));
 
 function RouteLoadingFallback() {
   return (
@@ -81,6 +82,7 @@ function AnimatedRoutes() {
       <Route path="/auth" element={<RoutedPage routeKey={location.pathname}><Auth /></RoutedPage>} />
       <Route path="/dashboard" element={<RoutedPage routeKey={location.pathname} protectedPage><Dashboard /></RoutedPage>} />
       <Route path="/methodology" element={<RoutedPage routeKey={location.pathname} protectedPage><Methodology /></RoutedPage>} />
+      <Route path="/vibecoding" element={<RoutedPage routeKey={location.pathname} protectedPage><VibeCoding /></RoutedPage>} />
     </Routes>
   );
 }
