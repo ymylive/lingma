@@ -373,6 +373,100 @@ export const vibeCodingTranslationsEn: Record<string, string> = {
     'If 3 fix rounds don\'t work, rollback and reframe the prompt with new evidence.',
   '快模型起草，强模型审查，测试验证一切。':
     'Fast models draft, strong models review, tests validate everything.',
+  // ── Methodology example translations ──
+
+  // Unit 1: Core Loop examples
+  '目标：为 VibeCodingLab 添加代码预览功能。\n范围：仅前端 track，iframe sandbox 渲染。\n约束：不改后端 API。\n完成标准：用户可实时预览 HTML/CSS/JS 输出。':
+    'Goal: Add code preview to VibeCodingLab.\nScope: Frontend track only, iframe sandbox rendering.\nConstraint: No backend API changes.\nDone when: Users can preview HTML/CSS/JS output in real time.',
+  'rg "moduleCards" src/ → 定位到 VibeCodingLab.tsx:112\n只读该文件的 112-140 行，而非整个文件。':
+    'rg "moduleCards" src/ → located VibeCodingLab.tsx:112\nRead only lines 112-140 instead of the whole file.',
+  '第一步：新建数据文件 methodologyUnits.ts\n第二步：新建 MethodologyGuide 组件\n第三步：替换 VibeCodingLab 中的渲染\n每步独立可验证。':
+    'Step 1: Create data file methodologyUnits.ts\nStep 2: Create MethodologyGuide component\nStep 3: Replace rendering in VibeCodingLab\nEach step is independently verifiable.',
+  'npx tsc --noEmit → 类型检查通过\nnpx vite build → 构建成功\ncurl 健康检查 → API 正常':
+    'npx tsc --noEmit → type check passed\nnpx vite build → build succeeded\ncurl health check → API healthy',
+  'Summary: 新增方法论文档页面\nChanges: 3 files added, 2 modified\nValidation: tsc 0 errors, vite build success\nNext: 添加单元测试覆盖':
+    'Summary: Added methodology docs page\nChanges: 3 files added, 2 modified\nValidation: tsc 0 errors, vite build success\nNext: Add unit test coverage',
+  'git commit -m "checkpoint: data layer done"\ngit commit -m "checkpoint: component renders correctly"\n\nprompt-log.md:\n- Round 1: 要求生成数据结构 → 产出 methodologyUnits.ts\n- Round 2: 要求生成渲染组件 → 产出 MethodologyGuide.tsx':
+    'git commit -m "checkpoint: data layer done"\ngit commit -m "checkpoint: component renders correctly"\n\nprompt-log.md:\n- Round 1: Asked to generate data structure → produced methodologyUnits.ts\n- Round 2: Asked to generate render component → produced MethodologyGuide.tsx',
+  '✅ Vibe Check 清单：\n1. 核心流程端到端可用\n2. UI 间距和文案感觉对\n3. 无控制台错误或断链\n4. 错误状态清晰且有帮助':
+    '✅ Vibe Check checklist:\n1. Core flow works end-to-end\n2. UI spacing and copy feel right\n3. No console errors or broken links\n4. Error states are clear and helpful',
+
+  // Unit 2: Skills examples
+  '多模块开发 → professional-delivery（流程）+ ui-ux-pro-max（领域）\n调试 → systematic-debugging（流程+领域合一）':
+    'Multi-module dev → professional-delivery (workflow) + ui-ux-pro-max (domain)\nDebugging → systematic-debugging (workflow + domain combined)',
+  '修一个 typo → 直接改\n新增完整功能模块 → professional-delivery\n排查诡异 bug → systematic-debugging':
+    'Fix a typo → edit directly\nAdd a full feature module → professional-delivery\nTrack down a mysterious bug → systematic-debugging',
+
+  // Unit 3: MCP examples
+  '需要查最新的 React 19 API → mcp-router 搜索\n需要查 npm 包版本 → resolve-library-id + get-library-docs\n需要看页面 DOM → chrome-devtools':
+    'Need the latest React 19 API → mcp-router search\nNeed an npm package version → resolve-library-id + get-library-docs\nNeed to inspect page DOM → chrome-devtools',
+  '先 get_file_contents 查看文件 → 确认内容 → 再 create_or_update_file 修改':
+    'First get_file_contents to view file → confirm content → then create_or_update_file to modify',
+
+  // Unit 4: Prompting examples
+  'Goal：为方法论模块添加交互式学习文档。\nScope：6 个单元，每个含知识点和练习，不改后端。\nVerification：tsc 通过，vite build 成功，部署后可访问。\nFormat：accordion 展开式 UI，数据与组件分离。':
+    'Goal: Add interactive learning docs for the methodology module.\nScope: 6 units, each with knowledge points and exercises, no backend changes.\nVerification: tsc passes, vite build succeeds, accessible after deploy.\nFormat: Accordion-style UI, data separated from components.',
+  '约束：不修改后端 API，不引入新的 npm 依赖，改动控制在 5 个文件以内，新增代码 < 200 行。':
+    'Constraints: No backend API changes, no new npm dependencies, changes within 5 files, new code < 200 lines.',
+  '❌ "确保功能正常"\n✅ "npx tsc --noEmit 零错误，npx vite build 成功产出 dist/，curl localhost:18081 返回 200"':
+    '❌ "Make sure it works"\n✅ "npx tsc --noEmit zero errors, npx vite build produces dist/, curl localhost:18081 returns 200"',
+  'Role: 你在维护这个仓库。\nGoal: 用户能实时预览 HTML 输出。\nConstraints: React + Tailwind，不引入新依赖。\nContext: src/components/Editor.tsx, src/types/.\nInputs/Outputs: 用户输入代码 → iframe 渲染结果。\nAcceptance: tsc 通过，无 XSS 风险。\nNon-goals: 不改后端，不加保存功能。':
+    'Role: You maintain this repository.\nGoal: Users can preview HTML output in real time.\nConstraints: React + Tailwind, no new dependencies.\nContext: src/components/Editor.tsx, src/types/.\nInputs/Outputs: User enters code → iframe renders result.\nAcceptance: tsc passes, no XSS risk.\nNon-goals: No backend changes, no save feature.',
+  '【Bug 修复模板】\n复现：点击"提交"按钮后页面白屏。\n预期：显示成功提示。\n实际：控制台报 TypeError: Cannot read property \'id\' of undefined。\n约束：只改 src/components/SubmitForm.tsx，不改 API。\n验收：点击提交后显示成功提示，无控制台错误。':
+    '[Bug Fix Template]\nReproduce: Page goes blank after clicking "Submit."\nExpected: Show success message.\nActual: Console shows TypeError: Cannot read property \'id\' of undefined.\nConstraint: Only change src/components/SubmitForm.tsx, no API changes.\nAcceptance: Success message shown after submit, no console errors.',
+
+  // Unit 5: Swarm examples
+  '单 agent：修一个 CSS 样式\n蜂群：同时开发用户认证模块的前端组件、后端 API、数据库迁移和测试用例':
+    'Single agent: fix a CSS style\nSwarm: develop auth module frontend components, backend API, DB migration, and tests in parallel',
+  'Agent A：src/data/methodologyUnits.ts（数据）\nAgent B：src/components/MethodologyGuide.tsx（组件）\nAgent C：src/i18n/translations.ts（翻译）\n三者互不干扰，最后集成。':
+    'Agent A: src/data/methodologyUnits.ts (data)\nAgent B: src/components/MethodologyGuide.tsx (component)\nAgent C: src/i18n/translations.ts (translations)\nAll three work independently, then integrate.',
+  'Product Lead：定义"用户能在 3 秒内完成注册"\nBuilder：拆分为表单组件 + API + 验证逻辑，逐步实现\nReviewer：审查 diff，跑安全扫描，验证 3 秒性能指标':
+    'Product Lead: Define "user can complete registration in 3 seconds"\nBuilder: Split into form component + API + validation logic, implement step by step\nReviewer: Review diff, run security scan, verify 3-second performance target',
+
+  // Unit 6: Writing examples
+  '❌ "经过分析，我发现有几个文件需要修改，首先是...最终结论是需要重构 UserService。"\n✅ "UserService 需要重构。原因：职责过重（3 个理由）。改动范围：2 个文件。"':
+    '❌ "After analysis, I found several files need changes, first is... the final conclusion is UserService needs refactoring."\n✅ "UserService needs refactoring. Reason: too many responsibilities (3 reasons). Scope: 2 files."',
+  '问题在 src/services/auth.ts:42，token 过期检查缺少时区处理。\n验证：npx tsc --noEmit 输出 0 errors。':
+    'The issue is at src/services/auth.ts:42 — token expiry check lacks timezone handling.\nValidation: npx tsc --noEmit outputs 0 errors.',
+  '✅ "根据文档，这个 API 应该支持批量操作（未实测）。"\n❌ "这个 API 支持批量操作。"（实际上你只是看了文档没试过）':
+    '✅ "Per the docs, this API should support batch operations (not yet tested)."\n❌ "This API supports batch operations." (you only read the docs, never tested it)',
+  '决策记录：\n问题：状态管理方案选型\n备选：Redux / Zustand / Context\n选择：Zustand\n理由：项目规模中等，Zustand 学习成本低，bundle 小\n影响：所有状态逻辑集中在 src/stores/':
+    'Decision Record:\nProblem: State management selection\nAlternatives: Redux / Zustand / Context\nChoice: Zustand\nRationale: Medium project size, low Zustand learning curve, small bundle\nImpact: All state logic centralized in src/stores/',
+  'Context: 为方法论页面添加搜索功能\nChanges: Methodology.tsx（添加搜索栏）, methodologyUnits.ts（添加关键词索引）\nChecks: tsc 通过, vite build 成功\nOpen Issues: 搜索性能未优化，大数据量可能卡顿\nNext Prompt: 为搜索添加 debounce 和结果高亮':
+    'Context: Add search to methodology page\nChanges: Methodology.tsx (add search bar), methodologyUnits.ts (add keyword index)\nChecks: tsc passed, vite build succeeded\nOpen Issues: Search performance not optimized, may lag with large data\nNext Prompt: Add debounce and result highlighting to search',
+
+  // Unit 7: Context Management examples
+  'plans/auth-module.md\n├── Goal: 实现 JWT 认证\n├── Current Status: 第 2 步完成，API 路由已定义\n├── Architecture Decisions: 选择 jose 库而非 jsonwebtoken\n└── Implementation Notes: token 过期时间 15min，refresh 7d':
+    'plans/auth-module.md\n├── Goal: Implement JWT authentication\n├── Current Status: Step 2 complete, API routes defined\n├── Architecture Decisions: Chose jose over jsonwebtoken\n└── Implementation Notes: Token expiry 15min, refresh 7d',
+  '❌ 把 500 行文件全部粘贴给 AI\n✅ "src/auth.ts:42-58 的 validateToken 函数有 bug，token 过期检查缺少时区处理。相关类型定义在 src/types/auth.ts:12。"':
+    '❌ Paste all 500 lines of a file to AI\n✅ "The validateToken function at src/auth.ts:42-58 has a bug — token expiry check lacks timezone handling. Related type definitions at src/types/auth.ts:12."',
+  '第 1 轮：加载 src/App.tsx 了解路由结构\n第 2 轮：加载目标组件 src/pages/Dashboard.tsx\n第 3 轮：按需加载相关的 hook 和 service':
+    'Round 1: Load src/App.tsx to understand routing structure\nRound 2: Load target component src/pages/Dashboard.tsx\nRound 3: Load related hooks and services as needed',
+
+  // Unit 8: Security examples
+  '第一层：npm run dev → 页面正常渲染，点击流程通畅\n第二层：git diff → 无意外文件改动，npx tsc -b → 0 errors\n第三层：回滚方案 = git revert HEAD，监控 = curl health check':
+    'Tier 1: npm run dev → page renders normally, click flow is smooth\nTier 2: git diff → no unexpected file changes, npx tsc -b → 0 errors\nTier 3: Rollback plan = git revert HEAD, monitoring = curl health check',
+  '入口点：/api/user/update（PUT）\n角色：已认证用户\n资产：用户个人信息\n滥用场景：修改其他用户的信息（IDOR）\n缓解：服务端校验 req.user.id === params.userId':
+    'Entry point: /api/user/update (PUT)\nRole: Authenticated user\nAsset: User personal info\nAbuse scenario: Modifying another user\'s info (IDOR)\nMitigation: Server-side check req.user.id === params.userId',
+  '路由审查清单：\n/api/public/* → 无需认证 ✅\n/api/user/* → 需要 JWT token ✅\n/api/admin/* → 需要 admin 角色 ✅\n/api/internal/* → ⚠️ 缺少认证中间件！':
+    'Route audit checklist:\n/api/public/* → No auth required ✅\n/api/user/* → JWT token required ✅\n/api/admin/* → Admin role required ✅\n/api/internal/* → ⚠️ Missing auth middleware!',
+
+  // Unit 9: Debugging examples
+  '第 1 步：点击"提交"→ 白屏（复现成功）\n第 2 步：git log --oneline -5 → 最近改了 SubmitForm.tsx\n第 3 步：console.log(formData) → id 字段为 undefined\n第 4 步：prompt: "SubmitForm.tsx:28 的 formData.id 为 undefined，原因是表单初始化时没有设置默认值。只改 initFormData 函数。"\n第 5 步：（如果还没修好）git checkout HEAD~1 -- src/components/SubmitForm.tsx':
+    'Step 1: Click "Submit" → blank screen (reproduced)\nStep 2: git log --oneline -5 → recently changed SubmitForm.tsx\nStep 3: console.log(formData) → id field is undefined\nStep 4: prompt: "formData.id at SubmitForm.tsx:28 is undefined because form init has no default value. Only change initFormData function."\nStep 5: (if still not fixed) git checkout HEAD~1 -- src/components/SubmitForm.tsx',
+  '幻觉依赖：AI 建议 import { useAuth } from \'next-auth/react-hooks\'（这个路径不存在）\n意图漂移：要求修一个按钮样式，AI 顺手重构了整个表单组件\n静默破坏：主流程正常，但空数据时不再显示 empty state':
+    'Hallucinated dependency: AI suggests import { useAuth } from \'next-auth/react-hooks\' (this path doesn\'t exist)\nIntent drift: Asked to fix a button style, AI also refactored the entire form component\nSilent break: Main flow works, but empty data no longer shows empty state',
+  '验证清单：\n✅ API 调用设置了 5s 超时\n✅ 重试使用指数退避（1s, 2s, 4s）\n❌ 支付接口不是幂等的——重复提交会重复扣款！\n❌ 错误响应包含了数据库连接字符串':
+    'Verification checklist:\n✅ API calls have 5s timeout set\n✅ Retries use exponential backoff (1s, 2s, 4s)\n❌ Payment endpoint is not idempotent — duplicate submissions cause duplicate charges!\n❌ Error response contains database connection string',
+
+  // Unit 10: Tooling examples
+  '日常功能开发 → Cursor / VS Code + Claude\n快速原型验证 → Bolt / Replit Agent\n批量重构 / 自动化 → Claude Code CLI\n前端调试 → Chrome DevTools + AI 分析':
+    'Daily feature dev → Cursor / VS Code + Claude\nRapid prototype validation → Bolt / Replit Agent\nBatch refactoring / automation → Claude Code CLI\nFrontend debugging → Chrome DevTools + AI analysis',
+  '最小环境清单：\n✅ Git + 频繁 checkpoint commit\n✅ ripgrep (rg) 代码搜索\n✅ TypeScript strict mode\n✅ Prettier 自动格式化\n✅ CLAUDE.md 项目约束文件\n✅ .env.example 环境变量模板':
+    'Minimum environment checklist:\n✅ Git + frequent checkpoint commits\n✅ ripgrep (rg) code search\n✅ TypeScript strict mode\n✅ Prettier auto-formatting\n✅ CLAUDE.md project constraint file\n✅ .env.example environment variable template',
+  'AI 生成 → 人类审查：\n✅ React 组件脚手架 → 审查 props 设计\n✅ API 路由模板 → 审查认证和授权\n✅ 测试用例 → 审查边界条件覆盖\n✅ CSS 布局 → 审查响应式和可访问性':
+    'AI generates → Human reviews:\n✅ React component scaffold → review props design\n✅ API route template → review auth and authorization\n✅ Test cases → review edge case coverage\n✅ CSS layout → review responsiveness and accessibility',
+
   // ── PLACEHOLDER_NEW_UNITS_CONTINUE ──
 
   // ── Methodology → Prompt Arena link ──
