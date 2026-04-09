@@ -133,6 +133,23 @@ export const pageTranslationsEn: Record<string, string> = {
   '学习导图': 'Study Mind Map',
   '未命名节点': 'Unnamed node',
   '未命名': 'Unnamed',
+  '新节点': 'New Node',
+  '松开文件即可生成思维导图': 'Drop the file to generate a mind map',
+  '支持 .txt / .md 文件': 'Supports .txt / .md files',
+  '重置': 'Reset',
+  '子节点': 'Child',
+  '同级': 'Sibling',
+  'AI 追加笔记': 'AI Append Notes',
+  'AI 扩写笔记': 'AI Expand Notes',
+  '快捷操作': 'Quick Actions',
+  '当前导图': 'Current Map',
+  '未选择': 'None selected',
+  '画布操作': 'Canvas Controls',
+  'AI 重新生成当前导图': 'AI Regenerate Current Map',
+  '大纲': 'Outline',
+  '标题': 'Title',
+  '拖动空白区域平移 · 滚轮平移': 'Drag empty area to pan · Scroll to pan',
+  'Ctrl+滚轮缩放 · 空格键拖拽': 'Ctrl+Scroll to zoom · Space to drag',
 
   // ── Practice.tsx ──
   '在线判题 + 学习资源': 'Online Judge + Learning Resources',
@@ -202,5 +219,9 @@ export const pagePatternsEn: Array<{ pattern: RegExp; replace: (...args: string[
   {
     pattern: /^近期关注：(.+)$/,
     replace: (topics) => `Recent focus: ${topics}`,
+  },
+  {
+    pattern: /^(\d+)\s*个顶级节点$/,
+    replace: (count) => `${count} top-level node${count === '1' ? '' : 's'}`,
   },
 ];

@@ -142,8 +142,11 @@ export default function Book() {
             <div>
               <h3 className="font-bold text-lg mb-1">{t('推荐学习路径')}</h3>
               <p className="text-klein-100 text-sm leading-relaxed">
-                建议按顺序学习：先掌握<strong>绑论</strong>中的复杂度分析，然后学习<strong>线性表</strong>打好基础，
-                再进阶<strong>树</strong>和<strong>图</strong>，最后通过<strong>查找</strong>和<strong>排序</strong>综合应用所学知识。
+                {isEnglish ? (
+                  <>We recommend studying in order: start with <strong>complexity analysis</strong>, then build a foundation with <strong>linear lists</strong>, advance to <strong>trees</strong> and <strong>graphs</strong>, and finally apply your knowledge through <strong>searching</strong> and <strong>sorting</strong>.</>
+                ) : (
+                  <>建议按顺序学习：先掌握<strong>绪论</strong>中的复杂度分析，然后学习<strong>线性表</strong>打好基础，再进阶<strong>树</strong>和<strong>图</strong>，最后通过<strong>查找</strong>和<strong>排序</strong>综合应用所学知识。</>
+                )}
               </p>
             </div>
           </div>

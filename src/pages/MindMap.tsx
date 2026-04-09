@@ -470,7 +470,7 @@ const downloadBlob = (name: string, blob: Blob) => {
   URL.revokeObjectURL(link.href);
 };
 export default function MindMap() {
-  const { formatDate } = useI18n();
+  const { formatDate, t } = useI18n();
   const { theme } = useTheme();
   const { user, progress } = useUser();
 
@@ -564,7 +564,7 @@ export default function MindMap() {
 
     if (!remoteSyncEnabled) {
       if (userId) {
-        setSyncMessage('服务端同步未启用，当前仅本地保存');
+        setSyncMessage(t('服务端同步未启用，当前仅本地保存'));
       }
       return () => {
         cancelled = true;
@@ -616,7 +616,7 @@ export default function MindMap() {
     return () => {
       cancelled = true;
     };
-  }, [remoteSyncEnabled, storageKey, userId]);
+  }, [remoteSyncEnabled, storageKey, t, userId]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -812,9 +812,9 @@ export default function MindMap() {
     const now = new Date().toISOString();
     const newMap: MindMapData = {
       id: createId(),
-      title: '未命名思维导图',
+      title: t('未命名思维导图'),
       source: { type: 'topic', value: '' },
-      nodes: [createNode('核心主题')],
+      nodes: [createNode(t('核心主题'))],
       createdAt: now,
       updatedAt: now,
     };
@@ -846,24 +846,24 @@ export default function MindMap() {
         sourceTitle = sourceText;
       } else if (sourceTab === 'url') {
         const url = urlInput.trim() || activeMap?.source.value || '';
-        if (!url) throw new Error('请输入 URL');
+        if (!url) throw new Error(t('请输入 URL'));
         const fetched = await fetchDocumentFromUrl(url);
         sourceText = fetched.text;
         sourceValue = fetched.url;
         sourceTitle = fetched.title;
         setSourcePreview({ title: fetched.title, length: fetched.length });
       } else {
-        if (!fileText.trim()) throw new Error('请先上传文本文件');
+        if (!fileText.trim()) throw new Error(t('请先上传文本文件'));
         sourceText = fileText;
-        sourceValue = fileName || '上传文件';
-        sourceTitle = fileName || '上传文件';
+        sourceValue = fileName || t('上传文件');
+        sourceTitle = fileName || t('上传文件');
       }
 
-      if (!sourceText.trim()) throw new Error('请输入有效内容');
+      if (!sourceText.trim()) throw new Error(t('请输入有效内容'));
 
       const personalContext = buildPersonalContext(progress);
       const result = await generateMindMap({
-        title: mapTitle || sourceTitle || '学习主题',
+        title: mapTitle || sourceTitle || t('学习主题'),
         sourceType,
         sourceText,
         sourceTitle,
@@ -875,7 +875,7 @@ export default function MindMap() {
       const now = new Date().toISOString();
       const nextMap: MindMapData = {
         id: activeMap?.id || createId(),
-        title: result.title || mapTitle || sourceTitle || '学习主题',
+        title: result.title || mapTitle || sourceTitle || t('学习主题'),
         source: { type: sourceType, value: sourceValue || sourceText, title: sourceTitle },
         nodes: result.nodes || [],
         createdAt: activeMap?.createdAt || now,
@@ -892,7 +892,7 @@ export default function MindMap() {
       setActiveMapId(nextMap.id);
       setSelectedNodeId(nextMap.nodes[0]?.id || null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : '生成失败，请稍后重试');
+      setError(err instanceof Error ? err.message : t('生成失败，请稍后重试'));
     } finally {
       setIsLoading(false);
     }
@@ -967,7 +967,7 @@ export default function MindMap() {
       nodes: updateNodeById(map.nodes, selectedNodeId, (node) => ({
         ...node,
         collapsed: false,
-        children: [...node.children, createNode('新子节点')],
+        children: [...node.children, createNode(t('新子节点'))],
       })),
       updatedAt: new Date().toISOString(),
     }));
@@ -977,7 +977,7 @@ export default function MindMap() {
     if (!activeMap || !selectedNodeId) return;
     updateActiveMap((map) => ({
       ...map,
-      nodes: addSiblingById(map.nodes, selectedNodeId, createNode('新节点')),
+      nodes: addSiblingById(map.nodes, selectedNodeId, createNode(t('新节点'))),
       updatedAt: new Date().toISOString(),
     }));
   };
@@ -1082,8 +1082,8 @@ export default function MindMap() {
 
     try {
       const result = await expandMindMapNodeNote({
-        mapTitle: activeMap.title || '学习主题',
-        nodeTitle: selectedNode.node.title || '未命名节点',
+        mapTitle: activeMap.title || t('学习主题'),
+        nodeTitle: selectedNode.node.title || t('未命名节点'),
         existingNote: selectedNode.node.note || '',
         parentTitle: parentNode?.title,
         siblingTitles,
@@ -1105,7 +1105,7 @@ export default function MindMap() {
         updatedAt: new Date().toISOString(),
       }));
     } catch (err) {
-      setNodeAiError(err instanceof Error ? err.message : 'AI 扩写失败，请稍后重试');
+      setNodeAiError(err instanceof Error ? err.message : t('AI 扩写失败，请稍后重试'));
     } finally {
       setIsNodeAiLoading(false);
     }
@@ -1300,7 +1300,7 @@ export default function MindMap() {
             onClick={resetCanvasViewport}
             className="cursor-pointer rounded-lg border border-slate-200 bg-white/80 px-2.5 py-1.5 text-xs text-slate-600 hover:border-indigo-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
           >
-            重置
+            {t('重置')}
           </button>
           <button
             onClick={handleToggleMapFullscreen}
@@ -1312,7 +1312,7 @@ export default function MindMap() {
       </div>
       {!activeMap && (
         <div className="text-center py-16 text-slate-500 dark:text-slate-400">
-          请选择或创建一个导图
+          {t('请选择或创建一个导图')}
         </div>
       )}
       {activeMap && (
@@ -1405,8 +1405,8 @@ export default function MindMap() {
               className="rounded-3xl border-2 border-dashed border-klein-400 bg-white/90 px-12 py-10 text-center shadow-lg dark:bg-slate-900/90"
             >
               <FileUp className="mx-auto h-12 w-12 text-klein-500" />
-              <div className="mt-4 text-lg font-semibold text-slate-900 dark:text-white">松开文件即可生成思维导图</div>
-              <div className="mt-2 text-sm text-slate-500">支持 .txt / .md 文件</div>
+              <div className="mt-4 text-lg font-semibold text-slate-900 dark:text-white">{t('松开文件即可生成思维导图')}</div>
+              <div className="mt-2 text-sm text-slate-500">{t('支持 .txt / .md 文件')}</div>
             </motion.div>
           </motion.div>
         )}
@@ -1422,13 +1422,13 @@ export default function MindMap() {
             <div>
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/70 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-xs text-slate-500 dark:text-slate-300 mb-3">
                 <Wand2 className="w-3.5 h-3.5 text-amber-500" />
-                AI 思维导图工作室
+                {t('AI 思维导图工作室')}
               </div>
               <h1 className="text-2xl font-bold text-slate-900 dark:text-white sm:text-3xl">
-                生成 · 编辑 · 导出 · 笔记
+                {t('生成 · 编辑 · 导出 · 笔记')}
               </h1>
               <p className="text-slate-600 dark:text-slate-400 mt-2 max-w-2xl">
-                支持主题、URL、文件内容生成思维导图，结合学习进度做个性化结构优化。
+                {t('支持主题、URL、文件内容生成思维导图，结合学习进度做个性化结构优化。')}
               </p>
             </div>
             <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
@@ -1437,7 +1437,7 @@ export default function MindMap() {
                 className="min-h-[44px] w-full cursor-pointer rounded-xl bg-klein-600 px-4 py-2 text-white transition hover:bg-klein-700 dark:bg-klein-500 dark:text-white sm:w-auto"
               >
                 <span className="inline-flex items-center gap-2">
-                  <Plus className="w-4 h-4" /> 新建导图
+                  <Plus className="w-4 h-4" /> {t('新建导图')}
                 </span>
               </button>
               <button
@@ -1446,7 +1446,7 @@ export default function MindMap() {
                 className="min-h-[44px] w-full cursor-pointer rounded-xl bg-klein-500 px-4 py-2 text-white transition hover:bg-klein-600 disabled:opacity-50 sm:w-auto"
               >
                 <span className="inline-flex items-center gap-2">
-                  <ListPlus className="w-4 h-4" /> 生成导图
+                  <ListPlus className="w-4 h-4" /> {t('生成导图')}
                 </span>
               </button>
             </div>
@@ -1457,13 +1457,13 @@ export default function MindMap() {
           <aside className="space-y-8">
             <div className="glass-card p-5 sm:p-6">
               <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
-                <Wand2 className="w-4 h-4 text-amber-500" /> 生成来源
+                <Wand2 className="w-4 h-4 text-amber-500" /> {t('生成来源')}
               </h2>
               <div className="mb-4 grid grid-cols-1 gap-2 sm:grid-cols-3">
                 {[
-                  { id: 'topic', label: '主题' },
+                  { id: 'topic', label: t('主题') },
                   { id: 'url', label: 'URL' },
-                  { id: 'file', label: '文件' },
+                  { id: 'file', label: t('文件') },
                 ].map((tab) => (
                   <button
                     key={tab.id}
@@ -1480,7 +1480,7 @@ export default function MindMap() {
               </div>
 
               <div className="mb-4">
-                <div className="text-xs text-slate-500 dark:text-slate-400 mb-2">生成模式</div>
+                <div className="text-xs text-slate-500 dark:text-slate-400 mb-2">{t('生成模式')}</div>
                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                   <button
                     type="button"
@@ -1491,7 +1491,7 @@ export default function MindMap() {
                         : 'bg-white/80 backdrop-blur-sm dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700'
                     }`}
                   >
-                    完整知识导图
+                    {t('完整知识导图')}
                   </button>
                   <button
                     type="button"
@@ -1502,31 +1502,31 @@ export default function MindMap() {
                         : 'bg-white/80 backdrop-blur-sm dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700'
                     }`}
                   >
-                    探索模式
+                    {t('探索模式')}
                   </button>
                 </div>
                 <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-2">
                   {generationMode === 'explore'
-                    ? '探索模式仅生成结构与节点标题，节点笔记留空，便于你自己补充。'
-                    : '完整模式会生成结构和简要节点笔记。'}
+                    ? t('探索模式仅生成结构与节点标题，节点笔记留空，便于你自己补充。')
+                    : t('完整模式会生成结构和简要节点笔记。')}
                 </div>
               </div>
 
               {sourceTab === 'topic' && (
                 <div className="space-y-3">
-                  <label className="text-xs text-slate-500 dark:text-slate-400">输入主题</label>
+                  <label className="text-xs text-slate-500 dark:text-slate-400">{t('输入主题')}</label>
                   <input
                     value={topicInput}
                     onChange={(e) => setTopicInput(e.target.value)}
                     className="min-h-[44px] w-full rounded-lg border border-slate-200 bg-white/80 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
-                    placeholder="如：二叉树遍历、递归与回溯"
+                    placeholder={t('如：二叉树遍历、递归与回溯')}
                   />
                 </div>
               )}
 
               {sourceTab === 'url' && (
                 <div className="space-y-3">
-                  <label className="text-xs text-slate-500 dark:text-slate-400">输入 URL</label>
+                  <label className="text-xs text-slate-500 dark:text-slate-400">{t('输入 URL')}</label>
                   <div className="relative">
                     <LinkIcon className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
                     <input
@@ -1538,7 +1538,7 @@ export default function MindMap() {
                   </div>
                   {sourcePreview?.title && (
                     <div className="text-xs text-slate-500 dark:text-slate-400">
-                      已抓取：{sourcePreview.title}（{sourcePreview.length} 字符）
+                      {t(`已抓取：${sourcePreview.title}（${sourcePreview.length} 字符）`)}
                     </div>
                   )}
                 </div>
@@ -1546,11 +1546,11 @@ export default function MindMap() {
 
               {sourceTab === 'file' && (
                 <div className="space-y-3">
-                  <label className="text-xs text-slate-500 dark:text-slate-400">上传文件</label>
+                  <label className="text-xs text-slate-500 dark:text-slate-400">{t('上传文件')}</label>
                   <label className="flex min-h-[48px] cursor-pointer flex-col gap-3 rounded-lg border border-dashed border-slate-300 bg-white/70 px-3 py-3 text-sm dark:border-slate-600 dark:bg-slate-900 sm:flex-row sm:items-center sm:justify-between">
                     <span className="inline-flex items-center gap-2">
                       <FileUp className="w-4 h-4 text-klein-500" />
-                      {fileName || '拖拽或点击上传 .txt / .md'}
+                      {fileName || t('拖拽或点击上传 .txt / .md')}
                     </span>
                     <input
                       type="file"
@@ -1561,7 +1561,7 @@ export default function MindMap() {
                   </label>
                   {fileText && (
                     <div className="text-xs text-slate-500 dark:text-slate-400">
-                      已读取 {fileText.length} 字符
+                      {t(`已读取 ${fileText.length} 字符`)}
                     </div>
                   )}
                 </div>
@@ -1573,7 +1573,7 @@ export default function MindMap() {
                   disabled={isLoading}
                   className="min-h-[44px] w-full cursor-pointer rounded-lg bg-klein-600 px-4 py-2 text-sm font-medium text-white hover:bg-klein-700 disabled:opacity-60"
                 >
-                  {isLoading ? '生成中...' : '生成新导图'}
+                  {isLoading ? t('生成中...') : t('生成新导图')}
                 </button>
                 <button
                   onClick={() => handleGenerate('update')}
@@ -1581,7 +1581,7 @@ export default function MindMap() {
                   className="min-h-[44px] w-full cursor-pointer rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 hover:border-klein-400 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
                 >
                   <span className="inline-flex items-center gap-2">
-                    <RefreshCw className="w-4 h-4" /> 更新当前导图
+                    <RefreshCw className="w-4 h-4" /> {t('更新当前导图')}
                   </span>
                 </button>
                 {error && <div className="text-xs text-rose-500">{error}</div>}
@@ -1590,7 +1590,7 @@ export default function MindMap() {
 
             <div className="glass-card p-5 sm:p-6">
               <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
-                <Pencil className="w-4 h-4 text-klein-500" /> 导图库
+                <Pencil className="w-4 h-4 text-klein-500" /> {t('导图库')}
               </h3>
               <div
                 className={`text-xs mb-3 ${
@@ -1603,16 +1603,16 @@ export default function MindMap() {
               >
                 {remoteSyncEnabled
                   ? syncStatus === 'syncing'
-                    ? '服务器同步中...'
-                    : syncMessage || '导图已与服务器同步'
+                    ? t('服务器同步中...')
+                    : syncMessage || t('导图已与服务器同步')
                   : userId
-                    ? syncMessage || '已登录：当前仅本地保存'
-                    : '未登录：当前仅本地保存'}
+                    ? syncMessage || t('已登录：当前仅本地保存')
+                    : t('未登录：当前仅本地保存')}
               </div>
               <div className="space-y-2 max-h-[360px] overflow-auto pr-2">
                 {maps.length === 0 && (
                   <div className="text-sm text-slate-500 dark:text-slate-400 text-center py-6">
-                    还没有导图，先生成一个吧。
+                    {t('还没有导图，先生成一个吧。')}
                   </div>
                 )}
                 {maps.map((map) => (
@@ -1645,7 +1645,7 @@ export default function MindMap() {
                           e.stopPropagation();
                           handleDeleteMap(map.id);
                         }}
-                        aria-label="删除导图"
+                        aria-label={t('删除导图')}
                         className="min-h-[44px] min-w-[44px] cursor-pointer p-1 text-slate-400 hover:text-rose-500"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -1664,7 +1664,7 @@ export default function MindMap() {
                   value={mapTitle}
                   onChange={(e) => handleUpdateTitle(e.target.value)}
                   className="min-h-[40px] w-full rounded-lg border border-slate-200 bg-white/80 px-3 py-1.5 text-sm font-medium dark:border-slate-700 dark:bg-slate-900 sm:w-[240px]"
-                  placeholder="导图标题"
+                  placeholder={t('导图标题')}
                 />
               </div>
               <div className="flex flex-wrap items-center gap-1.5">
@@ -1695,7 +1695,7 @@ export default function MindMap() {
                   className="cursor-pointer rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-medium text-slate-500 transition hover:border-indigo-400 hover:text-slate-700 dark:border-slate-700 dark:text-slate-400"
                 >
                   <span className="inline-flex items-center gap-1">
-                    <Copy className="w-3 h-3" /> 大纲
+                    <Copy className="w-3 h-3" /> {t('大纲')}
                   </span>
                 </button>
               </div>
@@ -1705,16 +1705,16 @@ export default function MindMap() {
               <div className="grid gap-6 lg:grid-cols-2">
               {/* Node editor - now below the canvas in a 2-col grid */}
                 <div className="glass-card space-y-4 p-4">
-                <h3 className="text-sm font-semibold text-slate-900 dark:text-white">节点编辑</h3>
+                <h3 className="text-sm font-semibold text-slate-900 dark:text-white">{t('节点编辑')}</h3>
                 {!selectedNode && (
                   <div className="text-xs text-slate-500 dark:text-slate-400">
-                    请选择一个节点进行编辑。
+                    {t('请选择一个节点进行编辑。')}
                   </div>
                 )}
                 {selectedNode && (
                   <>
                     <div>
-                      <label className="text-[11px] text-slate-500 dark:text-slate-400">标题</label>
+                      <label className="text-[11px] text-slate-500 dark:text-slate-400">{t('标题')}</label>
                       <input
                         value={selectedNode.node.title}
                         onChange={(e) =>
@@ -1731,7 +1731,7 @@ export default function MindMap() {
                       />
                     </div>
                     <div>
-                      <label className="text-[11px] text-slate-500 dark:text-slate-400">笔记</label>
+                      <label className="text-[11px] text-slate-500 dark:text-slate-400">{t('笔记')}</label>
                       <textarea
                         value={selectedNode.node.note || ''}
                         onChange={(e) =>
@@ -1746,12 +1746,12 @@ export default function MindMap() {
                         }
                         rows={3}
                         className="mt-1 w-full px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-900 text-sm"
-                        placeholder="记录关键理解、例子或待复习点"
+                        placeholder={t('记录关键理解、例子或待复习点')}
                       />
                     </div>
                     <div className="space-y-2">
                       <div className="flex items-center justify-between text-[11px]">
-                        <span className="text-slate-500 dark:text-slate-400">写入方式</span>
+                        <span className="text-slate-500 dark:text-slate-400">{t('写入方式')}</span>
                         <div className="inline-flex rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden text-xs">
                           <button
                             type="button"
@@ -1762,7 +1762,7 @@ export default function MindMap() {
                                 : 'bg-white/80 dark:bg-slate-900 text-slate-600 dark:text-slate-300'
                             }`}
                           >
-                            覆盖
+                            {t('覆盖')}
                           </button>
                           <button
                             type="button"
@@ -1773,7 +1773,7 @@ export default function MindMap() {
                                 : 'bg-white/80 dark:bg-slate-900 text-slate-600 dark:text-slate-300'
                             }`}
                           >
-                            追加
+                            {t('追加')}
                           </button>
                         </div>
                       </div>
@@ -1785,10 +1785,10 @@ export default function MindMap() {
                         <span className="inline-flex items-center gap-1.5">
                           <Wand2 className="w-3.5 h-3.5" />
                           {isNodeAiLoading
-                            ? 'AI 扩写中...'
+                            ? t('AI 扩写中...')
                             : nodeAiWriteMode === 'append'
-                              ? 'AI 追加笔记'
-                              : 'AI 扩写笔记'}
+                              ? t('AI 追加笔记')
+                              : t('AI 扩写笔记')}
                         </span>
                       </button>
                       {nodeAiError && <div className="text-xs text-rose-500">{nodeAiError}</div>}
@@ -1799,7 +1799,7 @@ export default function MindMap() {
                         className="cursor-pointer rounded-lg bg-indigo-600 px-2.5 py-2 text-xs font-medium text-white hover:bg-indigo-700"
                       >
                         <span className="inline-flex items-center gap-1.5">
-                          <Plus className="w-3.5 h-3.5" /> 子节点
+                          <Plus className="w-3.5 h-3.5" /> {t('子节点')}
                         </span>
                       </button>
                       <button
@@ -1807,7 +1807,7 @@ export default function MindMap() {
                         className="cursor-pointer rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-xs font-medium dark:border-slate-700 dark:bg-slate-900"
                       >
                         <span className="inline-flex items-center gap-1.5">
-                          <ListPlus className="w-3.5 h-3.5" /> 同级
+                          <ListPlus className="w-3.5 h-3.5" /> {t('同级')}
                         </span>
                       </button>
                       <button
@@ -1815,7 +1815,7 @@ export default function MindMap() {
                         className="cursor-pointer rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-xs font-medium dark:border-slate-700 dark:bg-slate-900"
                       >
                         <span className="inline-flex items-center gap-1.5">
-                          <MoveUp className="w-3.5 h-3.5" /> 上移
+                          <MoveUp className="w-3.5 h-3.5" /> {t('上移')}
                         </span>
                       </button>
                       <button
@@ -1823,7 +1823,7 @@ export default function MindMap() {
                         className="cursor-pointer rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-xs font-medium dark:border-slate-700 dark:bg-slate-900"
                       >
                         <span className="inline-flex items-center gap-1.5">
-                          <MoveDown className="w-3.5 h-3.5" /> 下移
+                          <MoveDown className="w-3.5 h-3.5" /> {t('下移')}
                         </span>
                       </button>
                       <button
@@ -1831,7 +1831,7 @@ export default function MindMap() {
                         className="col-span-2 cursor-pointer rounded-lg border border-rose-200 bg-rose-50 px-2.5 py-2 text-xs font-medium text-rose-600 hover:bg-rose-100"
                       >
                         <span className="inline-flex items-center gap-1.5">
-                          <Trash2 className="w-3.5 h-3.5" /> 删除节点
+                          <Trash2 className="w-3.5 h-3.5" /> {t('删除节点')}
                         </span>
                       </button>
                     </div>
@@ -1839,18 +1839,18 @@ export default function MindMap() {
                 )}
               </div>
               <div className="glass-card space-y-4 p-4">
-                <h3 className="text-sm font-semibold text-slate-900 dark:text-white">快捷操作</h3>
+                <h3 className="text-sm font-semibold text-slate-900 dark:text-white">{t('快捷操作')}</h3>
                 <div className="space-y-3">
                   <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-800/60">
-                    <div className="text-[11px] text-slate-500 dark:text-slate-400">当前导图</div>
-                    <div className="mt-1 text-sm font-medium text-slate-900 dark:text-white">{activeMap?.title || '未选择'}</div>
-                    <div className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">{activeMap ? `${activeMap.nodes.length} 个顶级节点` : ''}</div>
+                    <div className="text-[11px] text-slate-500 dark:text-slate-400">{t('当前导图')}</div>
+                    <div className="mt-1 text-sm font-medium text-slate-900 dark:text-white">{activeMap?.title || t('未选择')}</div>
+                    <div className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">{activeMap ? t(`${activeMap.nodes.length} 个顶级节点`) : ''}</div>
                   </div>
                   <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-800/60">
-                    <div className="text-[11px] text-slate-500 dark:text-slate-400">画布操作</div>
+                    <div className="text-[11px] text-slate-500 dark:text-slate-400">{t('画布操作')}</div>
                     <div className="mt-2 text-[11px] leading-5 text-slate-600 dark:text-slate-300">
-                      拖动空白区域平移 · 滚轮平移<br />
-                      Ctrl+滚轮缩放 · 空格键拖拽
+                      {t('拖动空白区域平移 · 滚轮平移')}<br />
+                      {t('Ctrl+滚轮缩放 · 空格键拖拽')}
                     </div>
                   </div>
                   <button
@@ -1859,7 +1859,7 @@ export default function MindMap() {
                     className="w-full cursor-pointer rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-600 hover:border-indigo-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
                   >
                     <span className="inline-flex items-center gap-1.5">
-                      <RefreshCw className="w-3.5 h-3.5" /> AI 重新生成当前导图
+                      <RefreshCw className="w-3.5 h-3.5" /> {t('AI 重新生成当前导图')}
                     </span>
                   </button>
                 </div>
@@ -1888,6 +1888,7 @@ function TreeNode({
   direction: 'left' | 'right';
   depth: number;
 }) {
+  const { t } = useI18n();
   const isSelected = selectedId === node.id;
   const hasChildren = node.children.length > 0;
   const layoutTransition = {
@@ -1930,7 +1931,7 @@ function TreeNode({
           <button
             onClick={() => onToggle(node.id)}
             className="mindmap-toggle-btn text-slate-400 hover:text-indigo-500"
-            aria-label={node.collapsed ? '展开子节点' : '折叠子节点'}
+            aria-label={node.collapsed ? t('展开子节点') : t('折叠子节点')}
           >
             {node.collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
           </button>

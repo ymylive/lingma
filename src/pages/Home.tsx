@@ -162,18 +162,17 @@ export default function Home() {
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-klein-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-klein-500"></span>
             </span>
-            交互式数据结构学习平台
+            {t('交互式数据结构学习平台')}
           </motion.div>
 
           <motion.h1 variants={itemVariants} className="mb-6 text-4xl font-extrabold leading-[1.1] tracking-tight text-slate-900 dark:text-white sm:mb-8 sm:text-6xl sm:leading-[1.08] md:text-7xl md:leading-[1.05]">
-            用<span className="text-gradient">动画</span>学懂
-            <br />数据结构与算法
+            {isEnglish ? (<>Learn with <span className="text-gradient">Animation</span><br />Data Structures & Algorithms</>) : (<>用<span className="text-gradient">动画</span>学懂<br />数据结构与算法</>)}
           </motion.h1>
 
           <motion.p variants={itemVariants} className="mx-auto mb-10 max-w-lg text-base leading-relaxed text-slate-500 dark:text-slate-400 sm:mb-14 sm:max-w-2xl sm:text-lg">
-            告别枯燥的理论，通过交互式动画直观理解每一步操作。
+            {t('告别枯燥的理论，通过交互式动画直观理解每一步操作。')}
             <br className="hidden md:block" />
-            代码与可视化同步，轻松掌握核心概念。
+            {t('代码与可视化同步，轻松掌握核心概念。')}
           </motion.p>
 
           <motion.div variants={itemVariants} className="flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center sm:gap-4">
@@ -181,13 +180,13 @@ export default function Home() {
               to="/book"
               className="group flex min-h-[52px] w-full items-center justify-center gap-2.5 rounded-2xl bg-klein-600 px-8 py-4 font-semibold text-white shadow-lg shadow-klein-600/15 transition-all duration-300 hover:-translate-y-0.5 hover:bg-klein-700 hover:shadow-xl hover:shadow-klein-600/25 sm:w-auto"
             >
-              <span>📚</span> 开始学习
+              <span>📚</span> {t('开始学习')}
             </Link>
             <Link
               to="/algorithms"
               className="group flex min-h-[52px] w-full items-center justify-center gap-2.5 rounded-2xl border border-slate-200/80 bg-white/70 px-8 py-4 font-semibold text-slate-700 shadow-sm backdrop-blur-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-klein-300 hover:text-klein-600 hover:shadow-md dark:border-slate-700/80 dark:bg-slate-800/70 dark:text-slate-200 dark:hover:border-pine-500/60 dark:hover:text-pine-400 sm:w-auto"
             >
-              <span>🎬</span> 查看演示
+              <span>🎬</span> {t('查看演示')}
             </Link>
           </motion.div>
         </motion.div>
@@ -210,7 +209,7 @@ export default function Home() {
                 {i > 0 && <div className="mx-4 hidden h-10 w-px bg-slate-200/80 dark:bg-slate-700/60 sm:mx-6 md:mx-8 sm:block" />}
                 <div className="w-28 px-3 py-2 text-center sm:w-32 sm:px-4">
                   <div className={`mb-1 bg-gradient-to-br ${stat.gradient} bg-clip-text text-2xl font-bold text-transparent sm:text-3xl`}>{stat.value}</div>
-                  <div className="text-xs font-medium text-slate-500 dark:text-slate-400 sm:text-sm">{stat.label}</div>
+                  <div className="text-xs font-medium text-slate-500 dark:text-slate-400 sm:text-sm">{t(stat.label)}</div>
                 </div>
               </div>
             ))}
@@ -226,8 +225,8 @@ export default function Home() {
             {...revealUp}
           >
             <p className="section-label mb-3">Learning Paths</p>
-            <h2 className="mb-3 text-2xl font-bold text-slate-900 dark:text-white sm:text-3xl">学习路径</h2>
-            <p className="text-sm text-slate-500 dark:text-slate-400 sm:text-base">为不同阶段的学习者量身定制</p>
+            <h2 className="mb-3 text-2xl font-bold text-slate-900 dark:text-white sm:text-3xl">{t('学习路径')}</h2>
+            <p className="text-sm text-slate-500 dark:text-slate-400 sm:text-base">{t('为不同阶段的学习者量身定制')}</p>
           </motion.div>
 
           <motion.div
@@ -249,9 +248,9 @@ export default function Home() {
                   <div className={`absolute top-0 right-0 w-32 h-32 rounded-full blur-3xl -mr-16 -mt-16 transition-all ${tone.glow}`} />
 
                   <h3 className="relative z-10 mb-2 text-lg font-bold text-slate-900 transition-colors group-hover:text-klein-600 dark:text-white dark:group-hover:text-klein-400">
-                    {path.title}
+                    {t(path.title)}
                   </h3>
-                  <p className="relative z-10 mb-6 text-sm leading-relaxed text-slate-500 dark:text-slate-400">{path.desc}</p>
+                  <p className="relative z-10 mb-6 text-sm leading-relaxed text-slate-500 dark:text-slate-400">{t(path.desc)}</p>
 
                   <div className="relative z-10 space-y-3">
                     {path.steps.map((step, i) => (
@@ -259,13 +258,13 @@ export default function Home() {
                         <span className={`flex h-6 w-6 items-center justify-center rounded-full border text-xs font-bold ${tone.step}`}>
                           {i + 1}
                         </span>
-                        <span className="text-sm font-medium text-slate-700 dark:text-slate-300">{step}</span>
+                        <span className="text-sm font-medium text-slate-700 dark:text-slate-300">{t(step)}</span>
                       </div>
                     ))}
                   </div>
 
                   <div className="relative z-10 mt-6 flex items-center gap-1.5 text-xs font-medium text-klein-500 opacity-0 transition-opacity group-hover:opacity-100 dark:text-klein-400">
-                    <span>开始学习</span>
+                    <span>{t('开始学习')}</span>
                     <svg className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
                   </div>
                 </Link>
@@ -286,8 +285,8 @@ export default function Home() {
             {...revealUp}
           >
             <p className="section-label mb-3">Quick Start</p>
-            <h2 className="mb-3 text-2xl font-bold text-slate-900 dark:text-white sm:text-3xl">快速体验</h2>
-            <p className="text-sm text-slate-500 dark:text-slate-400 sm:text-base">精选算法可视化演示，即点即用</p>
+            <h2 className="mb-3 text-2xl font-bold text-slate-900 dark:text-white sm:text-3xl">{t('快速体验')}</h2>
+            <p className="text-sm text-slate-500 dark:text-slate-400 sm:text-base">{t('精选算法可视化演示，即点即用')}</p>
           </motion.div>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 md:grid-cols-3">
@@ -306,10 +305,10 @@ export default function Home() {
                   <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-slate-50 text-xl transition-transform group-hover:scale-105 dark:bg-slate-700/80 sm:h-12 sm:w-12 sm:text-2xl">{algo.icon}</span>
                   <div className="min-w-0">
                     <span className="text-[10px] font-semibold uppercase tracking-wider text-klein-500 dark:text-klein-400">
-                      {algo.category}
+                      {t(algo.category)}
                     </span>
                     <h3 className="truncate font-semibold text-slate-900 transition-colors group-hover:text-klein-600 dark:text-white dark:group-hover:text-klein-400">
-                      {algo.name}
+                      {t(algo.name)}
                     </h3>
                   </div>
                   <svg className="ml-auto h-4 w-4 shrink-0 text-slate-300 transition-all group-hover:translate-x-0.5 group-hover:text-klein-400 dark:text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
@@ -329,8 +328,8 @@ export default function Home() {
             {...revealUp}
           >
             <p className="section-label mb-3">Why Us</p>
-            <h2 className="mb-3 text-2xl font-bold text-slate-900 dark:text-white sm:text-3xl">为什么选择我们</h2>
-            <p className="text-sm text-slate-500 dark:text-slate-400 sm:text-base">精心打磨的每一个细节</p>
+            <h2 className="mb-3 text-2xl font-bold text-slate-900 dark:text-white sm:text-3xl">{t('为什么选择我们')}</h2>
+            <p className="text-sm text-slate-500 dark:text-slate-400 sm:text-base">{t('精心打磨的每一个细节')}</p>
           </motion.div>
 
           <div className="grid gap-4 sm:gap-5 md:grid-cols-2 xl:grid-cols-4">
@@ -351,9 +350,9 @@ export default function Home() {
                 <div className={`mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl ${featureToneClass[feature.color] || featureToneClass.indigo}`}>
                   <span className="text-2xl">{feature.icon}</span>
                 </div>
-                <h3 className="mb-2 text-base font-bold text-slate-900 dark:text-white">{feature.title}</h3>
+                <h3 className="mb-2 text-base font-bold text-slate-900 dark:text-white">{t(feature.title)}</h3>
                 <p className="text-sm leading-relaxed text-slate-500 dark:text-slate-400">
-                  {feature.desc}
+                  {t(feature.desc)}
                 </p>
               </motion.div>
             ))}
@@ -371,16 +370,16 @@ export default function Home() {
             <div className="absolute top-0 right-0 w-72 h-72 rounded-full bg-white/[0.07] blur-3xl -mr-20 -mt-20 pointer-events-none" />
             <div className="absolute bottom-0 left-0 w-72 h-72 rounded-full bg-klein-400/10 blur-3xl -ml-20 -mb-20 pointer-events-none" />
 
-            <h2 className="relative z-10 mb-4 text-2xl font-bold sm:mb-5 sm:text-3xl md:text-4xl">准备好开启算法之旅了吗？</h2>
+            <h2 className="relative z-10 mb-4 text-2xl font-bold sm:mb-5 sm:text-3xl md:text-4xl">{t('准备好开启算法之旅了吗？')}</h2>
             <p className="relative z-10 mx-auto mb-8 max-w-lg text-sm leading-relaxed text-white/70 sm:mb-10 sm:text-base">
-              不需要繁琐的配置，打开浏览器即可开始学习。
-              <br />从基础到进阶，我们陪你一起成长。
+              {t('不需要繁琐的配置，打开浏览器即可开始学习。')}
+              <br />{t('从基础到进阶，我们陪你一起成长。')}
             </p>
             <Link
               to="/book"
               className="relative z-10 inline-flex min-h-[52px] w-full items-center justify-center gap-2.5 rounded-2xl bg-white px-8 py-4 font-bold text-klein-600 shadow-lg shadow-black/10 transition-all duration-300 hover:-translate-y-0.5 hover:bg-klein-50 hover:shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 dark:bg-slate-100 dark:text-klein-700 sm:w-auto sm:px-10"
             >
-              立即免费开始
+              {t('立即免费开始')}
             </Link>
           </div>
         </motion.div>

@@ -196,7 +196,7 @@ export default function Dashboard() {
             <Card variant="default" padding="md">
               <CardHeader>
                 <CardTitle>{copy.preferences}</CardTitle>
-                <CardDescription className="mt-1">调整你的学习偏好设置</CardDescription>
+                <CardDescription className="mt-1">{t('调整你的学习偏好设置')}</CardDescription>
               </CardHeader>
 
               <CardContent>
