@@ -40,8 +40,8 @@ interface SelectedNode {
 }
 
 const STORAGE_PREFIX = 'ds_mindmaps_v1';
-const MIN_SCALE = 0.35;
-const MAX_SCALE = 2.4;
+const MIN_SCALE = 0.35; // Minimum zoom level for mind map canvas
+const MAX_SCALE = 2.4;  // Maximum zoom level for mind map canvas
 
 const createId = () =>
   `${Math.random().toString(36).slice(2, 6)}${Date.now().toString(36).slice(-4)}`;
@@ -619,50 +619,48 @@ export default function MindMap() {
   }, [remoteSyncEnabled, storageKey, t, userId]);
 
   useEffect(() => {
-    const timer = window.setTimeout(() => {
-      const serialized = JSON.stringify(maps);
-      if (serialized === lastPersistedMapsRef.current) {
-        return;
+    const serialized = JSON.stringify(maps);
+
+    const persistTimer = window.setTimeout(() => {
+      if (serialized !== lastPersistedMapsRef.current) {
+        localStorage.setItem(storageKey, serialized);
+        lastPersistedMapsRef.current = serialized;
       }
-      localStorage.setItem(storageKey, serialized);
-      lastPersistedMapsRef.current = serialized;
     }, 250);
 
-    return () => window.clearTimeout(timer);
-  }, [maps, storageKey]);
+    let syncTimer: number | undefined;
+    if (remoteSyncEnabled && isRemoteReady) {
+      syncTimer = window.setTimeout(async () => {
+        if (skipNextRemoteSyncRef.current) {
+          skipNextRemoteSyncRef.current = false;
+          lastSyncedMapsRef.current = serialized;
+          return;
+        }
 
-  useEffect(() => {
-    if (!remoteSyncEnabled || !isRemoteReady) return;
+        if (serialized === lastSyncedMapsRef.current) {
+          return;
+        }
 
-    const timer = window.setTimeout(async () => {
-      const serialized = JSON.stringify(maps);
+        try {
+          setSyncStatus('syncing');
+          await saveMindMapsToServer(maps);
+          lastSyncedMapsRef.current = serialized;
+          setSyncStatus('saved');
+          setSyncMessage(`Synced ${maps.length} maps to server`);
+        } catch (err) {
+          setSyncStatus('error');
+          setSyncMessage(
+            err instanceof Error ? `Auto sync failed: ${err.message}` : 'Auto sync failed, please retry later'
+          );
+        }
+      }, 800);
+    }
 
-      if (skipNextRemoteSyncRef.current) {
-        skipNextRemoteSyncRef.current = false;
-        lastSyncedMapsRef.current = serialized;
-        return;
-      }
-
-      if (serialized === lastSyncedMapsRef.current) {
-        return;
-      }
-
-      try {
-        setSyncStatus('syncing');
-        await saveMindMapsToServer(maps);
-        lastSyncedMapsRef.current = serialized;
-        setSyncStatus('saved');
-        setSyncMessage(`Synced ${maps.length} maps to server`);
-      } catch (err) {
-        setSyncStatus('error');
-        setSyncMessage(
-          err instanceof Error ? `Auto sync failed: ${err.message}` : 'Auto sync failed, please retry later'
-        );
-      }
-    }, 800);
-
-    return () => window.clearTimeout(timer);
-  }, [isRemoteReady, maps, remoteSyncEnabled]);
+    return () => {
+      window.clearTimeout(persistTimer);
+      if (syncTimer !== undefined) window.clearTimeout(syncTimer);
+    };
+  }, [isRemoteReady, maps, remoteSyncEnabled, storageKey]);
 
   useEffect(() => {
     const doc = document as Document & {

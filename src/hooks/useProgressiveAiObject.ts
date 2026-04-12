@@ -1,6 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useReducedMotion } from 'framer-motion';
 
+const MIN_TYPING_DURATION_MS = 320;
+const MAX_TYPING_DURATION_MS = 2_400;
+const CHARS_TO_MS_FACTOR = 4;
+
 type ProgressiveValue =
   | string
   | number
@@ -76,7 +80,7 @@ export default function useProgressiveAiObject<T extends ProgressiveValue>(
       return undefined;
     }
 
-    const durationMs = Math.min(2400, Math.max(320, totalChars * 4));
+    const durationMs = Math.min(MAX_TYPING_DURATION_MS, Math.max(MIN_TYPING_DURATION_MS, totalChars * CHARS_TO_MS_FACTOR));
     let frameId = 0;
     const start = performance.now();
 

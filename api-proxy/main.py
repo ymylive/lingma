@@ -1489,7 +1489,7 @@ def verify_password(password: str, password_hash: str, password_salt: str) -> bo
 AUTH_REGISTRATION_FAILURE_DETAIL = "unable to create account"
 AUTH_MISSING_USER_PASSWORD_SALT_B64 = base64.b64encode(b"lingma-missing-user").decode("ascii")
 AUTH_MISSING_USER_PASSWORD_HASH = derive_password_hash(
-    "LingMaMissingUserPassword!2026",
+    secrets.token_urlsafe(32),
     AUTH_MISSING_USER_PASSWORD_SALT_B64,
 )
 

@@ -1,13 +1,10 @@
 import { localizeRuntimeText, pickRuntimeText } from '../utils/runtimeLocale';
+import { resolveProxyUrl } from '../utils/apiConfig';
 
-const DEFAULT_PROXY_ORIGIN =
-  typeof window !== 'undefined' && window.location ? window.location.origin : 'https://lingma.cornna.xyz';
-
-const DOC_PROXY_URL = import.meta.env.DEV
-  ? 'http://localhost:3001/api/doc'
-  : (import.meta.env.VITE_DOC_PROXY_URL ||
-     import.meta.env.VITE_AI_PROXY_URL?.replace('/api/ai', '/api/doc') ||
-     `${DEFAULT_PROXY_ORIGIN}/api/doc`);
+const DOC_PROXY_URL = resolveProxyUrl(
+  '/api/doc',
+  import.meta.env.VITE_DOC_PROXY_URL || import.meta.env.VITE_AI_PROXY_URL?.replace('/api/ai', '/api/doc'),
+);
 
 export interface DocFetchResult {
   url: string;

@@ -1,12 +1,9 @@
 import { getConfiguredModelOverride } from './aiService';
 import { localizeRuntimeText, pickRuntimeText } from '../utils/runtimeLocale';
 import { readStreamingSse } from './streamingSse';
+import { resolveProxyUrl } from '../utils/apiConfig';
 
-const DEFAULT_PROXY_ORIGIN =
-  typeof window !== 'undefined' && window.location ? window.location.origin : 'https://lingma.cornna.xyz';
-const API_BASE = import.meta.env.PROD
-  ? (import.meta.env.VITE_API_BASE_URL || `${DEFAULT_PROXY_ORIGIN}/api`)
-  : (import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api');
+const API_BASE = resolveProxyUrl('/api', import.meta.env.VITE_API_BASE_URL);
 
 export type SupportedJudgeLanguage = 'c' | 'cpp' | 'java' | 'csharp' | 'python';
 

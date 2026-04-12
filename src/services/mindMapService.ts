@@ -1,12 +1,10 @@
 import { isEnglishRuntimeLocale, localizeRuntimeText, pickRuntimeText } from '../utils/runtimeLocale';
 import { getConfiguredModelOverride } from './aiService';
+import { resolveProxyUrl } from '../utils/apiConfig';
 
-const DEFAULT_PROXY_ORIGIN =
-  typeof window !== 'undefined' && window.location ? window.location.origin : 'https://lingma.cornna.xyz';
+const SOURCE_TEXT_CHAR_LIMIT = 20_000;
 
-const AI_PROXY_URL = import.meta.env.DEV
-  ? 'http://localhost:3001/api/ai'
-  : (import.meta.env.VITE_AI_PROXY_URL || `${DEFAULT_PROXY_ORIGIN}/api/ai`);
+const AI_PROXY_URL = resolveProxyUrl('/api/ai', import.meta.env.VITE_AI_PROXY_URL);
 
 export interface MindMapNode {
   id: string;
@@ -127,7 +125,7 @@ function buildUserPrompt(input: MindMapPromptInput) {
         '',
         `[Existing Mind Map JSON]\n${JSON.stringify(input.existingMap)}`,
         '',
-        `[${sourceLabel}]\n${input.sourceText.slice(0, 20000)}`,
+        `[${sourceLabel}]\n${input.sourceText.slice(0, SOURCE_TEXT_CHAR_LIMIT)}`,
         personalization,
         modePrompt,
         `Output language requirement: ${getMindMapOutputInstruction()}`,
@@ -145,7 +143,7 @@ function buildUserPrompt(input: MindMapPromptInput) {
       '',
       `【已有导图 JSON】\n${JSON.stringify(input.existingMap)}`,
       '',
-      `【${sourceLabel}】\n${input.sourceText.slice(0, 20000)}`,
+      `【${sourceLabel}】\n${input.sourceText.slice(0, SOURCE_TEXT_CHAR_LIMIT)}`,
       personalization,
       modePrompt,
       `输出语言要求：${getMindMapOutputInstruction()}`,
@@ -163,7 +161,7 @@ function buildUserPrompt(input: MindMapPromptInput) {
       'Use short unique alphanumeric ids.',
       '',
       `[Mind Map Title] ${input.title || input.sourceTitle || getMindMapDefaultTitle()}`,
-      `[${sourceLabel}]\n${input.sourceText.slice(0, 20000)}`,
+      `[${sourceLabel}]\n${input.sourceText.slice(0, SOURCE_TEXT_CHAR_LIMIT)}`,
       personalization,
       modePrompt,
       `Output language requirement: ${getMindMapOutputInstruction()}`,
@@ -180,7 +178,7 @@ function buildUserPrompt(input: MindMapPromptInput) {
     'id 使用短小字母数字组合，保持唯一。',
     '',
     `【导图标题】${input.title || input.sourceTitle || getMindMapDefaultTitle()}`,
-    `【${sourceLabel}】\n${input.sourceText.slice(0, 20000)}`,
+    `【${sourceLabel}】\n${input.sourceText.slice(0, SOURCE_TEXT_CHAR_LIMIT)}`,
     personalization,
     modePrompt,
     `输出语言要求：${getMindMapOutputInstruction()}`,

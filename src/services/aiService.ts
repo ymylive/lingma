@@ -2,6 +2,9 @@
 
 import { readStreamingSse } from './streamingSse';
 import { isEnglishRuntimeLocale, localizeRuntimeText, pickRuntimeText, getRuntimeLocale } from '../utils/runtimeLocale';
+import { resolveProxyUrl } from '../utils/apiConfig';
+
+const AI_REQUEST_TIMEOUT_MS = 300_000; // 5-minute timeout for AI API calls
 
 export interface GeneratedExercise {
   title: string;
@@ -76,14 +79,8 @@ export interface AIConfig {
 const AI_CONFIG_STORAGE_KEY = 'ai_config';
 export const DEFAULT_AI_MODEL = 'gpt-5.4';
 
-// 代理服务地址 (API密钥存储在服务器端，前端不暴露)
-const DEFAULT_PROXY_ORIGIN =
-  typeof window !== 'undefined' && window.location ? window.location.origin : 'https://lingma.cornna.xyz';
-
 // 流式API地址
-const AI_STREAM_URL = import.meta.env.DEV
-  ? 'http://localhost:3001/api/ai/stream'
-  : (import.meta.env.VITE_AI_PROXY_URL?.replace('/api/ai', '/api/ai/stream') || `${DEFAULT_PROXY_ORIGIN}/api/ai/stream`);
+const AI_STREAM_URL = resolveProxyUrl('/api/ai/stream', import.meta.env.VITE_AI_PROXY_URL?.replace('/api/ai', '/api/ai/stream'));
 
 const DEFAULT_AI_CONFIG: AIConfig = {
   provider: 'gmn',
@@ -863,7 +860,7 @@ async function callAI<T>(
   const messages = buildExerciseCompatMessages(prompt);
 
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 300000);
+  const timeoutId = setTimeout(() => controller.abort(), AI_REQUEST_TIMEOUT_MS);
 
   try {
     const response = await fetch(apiUrl, {
