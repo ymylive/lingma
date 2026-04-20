@@ -36,6 +36,21 @@ describe('Auth', () => {
       isLoggedIn: false,
       isAuthLoading: false,
     });
+    // Button now reads prefers-reduced-motion via useLowMotionMode, which
+    // needs matchMedia to exist in jsdom.
+    vi.stubGlobal(
+      'matchMedia',
+      vi.fn().mockImplementation(() => ({
+        matches: false,
+        media: '',
+        onchange: null,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      })),
+    );
   });
 
   it('switches into forgot mode and returns to login after successful reset', async () => {

@@ -16,6 +16,7 @@ vi.mock('framer-motion', () => {
               drag: _drag,
               dragMomentum: _dragMomentum,
               whileDrag: _whileDrag,
+              whileHover: _whileHover,
               initial: _initial,
               animate: _animate,
               transition: _transition,

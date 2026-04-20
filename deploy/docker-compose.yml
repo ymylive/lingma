@@ -18,9 +18,6 @@ services:
       - ./.env
     environment:
       JUDGE_BASE_URL: http://judge-server:3002
-    extra_hosts:
-      - "cdnapi.cornna.xyz:host-gateway"
-      - "api.cornna.xyz:host-gateway"
     volumes:
       - api_proxy_data:/app/data
     restart: unless-stopped

@@ -1,7 +1,28 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { motion, type Variants } from 'framer-motion';
+import { motion } from 'framer-motion';
+import {
+  ArrowRight,
+  ArrowRightLeft,
+  ArrowUpDown,
+  GitBranch,
+  Layers,
+  Link2,
+  Network,
+  Sparkles,
+  Waves,
+  Zap,
+} from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { useI18n } from '../contexts/I18nContext';
+import useLowMotionMode from '../hooks/useLowMotionMode';
+import {
+  GlassCard,
+  PageHero,
+  Tabs,
+  getTone,
+} from '../components/ui';
+import type { TabItem, ToneName } from '../components/ui';
 
 function syncPageMetadata(title: string, description: string) {
   if (typeof document === 'undefined') return;
@@ -15,88 +36,60 @@ function syncPageMetadata(title: string, description: string) {
   meta.content = description;
 }
 
-const categories = [
-  {
-    name: '线性表',
-    icon: '📊',
-    color: 'klein',
-    items: [
-      { id: 'sequence', name: '顺序表' },
-      { id: 'link-head-node', name: '单链表（带头结点）' },
-      { id: 'link-head-no', name: '单链表（不带头结点）' },
-      { id: 'link-double', name: '双链表' },
-    ],
-  },
-  {
-    name: '栈',
-    icon: '📚',
-    color: 'klein',
-    items: [
-      { id: 'stack-sequence', name: '顺序栈' },
-      { id: 'stack-link', name: '链栈' },
-    ],
-  },
-  {
-    name: '队列',
-    icon: '🔄',
-    color: 'klein',
-    items: [
-      { id: 'queue-sequence', name: '顺序队列' },
-      { id: 'queue-link', name: '链队列' },
-    ],
-  },
-  {
-    name: '树',
-    icon: '🌳',
-    color: 'pine',
-    items: [
-      { id: 'binary-tree', name: '二叉树遍历' },
-      { id: 'bst', name: '二叉搜索树' },
-    ],
-  },
-  {
-    name: '图',
-    icon: '🕸️',
-    color: 'pine',
-    items: [
-      { id: 'bfs', name: 'BFS 广度优先' },
-      { id: 'dfs', name: 'DFS 深度优先' },
-    ],
-  },
-  {
-    name: '排序',
-    icon: '⚡',
-    color: 'pine',
-    items: [
-      { id: 'sort-bubble', name: '冒泡排序' },
-      { id: 'sort-insert', name: '插入排序' },
-      { id: 'sort-select', name: '选择排序' },
-      { id: 'sort-quick', name: '快速排序' },
-    ],
-  },
+type CategoryId = 'linear' | 'stack' | 'queue' | 'tree' | 'graph' | 'sort';
+
+interface CategoryMeta {
+  id: CategoryId;
+  name: string;
+  Icon: LucideIcon;
+  tone: ToneName;
+}
+
+interface AlgorithmItem {
+  id: string;
+  name: string;
+  desc: string;
+  category: CategoryId;
+  Icon: LucideIcon;
+}
+
+const CATEGORIES: CategoryMeta[] = [
+  { id: 'linear', name: '线性表', Icon: Link2, tone: 'klein' },
+  { id: 'stack', name: '栈', Icon: Layers, tone: 'indigo' },
+  { id: 'queue', name: '队列', Icon: ArrowRightLeft, tone: 'cyan' },
+  { id: 'tree', name: '树', Icon: GitBranch, tone: 'emerald' },
+  { id: 'graph', name: '图', Icon: Network, tone: 'purple' },
+  { id: 'sort', name: '排序', Icon: ArrowUpDown, tone: 'amber' },
 ];
 
-const containerVariants: Variants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.1
-    }
-  }
-};
+const ALGORITHMS: AlgorithmItem[] = [
+  { id: 'sequence', name: '顺序表', desc: '使用数组实现的线性表', category: 'linear', Icon: Layers },
+  { id: 'link-head-node', name: '单链表（带头结点）', desc: '便于操作统一处理', category: 'linear', Icon: Link2 },
+  { id: 'link-head-no', name: '单链表（不带头结点）', desc: '经典链式存储结构', category: 'linear', Icon: Link2 },
+  { id: 'link-double', name: '双链表', desc: '前驱与后继双向指针', category: 'linear', Icon: Link2 },
 
-const itemVariants: Variants = {
-  hidden: { y: 20, opacity: 0 },
-  visible: {
-    y: 0,
-    opacity: 1,
-    transition: { type: "spring", stiffness: 100 }
-  }
-};
+  { id: 'stack-sequence', name: '顺序栈', desc: '数组实现，后进先出', category: 'stack', Icon: Layers },
+  { id: 'stack-link', name: '链栈', desc: '链表实现的栈结构', category: 'stack', Icon: Layers },
+
+  { id: 'queue-sequence', name: '顺序队列', desc: '数组实现，先进先出', category: 'queue', Icon: ArrowRightLeft },
+  { id: 'queue-link', name: '链队列', desc: '链表实现的队列结构', category: 'queue', Icon: ArrowRightLeft },
+
+  { id: 'binary-tree', name: '二叉树遍历', desc: '先序 / 中序 / 后序 / 层序', category: 'tree', Icon: GitBranch },
+  { id: 'bst', name: '二叉搜索树', desc: '左小右大的有序二叉树', category: 'tree', Icon: GitBranch },
+
+  { id: 'bfs', name: 'BFS 广度优先', desc: '按层次探索图结构', category: 'graph', Icon: Network },
+  { id: 'dfs', name: 'DFS 深度优先', desc: '沿路径深入遍历', category: 'graph', Icon: Network },
+
+  { id: 'sort-bubble', name: '冒泡排序', desc: '相邻比较，逐步冒泡', category: 'sort', Icon: Waves },
+  { id: 'sort-insert', name: '插入排序', desc: '将元素插入已排序序列', category: 'sort', Icon: ArrowUpDown },
+  { id: 'sort-select', name: '选择排序', desc: '每次选择最小元素', category: 'sort', Icon: ArrowUpDown },
+  { id: 'sort-quick', name: '快速排序', desc: '分治法，O(n log n)', category: 'sort', Icon: Zap },
+];
 
 export default function Algorithms() {
   const { t, isEnglish } = useI18n();
+  const lowMotionMode = useLowMotionMode();
+  const [filter, setFilter] = useState<'all' | CategoryId>('all');
 
   useEffect(() => {
     syncPageMetadata(
@@ -105,78 +98,127 @@ export default function Algorithms() {
     );
   }, [isEnglish, t]);
 
-  return (
-    <div className="page-safe-top min-h-screen pb-12 transition-colors duration-500">
-      <div className="mx-auto max-w-5xl px-4 sm:px-6">
-        <motion.div
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          className="mb-14"
-        >
-          <p className="section-label mb-3">Algorithm Visualizations</p>
-          <h1 className="mb-4 text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white sm:text-4xl">
-            {isEnglish ? <>Algorithm<span className="text-gradient"> Visualization</span></> : <>算法<span className="text-gradient">可视化</span></>}
-          </h1>
-          <p className="max-w-xl text-base text-slate-600 dark:text-slate-400 sm:text-lg">
-            {t('通过交互式动画探索数据结构与算法的魅力。点击下方卡片开始你的学习旅程。')}
-          </p>
-        </motion.div>
+  const tabItems = useMemo<TabItem<'all' | CategoryId>[]>(
+    () => [
+      {
+        id: 'all',
+        label: t('全部'),
+        icon: <Sparkles className="h-4 w-4" strokeWidth={1.75} aria-hidden />,
+      },
+      ...CATEGORIES.map((cat) => ({
+        id: cat.id,
+        label: t(cat.name),
+        icon: <cat.Icon className="h-4 w-4" strokeWidth={1.75} aria-hidden />,
+      })),
+    ],
+    [t],
+  );
 
-        <motion.div 
-          className="space-y-12"
-          variants={containerVariants}
-          initial="hidden"
-          animate="visible"
-        >
-          {categories.map((cat) => (
-            <motion.div key={cat.name} variants={itemVariants}>
-              <div className="mb-5 flex flex-wrap items-center gap-3">
-                <span className={`text-2xl p-2 rounded-xl shadow-sm border ${
-                  cat.color === 'klein' 
-                    ? 'bg-klein-50 dark:bg-klein-900/20 border-klein-100 dark:border-klein-800 text-klein-600 dark:text-klein-400' 
-                    : 'bg-pine-50 dark:bg-pine-900/20 border-pine-100 dark:border-pine-800 text-pine-600 dark:text-pine-400'
-                }`}>
-                  {cat.icon}
-                </span>
-                <h2 className="text-lg font-bold text-slate-900 dark:text-white sm:text-xl">
-                  {t(cat.name)}
-                </h2>
-                <div className="hidden h-[0.5px] flex-1 bg-gradient-to-r from-slate-200 to-transparent dark:from-slate-700 sm:block"></div>
+  const visibleAlgorithms = useMemo(
+    () => (filter === 'all' ? ALGORITHMS : ALGORITHMS.filter((a) => a.category === filter)),
+    [filter],
+  );
+
+  const categoryMap = useMemo(
+    () => Object.fromEntries(CATEGORIES.map((c) => [c.id, c])) as Record<CategoryId, CategoryMeta>,
+    [],
+  );
+
+  return (
+    <div className="min-h-screen pb-24 transition-colors duration-500 sm:pb-32">
+      <PageHero
+        eyebrow="Algorithms"
+        title={
+          isEnglish ? (
+            <>
+              Algorithm <span className="text-gradient">Visualizations</span>
+            </>
+          ) : (
+            <>
+              算法<span className="text-gradient">可视化</span>
+            </>
+          )
+        }
+        description={t('按数据结构分类，每个算法都支持逐步播放与代码同步。')}
+      />
+
+      <section className="relative z-10 px-4 sm:px-6">
+        <div className="mx-auto max-w-5xl">
+          <div className="mb-10 flex justify-center sm:mb-14">
+            <div className="w-full overflow-x-auto">
+              <div className="flex min-w-max justify-center">
+                <Tabs<'all' | CategoryId>
+                  items={tabItems}
+                  value={filter}
+                  onChange={setFilter}
+                  variant="pill"
+                  ariaLabel={t('算法分类')}
+                />
               </div>
-              
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {cat.items.map((item) => (
-                  <Link
-                    key={item.id}
-                    to={`/algorithms/${item.id}`}
-                    className="group relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white/50 p-4 backdrop-blur-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-klein-300/50 hover:bg-white hover:shadow-md hover:shadow-klein-500/[0.05] dark:border-slate-700/60 dark:bg-slate-800/50 dark:hover:border-klein-500/30 dark:hover:bg-slate-800/80 sm:p-5"
-                  >
-                    <div className={`absolute top-0 right-0 w-20 h-20 rounded-full blur-3xl -mr-12 -mt-12 transition-all opacity-0 group-hover:opacity-100 ${
-                       cat.color === 'klein' ? 'bg-klein-500/10' : 'bg-pine-500/10'
-                    }`} />
-                    
-                    <div className="relative z-10 flex items-center justify-between">
-                      <span className="font-semibold text-slate-800 dark:text-slate-200 group-hover:text-klein-600 dark:group-hover:text-pine-400 transition-colors">
-                        {t(item.name)}
-                      </span>
-                      <svg 
-                        className={`w-5 h-5 transform group-hover:translate-x-1 transition-all ${
-                          cat.color === 'klein' ? 'text-klein-400' : 'text-pine-400'
-                        }`} 
-                        fill="none" 
-                        viewBox="0 0 24 24" 
-                        stroke="currentColor"
-                      >
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                      </svg>
-                    </div>
+            </div>
+          </div>
+
+          <motion.div
+            className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3"
+            layout={!lowMotionMode}
+          >
+            {visibleAlgorithms.map((algo, idx) => {
+              const cat = categoryMap[algo.category];
+              const tone = getTone(cat.tone);
+              const AlgoIcon = algo.Icon;
+              return (
+                <motion.div
+                  key={algo.id}
+                  layout={!lowMotionMode}
+                  initial={lowMotionMode ? false : { opacity: 0, y: 14 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={
+                    lowMotionMode
+                      ? { duration: 0 }
+                      : { duration: 0.32, ease: 'easeOut', delay: Math.min(idx * 0.03, 0.3) }
+                  }
+                >
+                  <Link to={`/algorithms/${algo.id}`} className="group block h-full">
+                    <GlassCard
+                      variant="soft"
+                      padding="md"
+                      hoverable
+                      className="flex h-full flex-col"
+                    >
+                      <div className="relative z-10 mb-5 flex items-center justify-between">
+                        <span
+                          className={`flex h-12 w-12 items-center justify-center rounded-2xl border ${tone.bg} ${tone.border} ${tone.text} transition-transform group-hover:scale-105`}
+                        >
+                          <AlgoIcon className="h-6 w-6" strokeWidth={1.75} aria-hidden />
+                        </span>
+                        <span
+                          className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider ${tone.bg} ${tone.border} ${tone.text}`}
+                        >
+                          {t(cat.name)}
+                        </span>
+                      </div>
+                      <h3 className="relative z-10 mb-2 text-base font-bold tracking-tight text-slate-900 transition-colors group-hover:text-klein-600 dark:text-white dark:group-hover:text-klein-400 sm:text-lg">
+                        {t(algo.name)}
+                      </h3>
+                      <p className="relative z-10 line-clamp-2 text-sm leading-relaxed text-slate-500 dark:text-slate-400">
+                        {t(algo.desc)}
+                      </p>
+                      <div className="relative z-10 mt-6 flex items-center gap-1.5 text-xs font-medium text-klein-500 opacity-0 transition-opacity group-hover:opacity-100 dark:text-klein-400">
+                        <span>{t('开始演示')}</span>
+                        <ArrowRight
+                          className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5"
+                          strokeWidth={1.75}
+                          aria-hidden
+                        />
+                      </div>
+                    </GlassCard>
                   </Link>
-                ))}
-              </div>
-            </motion.div>
-          ))}
-        </motion.div>
-      </div>
+                </motion.div>
+              );
+            })}
+          </motion.div>
+        </div>
+      </section>
     </div>
   );
 }

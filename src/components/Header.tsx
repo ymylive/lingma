@@ -16,12 +16,12 @@ export default function Header() {
   const headerRef = useRef<HTMLElement | null>(null);
 
   const navItems = useMemo(() => [
-    { path: '/algorithms', label: isEnglish ? 'Algorithms' : '算法演示', icon: '🎬' },
-    { path: '/book', label: isEnglish ? 'Tutorials' : '教程', icon: '📚' },
-    { path: '/methodology', label: isEnglish ? 'Methodology' : '方法论', icon: '📖' },
-    { path: '/practice', label: isEnglish ? 'AI Practice' : 'AI练习', icon: '🤖' },
-    { path: '/vibecoding', label: 'Vibe Coding', icon: '✨' },
-    { path: '/mindmap', label: 'MindMap', icon: '🧠' },
+    { path: '/algorithms', label: isEnglish ? 'Algorithms' : '算法演示' },
+    { path: '/book', label: isEnglish ? 'Tutorials' : '教程' },
+    { path: '/methodology', label: isEnglish ? 'Methodology' : '方法论' },
+    { path: '/practice', label: isEnglish ? 'AI Practice' : 'AI练习' },
+    { path: '/vibecoding', label: 'Vibe Coding' },
+    { path: '/mindmap', label: 'MindMap' },
   ], [isEnglish]);
 
   useEffect(() => {
@@ -119,7 +119,7 @@ export default function Header() {
                       style={{ zIndex: -1 }}
                     />
                   )}
-                  {item.icon} {item.label}
+                  {item.label}
                 </Link>
               );
             })}
@@ -305,7 +305,7 @@ export default function Header() {
                         : 'text-slate-600 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800'
                     }`}
                   >
-                    {item.icon} {item.label}
+                    {item.label}
                   </Link>
                 );
               })}

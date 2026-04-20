@@ -1,17 +1,29 @@
-﻿import { useState, useEffect, useRef, useCallback } from 'react';
+import { useCallback, useMemo, useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
+import { useAlgorithmPlayer } from '../../hooks/useAlgorithmPlayer';
+import useLowMotionMode from '../../hooks/useLowMotionMode';
+import { PlayerControls } from './_shared/PlayerControls';
+import { StepNarration } from './_shared/StepNarration';
+
+type NodeStatus = 'normal' | 'visiting' | 'visited';
 
 interface TreeNode {
-  value: number;
-  left: TreeNode | null;
-  right: TreeNode | null;
-  status: 'normal' | 'visiting' | 'visited';
+  id: string;
+  value: number | string;
+  left?: TreeNode;
+  right?: TreeNode;
 }
 
 interface Step {
-  tree: TreeNode;
-  result: number[];
+  visitedIds: string[];
+  visitingId: string | null;
   line: number;
-  desc: string;
+  description: string;
+  result: Array<number | string>;
+  // Extension fields: stack/queue contents for recursion / BFS visualization.
+  stack?: string[]; // node ids currently on the recursion stack (conceptually)
+  queue?: string[]; // node ids in the BFS queue (for level order)
+  compareHint?: string; // floating chip text next to the visiting node
 }
 
 type Traversal = 'preorder' | 'inorder' | 'postorder' | 'level';
@@ -138,348 +150,940 @@ const CODE: Record<Traversal, Record<Lang, { text: string; indent: number }[]>> 
   },
 };
 
-const createTree = (): TreeNode => ({
-  value: 50, status: 'normal',
-  left: { value: 30, status: 'normal',
-    left: { value: 20, status: 'normal', left: null, right: null },
-    right: { value: 40, status: 'normal', left: null, right: null }
-  },
-  right: { value: 70, status: 'normal',
-    left: { value: 60, status: 'normal', left: null, right: null },
-    right: { value: 80, status: 'normal', left: null, right: null }
-  }
-});
+// Default balanced tree used on first render.
+function buildDefaultTree(): TreeNode {
+  return {
+    id: 'n1',
+    value: 50,
+    left: {
+      id: 'n2',
+      value: 30,
+      left: { id: 'n4', value: 20 },
+      right: { id: 'n5', value: 40 },
+    },
+    right: {
+      id: 'n3',
+      value: 70,
+      left: { id: 'n6', value: 60 },
+      right: { id: 'n7', value: 80 },
+    },
+  };
+}
 
-// 节点位置映射
-const NODES = [
-  { val: 50, x: 150, y: 30 },
-  { val: 30, x: 80, y: 100 },
-  { val: 70, x: 220, y: 100 },
-  { val: 20, x: 45, y: 170 },
-  { val: 40, x: 115, y: 170 },
-  { val: 60, x: 185, y: 170 },
-  { val: 80, x: 255, y: 170 },
-];
+// Build a BST from an array of values (insertion order).
+function buildBstFromArray(values: number[]): TreeNode | null {
+  let idCounter = 0;
+  const mk = (v: number): TreeNode => ({ id: `b${++idCounter}`, value: v });
+  let root: TreeNode | null = null;
+  for (const v of values) {
+    if (root === null) {
+      root = mk(v);
+      continue;
+    }
+    let cur: TreeNode = root;
+    while (true) {
+      if (v < Number(cur.value)) {
+        if (!cur.left) {
+          cur.left = mk(v);
+          break;
+        }
+        cur = cur.left;
+      } else {
+        if (!cur.right) {
+          cur.right = mk(v);
+          break;
+        }
+        cur = cur.right;
+      }
+    }
+  }
+  return root;
+}
+
+/**
+ * Simplified Reingold–Tilford layout (preserved from Phase D).
+ */
+interface Layout {
+  positions: Map<string, { x: number; y: number }>;
+  width: number;
+  height: number;
+}
+
+function computeTreeLayout(
+  root: TreeNode | null | undefined,
+  levelGap = 80,
+  siblingGap = 24,
+): Layout {
+  const positions = new Map<string, { x: number; y: number }>();
+  if (!root) {
+    return { positions, width: 0, height: 0 };
+  }
+
+  interface Sub {
+    offsets: Map<string, { x: number; y: number }>;
+    leftContour: number[];
+    rightContour: number[];
+  }
+
+  const walk = (node: TreeNode, depth: number): Sub => {
+    if (!node.left && !node.right) {
+      const offsets = new Map<string, { x: number; y: number }>();
+      offsets.set(node.id, { x: 0, y: depth });
+      return {
+        offsets,
+        leftContour: [0],
+        rightContour: [0],
+      };
+    }
+
+    let leftSub: Sub | null = null;
+    let rightSub: Sub | null = null;
+    if (node.left) leftSub = walk(node.left, depth + 1);
+    if (node.right) rightSub = walk(node.right, depth + 1);
+
+    let leftRootX: number;
+    let rightRootX: number;
+
+    if (leftSub && rightSub) {
+      const compareLevels = Math.min(leftSub.rightContour.length, rightSub.leftContour.length);
+      let minGap = -Infinity;
+      for (let i = 0; i < compareLevels; i++) {
+        const diff = leftSub.rightContour[i] - rightSub.leftContour[i];
+        if (diff > minGap) minGap = diff;
+      }
+      const shift = minGap + siblingGap;
+      leftRootX = 0;
+      rightRootX = shift;
+    } else if (leftSub) {
+      leftRootX = -siblingGap;
+      rightRootX = 0;
+    } else {
+      leftRootX = 0;
+      rightRootX = siblingGap;
+    }
+
+    let parentX: number;
+    if (leftSub && rightSub) {
+      parentX = (leftRootX + rightRootX) / 2;
+    } else {
+      parentX = 0;
+    }
+
+    const shiftToZero = -parentX;
+    const offsets = new Map<string, { x: number; y: number }>();
+    offsets.set(node.id, { x: 0, y: depth });
+
+    if (leftSub) {
+      for (const [id, p] of leftSub.offsets) {
+        offsets.set(id, { x: p.x + leftRootX + shiftToZero, y: p.y });
+      }
+    }
+    if (rightSub) {
+      for (const [id, p] of rightSub.offsets) {
+        offsets.set(id, { x: p.x + rightRootX + shiftToZero, y: p.y });
+      }
+    }
+
+    const leftContour: number[] = [0];
+    const rightContour: number[] = [0];
+
+    const addLeft = (sub: Sub, rootOffset: number) => {
+      for (let i = 0; i < sub.leftContour.length; i++) {
+        const absolute = sub.leftContour[i] + rootOffset + shiftToZero;
+        const level = i + 1;
+        if (leftContour[level] === undefined) leftContour[level] = absolute;
+        else leftContour[level] = Math.min(leftContour[level], absolute);
+      }
+    };
+    const addRight = (sub: Sub, rootOffset: number) => {
+      for (let i = 0; i < sub.rightContour.length; i++) {
+        const absolute = sub.rightContour[i] + rootOffset + shiftToZero;
+        const level = i + 1;
+        if (rightContour[level] === undefined) rightContour[level] = absolute;
+        else rightContour[level] = Math.max(rightContour[level], absolute);
+      }
+    };
+
+    if (leftSub) {
+      addLeft(leftSub, leftRootX);
+      addRight(leftSub, leftRootX);
+    }
+    if (rightSub) {
+      addLeft(rightSub, rightRootX);
+      addRight(rightSub, rightRootX);
+    }
+
+    return { offsets, leftContour, rightContour };
+  };
+
+  const sub = walk(root, 0);
+
+  let minX = Infinity;
+  let maxX = -Infinity;
+  let maxDepth = 0;
+  for (const { x, y } of sub.offsets.values()) {
+    if (x < minX) minX = x;
+    if (x > maxX) maxX = x;
+    if (y > maxDepth) maxDepth = y;
+  }
+
+  const nodeRadius = 22;
+  const horizontalScale = nodeRadius * 2 + siblingGap;
+  const padding = nodeRadius + 16;
+
+  for (const [id, p] of sub.offsets) {
+    const px = (p.x - minX) * horizontalScale + padding;
+    const py = p.y * levelGap + padding;
+    positions.set(id, { x: px, y: py });
+  }
+
+  const width = (maxX - minX) * horizontalScale + padding * 2;
+  const height = maxDepth * levelGap + padding * 2;
+
+  return { positions, width, height };
+}
+
+interface EdgeSegment {
+  from: string;
+  to: string;
+  side: 'left' | 'right';
+}
+
+function collectEdges(root: TreeNode | null | undefined): EdgeSegment[] {
+  const edges: EdgeSegment[] = [];
+  const visit = (n: TreeNode | undefined) => {
+    if (!n) return;
+    if (n.left) {
+      edges.push({ from: n.id, to: n.left.id, side: 'left' });
+      visit(n.left);
+    }
+    if (n.right) {
+      edges.push({ from: n.id, to: n.right.id, side: 'right' });
+      visit(n.right);
+    }
+  };
+  visit(root ?? undefined);
+  return edges;
+}
+
+function flattenNodes(root: TreeNode | null | undefined): TreeNode[] {
+  const out: TreeNode[] = [];
+  const visit = (n: TreeNode | undefined) => {
+    if (!n) return;
+    out.push(n);
+    visit(n.left);
+    visit(n.right);
+  };
+  visit(root ?? undefined);
+  return out;
+}
+
+function computeDepths(root: TreeNode | null | undefined): Map<string, number> {
+  const depths = new Map<string, number>();
+  const walk = (n: TreeNode | undefined, d: number) => {
+    if (!n) return;
+    depths.set(n.id, d);
+    walk(n.left, d + 1);
+    walk(n.right, d + 1);
+  };
+  walk(root ?? undefined, 0);
+  return depths;
+}
+
+// ----- Step generators (with stack/queue enrichment) -----
+
+function preorderSteps(root: TreeNode | null | undefined): Step[] {
+  const result: Step[] = [];
+  const visited: Array<number | string> = [];
+  const visitedIds: string[] = [];
+  const stack: string[] = [];
+  result.push({
+    visitedIds: [],
+    visitingId: null,
+    line: 0,
+    description: '🚀 开始先序遍历：根 → 左 → 右',
+    result: [],
+    stack: [],
+  });
+  if (!root) return result;
+  const inner = (n: TreeNode | undefined) => {
+    if (!n) return;
+    stack.push(String(n.value));
+    result.push({
+      visitedIds: [...visitedIds],
+      visitingId: n.id,
+      line: 2,
+      description: `📍 访问节点 ${n.value}`,
+      result: [...visited],
+      stack: [...stack],
+    });
+    visitedIds.push(n.id);
+    visited.push(n.value);
+    result.push({
+      visitedIds: [...visitedIds],
+      visitingId: null,
+      line: 2,
+      description: `✓ 节点 ${n.value} 已访问，加入结果`,
+      result: [...visited],
+      stack: [...stack],
+    });
+    if (n.left) {
+      result.push({
+        visitedIds: [...visitedIds],
+        visitingId: null,
+        line: 3,
+        description: `↙️ 递归进入左子树 (节点${n.left.value})`,
+        result: [...visited],
+        stack: [...stack],
+      });
+      inner(n.left);
+    }
+    if (n.right) {
+      result.push({
+        visitedIds: [...visitedIds],
+        visitingId: null,
+        line: 4,
+        description: `↘️ 递归进入右子树 (节点${n.right.value})`,
+        result: [...visited],
+        stack: [...stack],
+      });
+      inner(n.right);
+    }
+    stack.pop();
+  };
+  inner(root);
+  result.push({
+    visitedIds: [...visitedIds],
+    visitingId: null,
+    line: -1,
+    description: `🎉 先序遍历完成！结果: ${visited.join(' → ')}`,
+    result: [...visited],
+    stack: [],
+  });
+  return result;
+}
+
+function inorderSteps(root: TreeNode | null | undefined): Step[] {
+  const result: Step[] = [];
+  const visited: Array<number | string> = [];
+  const visitedIds: string[] = [];
+  const stack: string[] = [];
+  result.push({
+    visitedIds: [],
+    visitingId: null,
+    line: 0,
+    description: '🚀 开始中序遍历：左 → 根 → 右',
+    result: [],
+    stack: [],
+  });
+  if (!root) return result;
+  const inner = (n: TreeNode | undefined) => {
+    if (!n) return;
+    stack.push(String(n.value));
+    if (n.left) {
+      result.push({
+        visitedIds: [...visitedIds],
+        visitingId: null,
+        line: 2,
+        description: `↙️ 递归进入左子树 (节点${n.left.value})`,
+        result: [...visited],
+        stack: [...stack],
+      });
+      inner(n.left);
+    }
+    result.push({
+      visitedIds: [...visitedIds],
+      visitingId: n.id,
+      line: 3,
+      description: `📍 访问节点 ${n.value}`,
+      result: [...visited],
+      stack: [...stack],
+    });
+    visitedIds.push(n.id);
+    visited.push(n.value);
+    result.push({
+      visitedIds: [...visitedIds],
+      visitingId: null,
+      line: 3,
+      description: `✓ 节点 ${n.value} 已访问，加入结果`,
+      result: [...visited],
+      stack: [...stack],
+    });
+    if (n.right) {
+      result.push({
+        visitedIds: [...visitedIds],
+        visitingId: null,
+        line: 4,
+        description: `↘️ 递归进入右子树 (节点${n.right.value})`,
+        result: [...visited],
+        stack: [...stack],
+      });
+      inner(n.right);
+    }
+    stack.pop();
+  };
+  inner(root);
+  result.push({
+    visitedIds: [...visitedIds],
+    visitingId: null,
+    line: -1,
+    description: `🎉 中序遍历完成！结果: ${visited.join(' → ')}`,
+    result: [...visited],
+    stack: [],
+  });
+  return result;
+}
+
+function postorderSteps(root: TreeNode | null | undefined): Step[] {
+  const result: Step[] = [];
+  const visited: Array<number | string> = [];
+  const visitedIds: string[] = [];
+  const stack: string[] = [];
+  result.push({
+    visitedIds: [],
+    visitingId: null,
+    line: 0,
+    description: '🚀 开始后序遍历：左 → 右 → 根',
+    result: [],
+    stack: [],
+  });
+  if (!root) return result;
+  const inner = (n: TreeNode | undefined) => {
+    if (!n) return;
+    stack.push(String(n.value));
+    if (n.left) {
+      result.push({
+        visitedIds: [...visitedIds],
+        visitingId: null,
+        line: 2,
+        description: `↙️ 递归进入左子树 (节点${n.left.value})`,
+        result: [...visited],
+        stack: [...stack],
+      });
+      inner(n.left);
+    }
+    if (n.right) {
+      result.push({
+        visitedIds: [...visitedIds],
+        visitingId: null,
+        line: 3,
+        description: `↘️ 递归进入右子树 (节点${n.right.value})`,
+        result: [...visited],
+        stack: [...stack],
+      });
+      inner(n.right);
+    }
+    result.push({
+      visitedIds: [...visitedIds],
+      visitingId: n.id,
+      line: 4,
+      description: `📍 访问节点 ${n.value}`,
+      result: [...visited],
+      stack: [...stack],
+    });
+    visitedIds.push(n.id);
+    visited.push(n.value);
+    result.push({
+      visitedIds: [...visitedIds],
+      visitingId: null,
+      line: 4,
+      description: `✓ 节点 ${n.value} 已访问，加入结果`,
+      result: [...visited],
+      stack: [...stack],
+    });
+    stack.pop();
+  };
+  inner(root);
+  result.push({
+    visitedIds: [...visitedIds],
+    visitingId: null,
+    line: -1,
+    description: `🎉 后序遍历完成！结果: ${visited.join(' → ')}`,
+    result: [...visited],
+    stack: [],
+  });
+  return result;
+}
+
+function levelorderSteps(root: TreeNode | null | undefined): Step[] {
+  const result: Step[] = [];
+  const visited: Array<number | string> = [];
+  const visitedIds: string[] = [];
+  result.push({
+    visitedIds: [],
+    visitingId: null,
+    line: 0,
+    description: '🚀 开始层序遍历（使用队列）',
+    result: [],
+    queue: [],
+  });
+  if (!root) return result;
+  const queue: TreeNode[] = [root];
+  result.push({
+    visitedIds: [],
+    visitingId: null,
+    line: 2,
+    description: `📥 将根节点 ${root.value} 入队`,
+    result: [],
+    queue: queue.map((n) => String(n.value)),
+  });
+  while (queue.length > 0) {
+    const node = queue.shift()!;
+    result.push({
+      visitedIds: [...visitedIds],
+      visitingId: null,
+      line: 4,
+      description: `📤 取出队首节点 ${node.value}`,
+      result: [...visited],
+      queue: queue.map((n) => String(n.value)),
+    });
+    result.push({
+      visitedIds: [...visitedIds],
+      visitingId: node.id,
+      line: 5,
+      description: `📍 访问节点 ${node.value}`,
+      result: [...visited],
+      queue: queue.map((n) => String(n.value)),
+    });
+    visitedIds.push(node.id);
+    visited.push(node.value);
+    result.push({
+      visitedIds: [...visitedIds],
+      visitingId: null,
+      line: 5,
+      description: `✓ 节点 ${node.value} 已访问`,
+      result: [...visited],
+      queue: queue.map((n) => String(n.value)),
+    });
+    if (node.left) {
+      queue.push(node.left);
+      result.push({
+        visitedIds: [...visitedIds],
+        visitingId: null,
+        line: 6,
+        description: `📥 左孩子 ${node.left.value} 入队`,
+        result: [...visited],
+        queue: queue.map((n) => String(n.value)),
+      });
+    }
+    if (node.right) {
+      queue.push(node.right);
+      result.push({
+        visitedIds: [...visitedIds],
+        visitingId: null,
+        line: 7,
+        description: `📥 右孩子 ${node.right.value} 入队`,
+        result: [...visited],
+        queue: queue.map((n) => String(n.value)),
+      });
+    }
+  }
+  result.push({
+    visitedIds: [...visitedIds],
+    visitingId: null,
+    line: -1,
+    description: `🎉 层序遍历完成！结果: ${visited.join(' → ')}`,
+    result: [...visited],
+    queue: [],
+  });
+  return result;
+}
 
 export default function TreeVisualization() {
   const [traversal, setTraversal] = useState<Traversal>('preorder');
   const [lang, setLang] = useState<Lang>('cpp');
-  const [steps, setSteps] = useState<Step[]>([]);
-  const [stepIdx, setStepIdx] = useState(-1);
-  const [playing, setPlaying] = useState(false);
-  const timerRef = useRef<number | null>(null);
+  const [inputValues, setInputValues] = useState('');
+  const [tree, setTree] = useState<TreeNode | null>(() => buildDefaultTree());
+  const [armed, setArmed] = useState(false);
+  const lowMotion = useLowMotionMode();
 
-  const cloneTree = useCallback((node: TreeNode | null): TreeNode | null => {
-    if (!node) return null;
-    return { ...node, left: cloneTree(node.left), right: cloneTree(node.right) };
-  }, []);
+  const layout = useMemo(() => computeTreeLayout(tree), [tree]);
+  const edges = useMemo(() => collectEdges(tree), [tree]);
+  const allNodes = useMemo(() => flattenNodes(tree), [tree]);
+  const depths = useMemo(() => computeDepths(tree), [tree]);
 
-  const updateNode = useCallback((root: TreeNode, val: number, status: 'normal' | 'visiting' | 'visited'): TreeNode => {
-    const t = cloneTree(root) as TreeNode;
-    const update = (n: TreeNode | null): boolean => {
-      if (!n) return false;
-      if (n.value === val) { n.status = status; return true; }
-      return update(n.left) || update(n.right);
-    };
-    update(t);
-    return t;
-  }, [cloneTree]);
-
-  // 生成先序遍历步骤
-  const generatePreorderSteps = useCallback(() => {
-    const result: Step[] = [];
-    const visited: number[] = [];
-    
-    const traverse = (node: TreeNode | null, tree: TreeNode) => {
-      if (!node) return tree;
-      
-      // 访问节点
-      let t = updateNode(tree, node.value, 'visiting');
-      result.push({ tree: t, result: [...visited], line: 2, desc: `📍 访问节点 ${node.value}` });
-      
-      visited.push(node.value);
-      t = updateNode(t, node.value, 'visited');
-      result.push({ tree: t, result: [...visited], line: 2, desc: `✓ 节点 ${node.value} 已访问，加入结果` });
-      
-      // 递归左子树
-      if (node.left) {
-        result.push({ tree: t, result: [...visited], line: 3, desc: `↙️ 递归进入左子树 (节点${node.left.value})` });
-        t = traverse(node.left, t);
-      }
-      
-      // 递归右子树  
-      if (node.right) {
-        result.push({ tree: t, result: [...visited], line: 4, desc: `↘️ 递归进入右子树 (节点${node.right.value})` });
-        t = traverse(node.right, t);
-      }
-      
-      return t;
-    };
-    
-    const initTree = createTree();
-    result.push({ tree: initTree, result: [], line: 0, desc: '🚀 开始先序遍历：根 → 左 → 右' });
-    traverse(initTree, initTree);
-    result.push({ tree: result[result.length - 1].tree, result: visited, line: -1, desc: `🎉 先序遍历完成！结果: ${visited.join(' → ')}` });
-    
-    return result;
-  }, [updateNode]);
-
-  // 生成中序遍历步骤
-  const generateInorderSteps = useCallback(() => {
-    const result: Step[] = [];
-    const visited: number[] = [];
-    
-    const traverse = (node: TreeNode | null, tree: TreeNode) => {
-      if (!node) return tree;
-      
-      // 递归左子树
-      let t = tree;
-      if (node.left) {
-        result.push({ tree: t, result: [...visited], line: 2, desc: `↙️ 递归进入左子树 (节点${node.left.value})` });
-        t = traverse(node.left, t);
-      }
-      
-      // 访问节点
-      t = updateNode(t, node.value, 'visiting');
-      result.push({ tree: t, result: [...visited], line: 3, desc: `📍 访问节点 ${node.value}` });
-      
-      visited.push(node.value);
-      t = updateNode(t, node.value, 'visited');
-      result.push({ tree: t, result: [...visited], line: 3, desc: `✓ 节点 ${node.value} 已访问，加入结果` });
-      
-      // 递归右子树
-      if (node.right) {
-        result.push({ tree: t, result: [...visited], line: 4, desc: `↘️ 递归进入右子树 (节点${node.right.value})` });
-        t = traverse(node.right, t);
-      }
-      
-      return t;
-    };
-    
-    const initTree = createTree();
-    result.push({ tree: initTree, result: [], line: 0, desc: '🚀 开始中序遍历：左 → 根 → 右' });
-    traverse(initTree, initTree);
-    result.push({ tree: result[result.length - 1].tree, result: visited, line: -1, desc: `🎉 中序遍历完成！结果: ${visited.join(' → ')}` });
-    
-    return result;
-  }, [updateNode]);
-
-  // 生成后序遍历步骤
-  const generatePostorderSteps = useCallback(() => {
-    const result: Step[] = [];
-    const visited: number[] = [];
-    
-    const traverse = (node: TreeNode | null, tree: TreeNode) => {
-      if (!node) return tree;
-      
-      let t = tree;
-      // 递归左子树
-      if (node.left) {
-        result.push({ tree: t, result: [...visited], line: 2, desc: `↙️ 递归进入左子树 (节点${node.left.value})` });
-        t = traverse(node.left, t);
-      }
-      
-      // 递归右子树
-      if (node.right) {
-        result.push({ tree: t, result: [...visited], line: 3, desc: `↘️ 递归进入右子树 (节点${node.right.value})` });
-        t = traverse(node.right, t);
-      }
-      
-      // 访问节点
-      t = updateNode(t, node.value, 'visiting');
-      result.push({ tree: t, result: [...visited], line: 4, desc: `📍 访问节点 ${node.value}` });
-      
-      visited.push(node.value);
-      t = updateNode(t, node.value, 'visited');
-      result.push({ tree: t, result: [...visited], line: 4, desc: `✓ 节点 ${node.value} 已访问，加入结果` });
-      
-      return t;
-    };
-    
-    const initTree = createTree();
-    result.push({ tree: initTree, result: [], line: 0, desc: '🚀 开始后序遍历：左 → 右 → 根' });
-    traverse(initTree, initTree);
-    result.push({ tree: result[result.length - 1].tree, result: visited, line: -1, desc: `🎉 后序遍历完成！结果: ${visited.join(' → ')}` });
-    
-    return result;
-  }, [updateNode]);
-
-  // 生成层序遍历步骤
-  const generateLevelorderSteps = useCallback(() => {
-    const result: Step[] = [];
-    const visited: number[] = [];
-    const initTree = createTree();
-    
-    result.push({ tree: initTree, result: [], line: 0, desc: '🚀 开始层序遍历（使用队列）' });
-    
-    const queue: TreeNode[] = [initTree];
-    let t = cloneTree(initTree) as TreeNode;
-    result.push({ tree: t, result: [], line: 2, desc: '📥 将根节点 50 入队' });
-    
-    while (queue.length > 0) {
-      const node = queue.shift()!;
-      result.push({ tree: t, result: [...visited], line: 4, desc: `📤 取出队首节点 ${node.value}` });
-      
-      t = updateNode(t, node.value, 'visiting');
-      result.push({ tree: t, result: [...visited], line: 5, desc: `📍 访问节点 ${node.value}` });
-      
-      visited.push(node.value);
-      t = updateNode(t, node.value, 'visited');
-      result.push({ tree: t, result: [...visited], line: 5, desc: `✓ 节点 ${node.value} 已访问` });
-      
-      if (node.left) {
-        queue.push(node.left);
-        result.push({ tree: t, result: [...visited], line: 6, desc: `📥 左孩子 ${node.left.value} 入队` });
-      }
-      if (node.right) {
-        queue.push(node.right);
-        result.push({ tree: t, result: [...visited], line: 7, desc: `📥 右孩子 ${node.right.value} 入队` });
-      }
+  const steps = useMemo<Step[]>(() => {
+    if (!armed) return [];
+    switch (traversal) {
+      case 'preorder':
+        return preorderSteps(tree);
+      case 'inorder':
+        return inorderSteps(tree);
+      case 'postorder':
+        return postorderSteps(tree);
+      case 'level':
+        return levelorderSteps(tree);
     }
-    
-    result.push({ tree: t, result: visited, line: -1, desc: `🎉 层序遍历完成！结果: ${visited.join(' → ')}` });
-    return result;
-  }, [cloneTree, updateNode]);
+  }, [armed, traversal, tree]);
+
+  const player = useAlgorithmPlayer<Step>({
+    steps,
+    stepDurationMs: 900,
+    autoPlay: false,
+  });
+
+  const current = player.currentStep;
+  const visitedSet = useMemo(
+    () => new Set(current?.visitedIds ?? []),
+    [current],
+  );
+  const displayResult = current?.result ?? [];
+  const activeLine = current?.line ?? -1;
+  const narrationDescription = current?.description ?? '选择遍历方式，点击"开始"生成步骤';
+
+  const getNodeStatus = useCallback(
+    (id: string): NodeStatus => {
+      if (current?.visitingId === id) return 'visiting';
+      if (visitedSet.has(id)) return 'visited';
+      return 'normal';
+    },
+    [current, visitedSet],
+  );
 
   const start = () => {
-    let newSteps: Step[] = [];
-    if (traversal === 'preorder') newSteps = generatePreorderSteps();
-    else if (traversal === 'inorder') newSteps = generateInorderSteps();
-    else if (traversal === 'postorder') newSteps = generatePostorderSteps();
-    else newSteps = generateLevelorderSteps();
-    
-    setSteps(newSteps);
-    setStepIdx(0);
-    setPlaying(false);  // 默认不自动播放，让用户手动点击
+    setArmed(true);
   };
 
-  const reset = () => {
-    if (timerRef.current) clearTimeout(timerRef.current);
-    setSteps([]);
-    setStepIdx(-1);
-    setPlaying(false);
+  const resetAll = () => {
+    setArmed(false);
   };
 
-  // 自动播放
-  useEffect(() => {
-    if (!playing || stepIdx < 0 || steps.length === 0) return;
-    if (stepIdx >= steps.length - 1) {
-      setPlaying(false);
-      return;
+  const applyCustomTree = () => {
+    const parts = inputValues
+      .split(/[,，\s]+/)
+      .map((t) => t.trim())
+      .filter(Boolean);
+    const nums = parts.map((p) => Number(p)).filter((n) => !Number.isNaN(n));
+    if (nums.length === 0) {
+      setTree(buildDefaultTree());
+    } else {
+      setTree(buildBstFromArray(nums));
     }
-    timerRef.current = window.setTimeout(() => setStepIdx(i => i + 1), 1200);
-    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
-  }, [playing, stepIdx, steps]);
-
-  const currentStep = steps[stepIdx];
-  const displayTree = currentStep?.tree || createTree();
-  const displayResult = currentStep?.result || [];
-  const displayLine = currentStep?.line ?? -1;
-  const displayDesc = currentStep?.desc || '选择遍历方式，点击"开始"生成步骤';
-
-  const getNodeStatus = (val: number): string => {
-    const find = (n: TreeNode | null): string | null => {
-      if (!n) return null;
-      if (n.value === val) return n.status;
-      return find(n.left) || find(n.right);
-    };
-    return find(displayTree) || 'normal';
+    setArmed(false);
   };
+
+  const resetDefaultTree = () => {
+    setTree(buildDefaultTree());
+    setInputValues('');
+    setArmed(false);
+  };
+
+  const viewBoxW = Math.max(layout.width, 180);
+  const viewBoxH = Math.max(layout.height, 120);
+
+  // Depth indicator (left edge). Build a set of unique y-positions per depth.
+  const depthRows = useMemo(() => {
+    const byDepth = new Map<number, number>();
+    for (const n of allNodes) {
+      const p = layout.positions.get(n.id);
+      const d = depths.get(n.id);
+      if (!p || typeof d !== 'number') continue;
+      byDepth.set(d, p.y);
+    }
+    return Array.from(byDepth.entries()).sort((a, b) => a[0] - b[0]);
+  }, [allNodes, layout, depths]);
+
+  // Id → edge lookup so we can highlight traversal path.
+  const visitingId = current?.visitingId ?? null;
+  const visitedEdges = useMemo(() => {
+    // An edge (parent,child) is "visited" if the child has been visited or is being visited.
+    const set = new Set<string>();
+    const active = new Set<string>(current?.visitedIds ?? []);
+    if (visitingId) active.add(visitingId);
+    for (const e of edges) {
+      if (active.has(e.to)) set.add(`${e.from}->${e.to}`);
+    }
+    return set;
+  }, [edges, current, visitingId]);
+
+  // BST comparison chip text (based on visiting node + root)
+  const rootValue = tree ? Number(tree.value) : null;
+  const compareHint = useMemo(() => {
+    if (!visitingId || rootValue === null) return null;
+    const visitingNode = allNodes.find((n) => n.id === visitingId);
+    if (!visitingNode) return null;
+    const v = Number(visitingNode.value);
+    if (Number.isNaN(v)) return null;
+    if (visitingNode.id === tree?.id) return `root = ${v}`;
+    return v < rootValue ? `${v} < ${rootValue} → 左子树` : `${v} ≥ ${rootValue} → 右子树`;
+  }, [visitingId, rootValue, allNodes, tree]);
 
   return (
     <div className="space-y-4">
       <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4">
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex bg-slate-100 dark:bg-slate-700 rounded-lg p-1">
-            {(Object.keys(TRAVERSALS) as Traversal[]).map(t => (
-              <button key={t} onClick={() => { setTraversal(t); reset(); }} disabled={steps.length > 0}
-                className={'px-3 py-1.5 rounded-md text-xs font-medium transition-all ' +
-                  (traversal === t ? 'bg-white dark:bg-slate-600 text-indigo-600 dark:text-indigo-400 shadow-sm' : 'text-slate-600 dark:text-slate-300')}>
+            {(Object.keys(TRAVERSALS) as Traversal[]).map((t) => (
+              <button
+                key={t}
+                onClick={() => {
+                  setTraversal(t);
+                  setArmed(false);
+                }}
+                disabled={armed}
+                className={
+                  'px-3 py-1.5 rounded-md text-xs font-medium transition-all ' +
+                  (traversal === t
+                    ? 'bg-white dark:bg-slate-600 text-klein-600 dark:text-klein-300 shadow-sm'
+                    : 'text-slate-600 dark:text-slate-300')
+                }
+              >
                 {TRAVERSALS[t].name}
               </button>
             ))}
           </div>
-          <button onClick={start} disabled={steps.length > 0}
-            className="px-4 py-1.5 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-50">
+          <button
+            onClick={start}
+            disabled={armed}
+            className="px-4 py-1.5 bg-klein-500 text-white rounded-lg text-sm font-medium hover:bg-klein-600 disabled:opacity-50"
+          >
             开始遍历
           </button>
-          <button onClick={reset} className="px-4 py-1.5 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-lg text-sm font-medium hover:bg-slate-200 dark:hover:bg-slate-600">重置</button>
-          
-          {/* 步进控制 */}
-          {steps.length > 0 && (
-            <div className="flex items-center gap-2 border-l border-slate-200 dark:border-slate-600 pl-3">
-              <button onClick={() => setStepIdx(i => Math.max(0, i - 1))} disabled={stepIdx <= 0}
-                className="px-3 py-1.5 bg-slate-200 dark:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg text-sm font-medium disabled:opacity-50 hover:bg-slate-300 dark:hover:bg-slate-500">
-                ◀ 上一步
-              </button>
-              <span className="text-xs text-slate-500 dark:text-slate-400 min-w-[60px] text-center">{stepIdx + 1} / {steps.length}</span>
-              <button onClick={() => setStepIdx(i => Math.min(steps.length - 1, i + 1))} disabled={stepIdx >= steps.length - 1}
-                className="px-3 py-1.5 bg-slate-200 dark:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg text-sm font-medium disabled:opacity-50 hover:bg-slate-300 dark:hover:bg-slate-500">
-                下一步 ▶
-              </button>
-              {!playing ? (
-                <button onClick={() => setPlaying(true)} disabled={stepIdx >= steps.length - 1}
-                  className="px-3 py-1.5 bg-emerald-500 text-white rounded-lg text-sm font-medium disabled:opacity-50">
-                  ▶ 自动
-                </button>
-              ) : (
-                <button onClick={() => setPlaying(false)}
-                  className="px-3 py-1.5 bg-amber-500 text-white rounded-lg text-sm font-medium">
-                  ⏸ 暂停
-                </button>
-              )}
-            </div>
-          )}
-          
+          <button
+            onClick={resetAll}
+            className="px-4 py-1.5 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-lg text-sm font-medium hover:bg-slate-200 dark:hover:bg-slate-600"
+          >
+            重置步骤
+          </button>
+
+          <div className="flex items-center gap-2 ml-2">
+            <input
+              type="text"
+              value={inputValues}
+              onChange={(e) => setInputValues(e.target.value)}
+              placeholder="自定义BST值，逗号分隔"
+              className="px-3 py-1.5 border border-slate-200 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-white w-56"
+            />
+            <button
+              onClick={applyCustomTree}
+              className="px-3 py-1.5 bg-emerald-500 text-white rounded-lg text-sm font-medium hover:bg-emerald-600"
+            >
+              生成树
+            </button>
+            <button
+              onClick={resetDefaultTree}
+              className="px-3 py-1.5 bg-slate-200 dark:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg text-sm font-medium hover:bg-slate-300 dark:hover:bg-slate-500"
+            >
+              默认树
+            </button>
+          </div>
+
           {displayResult.length > 0 && (
             <div className="ml-auto text-sm">
               <span className="text-slate-500 dark:text-slate-400">结果: </span>
-              <span className="text-indigo-600 dark:text-indigo-400 font-mono font-bold">{displayResult.join(' → ')}</span>
+              <span className="text-klein-600 dark:text-klein-300 font-mono font-bold">
+                {displayResult.join(' → ')}
+              </span>
             </div>
           )}
         </div>
       </div>
 
+      {steps.length > 0 && (
+        <div className="space-y-2">
+          <PlayerControls
+            playing={player.playing}
+            canStepBack={player.canStepBack}
+            canStepForward={player.canStepForward}
+            atEnd={player.atEnd}
+            speed={player.speed}
+            play={player.play}
+            pause={player.pause}
+            toggle={player.toggle}
+            stepBack={player.stepBack}
+            stepForward={player.stepForward}
+            reset={player.reset}
+            setSpeed={player.setSpeed}
+          />
+          <StepNarration
+            description={narrationDescription}
+            totalSteps={steps.length}
+            currentIndex={player.index}
+          />
+        </div>
+      )}
+
       <div className="grid lg:grid-cols-5 gap-4">
-        <div className="lg:col-span-3 bg-slate-800 rounded-xl p-6">
-          <div className="mb-4 px-4 py-2 bg-slate-700/50 rounded-lg text-white text-sm">{displayDesc}</div>
-          <svg width="100%" height="220" viewBox="0 0 300 220">
-            {/* 连线 */}
-            <line x1="150" y1="50" x2="80" y2="80" stroke="#475569" strokeWidth="2"/>
-            <line x1="150" y1="50" x2="220" y2="80" stroke="#475569" strokeWidth="2"/>
-            <line x1="80" y1="120" x2="45" y2="150" stroke="#475569" strokeWidth="2"/>
-            <line x1="80" y1="120" x2="115" y2="150" stroke="#475569" strokeWidth="2"/>
-            <line x1="220" y1="120" x2="185" y2="150" stroke="#475569" strokeWidth="2"/>
-            <line x1="220" y1="120" x2="255" y2="150" stroke="#475569" strokeWidth="2"/>
-            
-            {/* 节点 */}
-            {NODES.map(n => {
-              const status = getNodeStatus(n.val);
-              return (
-                <g key={n.val}>
-                  <circle cx={n.x} cy={n.y} r="22"
-                    className={'transition-all duration-300 ' +
-                      (status === 'visiting' ? 'fill-amber-400' :
-                       status === 'visited' ? 'fill-emerald-500' : 'fill-indigo-500')} />
-                  <text x={n.x} y={n.y + 5} textAnchor="middle" className="fill-white font-bold text-sm">{n.val}</text>
+        <div className="lg:col-span-3 bg-slate-900 rounded-xl p-4 sm:p-6 border border-slate-800">
+          <div className="relative">
+            <svg
+              width="100%"
+              height={Math.min(viewBoxH, 400)}
+              viewBox={`0 0 ${viewBoxW} ${viewBoxH}`}
+              preserveAspectRatio="xMidYMid meet"
+            >
+              {/* Depth rulers (left edge) */}
+              {depthRows.map(([d, y]) => (
+                <g key={`d-${d}`}>
+                  <line
+                    x1={0}
+                    x2={viewBoxW}
+                    y1={y}
+                    y2={y}
+                    stroke="#1e293b"
+                    strokeWidth={0.6}
+                    strokeDasharray="2,6"
+                    opacity={0.6}
+                  />
+                  <text
+                    x={4}
+                    y={y - 4}
+                    fontSize={9}
+                    fontFamily="monospace"
+                    fill="#475569"
+                  >
+                    depth {d}
+                  </text>
                 </g>
-              );
-            })}
-          </svg>
-          <div className="flex justify-center gap-4 mt-4 pt-4 border-t border-slate-700">
-            <div className="flex items-center gap-2"><div className="w-4 h-4 rounded-full bg-indigo-500"></div><span className="text-slate-400 text-xs">未访问</span></div>
-            <div className="flex items-center gap-2"><div className="w-4 h-4 rounded-full bg-amber-400"></div><span className="text-slate-400 text-xs">正在访问</span></div>
-            <div className="flex items-center gap-2"><div className="w-4 h-4 rounded-full bg-emerald-500"></div><span className="text-slate-400 text-xs">已访问</span></div>
+              ))}
+
+              {/* Edges as cubic Béziers */}
+              {edges.map((e, i) => {
+                const p1 = layout.positions.get(e.from);
+                const p2 = layout.positions.get(e.to);
+                if (!p1 || !p2) return null;
+                const midY = (p1.y + p2.y) / 2;
+                const d = `M ${p1.x} ${p1.y + 18} C ${p1.x} ${midY + 4}, ${p2.x} ${midY - 4}, ${p2.x} ${p2.y - 18}`;
+                const visited = visitedEdges.has(`${e.from}->${e.to}`);
+                return (
+                  <path
+                    key={`e${i}`}
+                    d={d}
+                    stroke={visited ? '#002FA7' : '#334155'}
+                    strokeWidth={visited ? 2.4 : 1.6}
+                    fill="none"
+                    strokeLinecap="round"
+                    className="transition-[stroke,stroke-width] duration-200"
+                  />
+                );
+              })}
+
+              {/* Nodes — circles with mono value */}
+              {allNodes.map((n) => {
+                const p = layout.positions.get(n.id);
+                if (!p) return null;
+                const status = getNodeStatus(n.id);
+                let fill = '#ffffff';
+                let stroke = '#002FA7';
+                let textFill = '#0f172a';
+                if (status === 'visiting') {
+                  fill = '#FFE135';
+                  stroke = '#FFE135';
+                  textFill = '#1e293b';
+                } else if (status === 'visited') {
+                  fill = '#10b981';
+                  stroke = '#10b981';
+                  textFill = '#ffffff';
+                } else {
+                  // unvisited
+                  fill = '#0f172a';
+                  stroke = '#334155';
+                  textFill = '#cbd5e1';
+                }
+                return (
+                  <g key={n.id} className="transition-[fill,stroke] duration-200">
+                    <circle
+                      cx={p.x}
+                      cy={p.y}
+                      r={18}
+                      fill={fill}
+                      stroke={stroke}
+                      strokeWidth={2}
+                    />
+                    <text
+                      x={p.x}
+                      y={p.y + 4}
+                      textAnchor="middle"
+                      fontFamily="monospace"
+                      fontSize={13}
+                      fontWeight="bold"
+                      fill={textFill}
+                    >
+                      {String(n.value)}
+                    </text>
+                  </g>
+                );
+              })}
+
+              {/* Compare hint chip next to visiting node */}
+              {compareHint && visitingId && (() => {
+                const p = layout.positions.get(visitingId);
+                if (!p) return null;
+                const chipW = Math.max(compareHint.length * 6 + 16, 60);
+                return (
+                  <g>
+                    <rect
+                      x={p.x + 22}
+                      y={p.y - 30}
+                      width={chipW}
+                      height={20}
+                      rx={10}
+                      fill="#0f172a"
+                      stroke="#FFE135"
+                      strokeWidth={1}
+                    />
+                    <text
+                      x={p.x + 22 + chipW / 2}
+                      y={p.y - 16}
+                      textAnchor="middle"
+                      fontFamily="monospace"
+                      fontSize={10}
+                      fill="#FFE135"
+                    >
+                      {compareHint}
+                    </text>
+                  </g>
+                );
+              })()}
+            </svg>
+          </div>
+
+          {/* Stack / Queue side strip */}
+          {current && (current.stack || current.queue) && (
+            <div className="mt-3 rounded-lg border border-slate-800 bg-slate-950/40 p-3">
+              <div className="text-[10px] uppercase tracking-wide text-slate-500 mb-2">
+                {traversal === 'level' ? '队列 (FIFO)' : '递归调用栈 (LIFO)'}
+              </div>
+              {traversal === 'level' ? (
+                <HorizontalTape
+                  items={current.queue ?? []}
+                  direction="queue"
+                  lowMotion={lowMotion}
+                />
+              ) : (
+                <HorizontalTape
+                  items={current.stack ?? []}
+                  direction="stack"
+                  lowMotion={lowMotion}
+                />
+              )}
+            </div>
+          )}
+
+          {/* Legend */}
+          <div className="flex justify-center gap-4 mt-4 pt-4 border-t border-slate-800">
+            <LegendChip color="bg-slate-900 border-slate-600" outline label="未访问" />
+            <LegendChip color="bg-pine-500" label="正在访问" />
+            <LegendChip color="bg-emerald-500" label="已访问" />
+            <LegendChip color="bg-klein-500" label="遍历路径" />
           </div>
         </div>
 
-        <div className="lg:col-span-2 bg-slate-800 rounded-xl p-4">
+        <div className="lg:col-span-2 bg-slate-900 rounded-xl p-4 border border-slate-800">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-slate-300 font-medium text-sm">{TRAVERSALS[traversal].name}</span>
-            <div className="flex bg-slate-700 rounded p-0.5">
-              {(['cpp', 'java', 'python'] as Lang[]).map(l => (
-                <button key={l} onClick={() => setLang(l)}
-                  className={'px-2 py-0.5 rounded text-xs transition-all ' + (lang === l ? 'bg-slate-600 text-white' : 'text-slate-400')}>
+            <span className="text-slate-300 font-medium text-sm">
+              {TRAVERSALS[traversal].name}
+            </span>
+            <div className="flex bg-slate-800 rounded p-0.5">
+              {(['cpp', 'java', 'python'] as Lang[]).map((l) => (
+                <button
+                  key={l}
+                  onClick={() => setLang(l)}
+                  className={
+                    'px-2 py-0.5 rounded text-xs transition-all ' +
+                    (lang === l ? 'bg-slate-700 text-white' : 'text-slate-400')
+                  }
+                >
                   {LANG_NAMES[l]}
                 </button>
               ))}
@@ -487,16 +1091,27 @@ export default function TreeVisualization() {
           </div>
           <div className="font-mono text-xs space-y-0.5">
             {CODE[traversal][lang].map((item: { text: string; indent: number }, i: number) => (
-              <div key={i}
-                className={'py-0.5 px-2 rounded transition-all duration-200 ' + (displayLine === i ? 'bg-amber-500/30 text-amber-200' : 'text-slate-400')}
-                style={{ paddingLeft: (item.indent * 12 + 8) + 'px' }}>
-                <span className="text-slate-600 select-none w-4 inline-block text-right mr-2">{i + 1}</span>
+              <div
+                key={i}
+                className={
+                  'py-0.5 px-2 rounded transition-all duration-200 ' +
+                  (activeLine === i
+                    ? 'bg-pine-500/25 text-pine-100 border-l-2 border-pine-400'
+                    : 'text-slate-400 border-l-2 border-transparent')
+                }
+                style={{ paddingLeft: item.indent * 12 + 8 + 'px' }}
+              >
+                <span className="text-slate-600 select-none w-4 inline-block text-right mr-2">
+                  {i + 1}
+                </span>
                 {item.text}
               </div>
             ))}
           </div>
-          <div className="mt-4 pt-4 border-t border-slate-700">
-            <p className="text-slate-400 text-xs mb-2">遍历顺序: <span className="text-indigo-400">{TRAVERSALS[traversal].order}</span></p>
+          <div className="mt-4 pt-4 border-t border-slate-800">
+            <p className="text-slate-400 text-xs mb-2">
+              遍历顺序: <span className="text-klein-300 font-mono">{TRAVERSALS[traversal].order}</span>
+            </p>
             <p className="text-slate-500 text-xs">
               {traversal === 'preorder' && '先序遍历常用于：复制树、表达式树的前缀表示'}
               {traversal === 'inorder' && '中序遍历BST可得到有序序列'}
@@ -506,6 +1121,81 @@ export default function TreeVisualization() {
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+function LegendChip({
+  color,
+  label,
+  outline,
+}: {
+  color: string;
+  label: string;
+  outline?: boolean;
+}) {
+  return (
+    <div className="flex items-center gap-1.5 text-[11px] text-slate-400">
+      <div
+        className={
+          'w-3 h-3 rounded-full ' +
+          (outline ? 'border-2 ' : '') +
+          color
+        }
+      />
+      <span>{label}</span>
+    </div>
+  );
+}
+
+interface HorizontalTapeProps {
+  items: string[];
+  direction: 'stack' | 'queue';
+  lowMotion: boolean;
+}
+
+function HorizontalTape({ items, direction, lowMotion }: HorizontalTapeProps) {
+  // For the stack, newest on the right ("top"). For the queue, head on the left.
+  const showItems = items;
+
+  if (showItems.length === 0) {
+    return <div className="text-[11px] font-mono text-slate-600 italic">（空）</div>;
+  }
+
+  return (
+    <div className="flex items-center gap-1.5 overflow-x-auto">
+      <AnimatePresence initial={false}>
+        {showItems.map((v, i) => {
+          const isTop = direction === 'stack' && i === showItems.length - 1;
+          const isHead = direction === 'queue' && i === 0;
+          const isTail = direction === 'queue' && i === showItems.length - 1;
+          return (
+            <motion.div
+              key={`${v}-${i}`}
+              layout={!lowMotion}
+              initial={{ opacity: 0, scale: 0.6, y: direction === 'stack' ? -6 : 0, x: direction === 'queue' ? 6 : 0 }}
+              animate={{ opacity: 1, scale: 1, y: 0, x: 0 }}
+              exit={{ opacity: 0, scale: 0.6 }}
+              transition={{ type: 'spring', stiffness: 320, damping: 26, mass: 0.7 }}
+              className={
+                'min-w-[36px] h-7 px-2 rounded-md flex items-center justify-center font-mono text-xs font-bold border ' +
+                (isTop
+                  ? 'bg-pine-500 text-slate-900 border-pine-600 shadow-sm shadow-pine-500/40'
+                  : isHead
+                  ? 'bg-emerald-500 text-white border-emerald-600'
+                  : isTail
+                  ? 'bg-klein-500 text-white border-klein-600'
+                  : 'bg-slate-800 text-slate-300 border-slate-700')
+              }
+              title={
+                isTop ? 'top' : isHead ? 'front' : isTail ? 'rear' : undefined
+              }
+            >
+              {v}
+            </motion.div>
+          );
+        })}
+      </AnimatePresence>
     </div>
   );
 }

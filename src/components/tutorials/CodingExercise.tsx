@@ -704,7 +704,7 @@ export function FillInBlank({ exerciseId, title, description, difficulty, catego
 
   return (
     <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800">
-      <div className="border-b border-slate-200 bg-[radial-gradient(circle_at_top_left,_rgba(16,185,129,0.14),_transparent_45%),linear-gradient(135deg,_rgba(255,255,255,0.92),_rgba(240,253,250,0.82))] px-4 py-5 dark:border-slate-700 dark:bg-[radial-gradient(circle_at_top_left,_rgba(16,185,129,0.2),_transparent_42%),linear-gradient(135deg,_rgba(15,23,42,0.98),_rgba(30,41,59,0.94))] sm:px-6">
+      <div className="border-b border-slate-200 bg-[radial-gradient(circle_at_top_left,_rgba(16,185,129,0.08),_transparent_45%),linear-gradient(135deg,_rgba(255,255,255,0.96),_rgba(248,250,252,0.92))] px-4 py-5 dark:border-slate-700 dark:bg-[radial-gradient(circle_at_top_left,_rgba(16,185,129,0.14),_transparent_42%),linear-gradient(135deg,_rgba(15,23,42,0.98),_rgba(30,41,59,0.94))] sm:px-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:justify-between">
           <div className="space-y-3">
             <div className="flex flex-wrap gap-2">

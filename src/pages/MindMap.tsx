@@ -1400,7 +1400,7 @@ export default function MindMap() {
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
               transition={{ duration: 0.2 }}
-              className="rounded-3xl border-2 border-dashed border-klein-400 bg-white/90 px-12 py-10 text-center shadow-lg dark:bg-slate-900/90"
+              className="rounded-3xl border-2 border-dashed border-klein-400 bg-white/75 backdrop-blur-xl px-12 py-10 text-center shadow-lg dark:bg-slate-900/70"
             >
               <FileUp className="mx-auto h-12 w-12 text-klein-500" />
               <div className="mt-4 text-lg font-semibold text-slate-900 dark:text-white">{t('松开文件即可生成思维导图')}</div>
@@ -1591,14 +1591,28 @@ export default function MindMap() {
                 <Pencil className="w-4 h-4 text-klein-500" /> {t('导图库')}
               </h3>
               <div
-                className={`text-xs mb-3 ${
+                className={`mb-3 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium ${
                   syncStatus === 'error'
-                    ? 'text-rose-500'
+                    ? 'bg-rose-50 text-rose-600 dark:bg-rose-900/30 dark:text-rose-300'
                     : syncStatus === 'syncing'
-                      ? 'text-amber-600 dark:text-amber-400'
-                      : 'text-emerald-600 dark:text-emerald-400'
+                      ? 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300'
+                      : remoteSyncEnabled
+                        ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'
+                        : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'
                 }`}
               >
+                <span
+                  className={`h-1.5 w-1.5 rounded-full ${
+                    syncStatus === 'error'
+                      ? 'bg-rose-500'
+                      : syncStatus === 'syncing'
+                        ? 'bg-amber-500'
+                        : remoteSyncEnabled
+                          ? 'bg-emerald-500'
+                          : 'bg-slate-400'
+                  }`}
+                  aria-hidden
+                />
                 {remoteSyncEnabled
                   ? syncStatus === 'syncing'
                     ? t('服务器同步中...')

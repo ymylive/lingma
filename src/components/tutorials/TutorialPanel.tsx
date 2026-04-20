@@ -1,9 +1,18 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useI18n } from '../../contexts/I18nContext';
+import {
+  BookOpenIcon,
+  DiagramIcon,
+  ImportantIcon,
+  PlayMediaIcon,
+  StarRating,
+  TipIcon,
+  WarningIcon,
+} from '../ui';
 
 interface Section {
   title: string;
-  icon: string;
+  icon: ReactNode;
   content: React.ReactNode;
 }
 
@@ -21,7 +30,7 @@ export default function TutorialPanel({ title, sections }: TutorialPanelProps) {
       {/* 标题 */}
       <div className="bg-gradient-to-r from-klein-600 to-purple-600 px-4 py-4 sm:px-6">
         <h2 className="flex flex-wrap items-center gap-2 text-lg font-bold text-white sm:text-xl">
-          <span>📚</span> {t(title)} - {t('学习教程')}
+          <BookOpenIcon size={20} className="text-white/90" /> {t(title)} - {t('学习教程')}
         </h2>
       </div>
 
@@ -196,13 +205,13 @@ export function MultiLangCode({ codes, title }: {
 }
 
 // 工具组件：演示链接
-export function DemoLink({ to, text, icon = '🎬' }: { to: string; text: string; icon?: string }) {
+export function DemoLink({ to, text, icon }: { to: string; text: string; icon?: ReactNode }) {
   return (
     <a
       href={to}
       className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-klein-500 to-purple-500 px-4 py-3 text-sm font-medium text-white shadow-md transition-all hover:from-klein-600 hover:to-purple-600 sm:justify-start sm:py-2"
     >
-      <span>{icon}</span>
+      <span className="inline-flex items-center">{icon ?? <PlayMediaIcon size={16} />}</span>
       {text}
       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
@@ -216,7 +225,7 @@ export function Diagram({ title, children }: { title: string; children: React.Re
   return (
     <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800 sm:p-5">
       <div className="mb-3 flex items-center gap-2 text-[15px] font-medium text-slate-700 dark:text-slate-300 sm:text-sm">
-        <span>📐</span> {title}
+        <DiagramIcon size={16} className="text-klein-500 dark:text-klein-300" /> {title}
       </div>
       <div className="flex justify-center">{children}</div>
     </div>
@@ -239,31 +248,55 @@ export function Term({ word, meaning }: { word: string; meaning: string }) {
 export function DifficultyBadge({ level }: { level: 'easy' | 'medium' | 'hard' }) {
   const { t } = useI18n();
   const config = {
-    easy: { text: '⭐ 入门', color: 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400' },
-    medium: { text: '⭐⭐ 进阶', color: 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400' },
-    hard: { text: '⭐⭐⭐ 困难', color: 'bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-400' },
+    easy: { text: '入门', stars: 1 as const, color: 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400' },
+    medium: { text: '进阶', stars: 2 as const, color: 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400' },
+    hard: { text: '困难', stars: 3 as const, color: 'bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-400' },
   };
   const c = config[level];
-  return <span className={`inline-block rounded px-2.5 py-1 text-[13px] font-medium ${c.color}`}>{t(c.text)}</span>;
+  return (
+    <span className={`inline-flex items-center gap-1 rounded px-2.5 py-1 text-[13px] font-medium ${c.color}`}>
+      <StarRating level={c.stars} size={11} />
+      {t(c.text)}
+    </span>
+  );
 }
 
 // 工具组件：提示框
-export function TipBox({ type, children }: { 
-  type: 'tip' | 'warning' | 'important'; 
-  children: React.ReactNode 
+export function TipBox({ type, children }: {
+  type: 'tip' | 'warning' | 'important';
+  children: React.ReactNode
 }) {
   const { t } = useI18n();
   const styles = {
-    tip: { bg: 'bg-emerald-50 dark:bg-emerald-900/30', border: 'border-emerald-200 dark:border-emerald-800', icon: '💡', title: '提示' },
-    warning: { bg: 'bg-amber-50 dark:bg-amber-900/30', border: 'border-amber-200 dark:border-amber-800', icon: '⚠️', title: '注意' },
-    important: { bg: 'bg-rose-50 dark:bg-rose-900/30', border: 'border-rose-200 dark:border-rose-800', icon: '❗', title: '重要' },
+    tip: {
+      bg: 'bg-emerald-50 dark:bg-emerald-900/30',
+      border: 'border-emerald-200 dark:border-emerald-800',
+      iconColor: 'text-emerald-600 dark:text-emerald-300',
+      Icon: TipIcon,
+      title: '提示',
+    },
+    warning: {
+      bg: 'bg-amber-50 dark:bg-amber-900/30',
+      border: 'border-amber-200 dark:border-amber-800',
+      iconColor: 'text-amber-600 dark:text-amber-300',
+      Icon: WarningIcon,
+      title: '注意',
+    },
+    important: {
+      bg: 'bg-rose-50 dark:bg-rose-900/30',
+      border: 'border-rose-200 dark:border-rose-800',
+      iconColor: 'text-rose-600 dark:text-rose-300',
+      Icon: ImportantIcon,
+      title: '重要',
+    },
   };
   const s = styles[type];
-  
+  const Icon = s.Icon;
+
   return (
     <div className={`${s.bg} ${s.border} rounded-xl border p-4 sm:p-5`}>
       <div className="mb-1 flex items-center gap-2 text-base font-medium text-slate-800 dark:text-slate-200">
-        <span>{s.icon}</span> {t(s.title)}
+        <Icon size={18} className={s.iconColor} /> {t(s.title)}
       </div>
       <div className="text-[15px] leading-7 text-slate-700 dark:text-slate-300 sm:text-sm">{children}</div>
     </div>

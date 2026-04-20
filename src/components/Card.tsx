@@ -20,7 +20,7 @@ export function Card({
   const lowMotion = useLowMotionMode();
 
   const variantClasses = {
-    default: 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm',
+    default: 'bg-white/55 backdrop-blur-md dark:bg-slate-900/50 border border-slate-200/60 dark:border-slate-700/40 shadow-sm',
     elevated: 'bg-white dark:bg-slate-800 border border-slate-200/50 dark:border-slate-700/50 shadow-lg shadow-slate-200/50 dark:shadow-slate-900/50',
     outlined: 'bg-transparent border-2 border-slate-300 dark:border-slate-600',
     glass: 'bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border border-slate-200/80 dark:border-slate-700/80 shadow-sm',

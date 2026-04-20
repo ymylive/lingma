@@ -25,6 +25,7 @@ import {
 import { useI18n } from '../../contexts/I18nContext';
 import { useUser } from '../../contexts/UserContext';
 import CodingExercise, { FillInBlank } from './CodingExercise';
+import { StarRating } from '../ui';
 import { buildAiDefaults, getSkillLevelMeta } from '../../utils/userPersonalization';
 import { getTargetLanguageMeta } from '../../utils/targetLanguages';
 
@@ -223,7 +224,7 @@ export default function AIExerciseGenerator() {
   const generatorSurfaceClass =
     'relative isolate overflow-visible rounded-3xl border border-slate-200/80 bg-[linear-gradient(135deg,rgba(255,255,255,0.97),rgba(241,245,249,0.92)),radial-gradient(circle_at_top_right,rgba(79,70,229,0.16),transparent_34%),radial-gradient(circle_at_bottom_left,rgba(16,185,129,0.12),transparent_30%)] p-7 shadow-xl dark:border-slate-700/80 dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.96),rgba(15,23,42,0.9)),radial-gradient(circle_at_top_right,rgba(99,102,241,0.2),transparent_36%),radial-gradient(circle_at_bottom_left,rgba(16,185,129,0.15),transparent_34%)] sm:p-8';
   const fieldPanelClass =
-    'relative rounded-xl border border-slate-200/80 bg-white/85 p-6 shadow-sm backdrop-blur-sm focus-within:z-30 dark:border-slate-700/80 dark:bg-slate-900/70';
+    'relative flex min-h-[148px] flex-col justify-center rounded-2xl border border-slate-200/80 bg-white/85 p-5 shadow-sm backdrop-blur-sm focus-within:z-30 dark:border-slate-700/80 dark:bg-slate-900/70';
   const inputClass =
     'min-h-[48px] w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition-colors focus:border-klein-400 focus:ring-2 focus:ring-klein-500/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-500';
 
@@ -338,18 +339,18 @@ export default function AIExerciseGenerator() {
       )}
 
       <div className={generatorSurfaceClass}>
-        <div className="mb-8 flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-          <div className="flex items-start gap-4">
+        <div className="mb-8 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex items-center gap-4">
             <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-slate-900 text-white shadow-sm dark:bg-white dark:text-slate-950">
               <Bot className="h-6 w-6" />
             </div>
-            <div>
+            <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="rounded-full bg-klein-600 px-3 py-1 text-xs font-semibold text-white">{t('AI 智能出题')}</span>
-                <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-medium text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">{learningStateLabel}</span>
+                <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-[11px] font-medium text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">{learningStateLabel}</span>
+                <span className="text-[11px] font-medium uppercase tracking-[0.22em] text-klein-600 dark:text-klein-300">AI Generator</span>
               </div>
-              <h2 className="mt-5 text-3xl font-bold text-slate-900 dark:text-white">{t('AI 智能出题')}</h2>
-              <p className="mt-4 max-w-2xl text-base leading-8 text-slate-600 dark:text-slate-300">
+              <h2 className="mt-2 text-2xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-3xl">{t('AI 智能出题')}</h2>
+              <p className="mt-1.5 max-w-2xl text-sm leading-6 text-slate-600 dark:text-slate-300 sm:text-[15px]">
                 {t('根据主题自动生成编程练习题')}
               </p>
             </div>
@@ -398,24 +399,29 @@ export default function AIExerciseGenerator() {
               </div>
               <div className="grid grid-cols-3 gap-2">
                 {[
-                  { id: 'easy', label: '⭐简单' },
-                  { id: 'medium', label: '⭐⭐中等' },
-                  { id: 'hard', label: '⭐⭐⭐困难' },
+                  { id: 'easy' as Difficulty, label: '简单', level: 1 as const },
+                  { id: 'medium' as Difficulty, label: '中等', level: 2 as const },
+                  { id: 'hard' as Difficulty, label: '困难', level: 3 as const },
                 ].map((item) => (
                   <button
                     key={item.id}
                     type="button"
                     onClick={() => {
-                      setDifficulty(item.id as Difficulty);
+                      setDifficulty(item.id);
                       setHasManualDifficulty(true);
                     }}
-                    className={`min-h-[44px] cursor-pointer whitespace-nowrap rounded-2xl px-2 py-2 text-sm font-medium transition-all ${
+                    className={`flex min-h-[44px] cursor-pointer flex-col items-center justify-center gap-1 whitespace-nowrap rounded-2xl px-2 py-2 text-sm font-medium transition-all ${
                       difficulty === item.id
                         ? 'bg-slate-900 text-white shadow-sm dark:bg-klein-500'
                         : 'border border-slate-200 bg-white text-slate-700 hover:border-klein-300 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-klein-500/50 dark:hover:bg-slate-800'
                     }`}
                   >
-                    {t(item.label)}
+                    <StarRating
+                      level={item.level}
+                      size={11}
+                      className={difficulty === item.id ? 'text-amber-300' : 'text-amber-500'}
+                    />
+                    <span>{t(item.label)}</span>
                   </button>
                 ))}
               </div>

@@ -14,7 +14,7 @@ except ImportError:
 
 from runtime_config import get_docker_compose_env_updates
 
-VPS_HOST = os.getenv("LINGMA_VPS_HOST", "8.134.33.19")
+VPS_HOST = os.getenv("LINGMA_VPS_HOST", "111.228.53.64")
 VPS_USER = os.getenv("LINGMA_VPS_USER", "root")
 VPS_PASSWORD = os.getenv("LINGMA_VPS_PASSWORD", "")
 PUBLIC_DOMAIN = os.getenv("LINGMA_PUBLIC_DOMAIN", "lingma.cornna.xyz")
