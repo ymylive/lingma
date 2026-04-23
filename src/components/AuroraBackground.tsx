@@ -17,9 +17,8 @@ precision highp float;
 
 uniform float uTime;
 uniform vec2 uResolution;
-uniform vec2 uMouse;
-uniform vec2 uMouseVel;       // velocity in shader coords/frame (already normalized)
-uniform float uMouseActive;
+uniform vec2 uTrailPos[8];
+uniform float uTrailTime[8];
 uniform float uDark;
 
 vec2 hash2(vec2 p) {
@@ -43,7 +42,7 @@ float fbm(vec2 p) {
   float v = 0.0;
   float a = 0.5;
   mat2 rot = mat2(0.8, -0.6, 0.6, 0.8);
-  for (int i = 0; i < 5; i++) {
+  for (int i = 0; i < 4; i++) {
     v += a * noise(p);
     p = rot * p * 2.0;
     a *= 0.5;
@@ -56,46 +55,45 @@ void main() {
   float aspect = uResolution.x / uResolution.y;
   vec2 p = vec2(uv.x * aspect, uv.y);
 
-  // Mouse position in shader space
-  vec2 mUv = uMouse / uResolution;
-  vec2 mp = vec2(mUv.x * aspect, mUv.y);
-  vec2 toMouse = p - mp;
-  float d = length(toMouse);
-
-  // ─── DIRECTIONAL CURSOR INTERACTION ───
-  // Mouse moves through existing smoke. We SHIFT the flow-field sampling position
-  // opposite to motion direction, locally — smoke looks PARTED along the motion axis.
-  // No new smoke generated, no bloom, no concentric rings.
-  float mouseSpeed = length(uMouseVel);
-  vec2 mouseDir = mouseSpeed > 1e-5 ? uMouseVel / mouseSpeed : vec2(0.0);
-  float speedFactor = clamp(mouseSpeed * 160.0, 0.0, 1.0);
-
-  // Project pixel offset onto motion axis → asymmetric "wake-like" falloff:
-  //   stronger behind cursor (dParallel < 0), weaker ahead — comet-tail profile
-  float dParallel = dot(toMouse, mouseDir);               // + ahead, − behind cursor
-  float dPerpen   = dot(toMouse, vec2(-mouseDir.y, mouseDir.x));
-  float axisStretch = dParallel < 0.0 ? 1.8 : 3.0;        // elongate influence behind
-  float localMask = exp(-((dParallel * axisStretch) * (dParallel * axisStretch)
-                         + (dPerpen * 3.4) * (dPerpen * 3.4)));
-  localMask *= speedFactor;
-
-  // Sample-position offset: shift opposite to motion direction
-  // → smoke appears to "stay behind" the cursor, as if it were parting around a moving object
-  vec2 flowOffset = -mouseDir * localMask * 0.085;
-  vec2 pShifted = p + flowOffset;
-
   float t = uTime * 0.08;
 
-  // Domain warping -> "smoke" flow, sampled at shifted position (undistorted when mouse is idle)
-  vec2 q = vec2(fbm(pShifted + vec2(0.0, t)), fbm(pShifted + vec2(5.2, 1.3) - vec2(t, 0.0)));
-  vec2 r = vec2(
-    fbm(pShifted + 3.0 * q + vec2(1.7, 9.2) + vec2(t * 1.5, 0.0)),
-    fbm(pShifted + 3.0 * q + vec2(8.3, 2.8) - vec2(0.0, t * 1.1))
-  );
-  float f = fbm(pShifted + 3.0 * r);
+  // ─── CURSOR DISTURBANCE — curl-noise turbulence along trail ───
+  // Accumulate gaussian trail influence; curl of single-octave noise gives a
+  // divergence-free rotational field that swirls the sampling coords → smoke
+  // visibly rotates/eddies along the cursor path, no linear stretch/distortion.
+  const float TRAIL_R   = 0.24;
+  const float TRAIL_TAU = 1.2;
+  float trailInfluence = 0.0;
+  for (int i = 0; i < 8; i++) {
+    float age = uTime - uTrailTime[i];
+    if (age < 0.0 || age > 3.0) continue;
+    vec2 rUv = uTrailPos[i] / uResolution;
+    vec2 rp  = vec2(rUv.x * aspect, rUv.y);
+    vec2 to  = p - rp;
+    float d2 = dot(to, to);
+    trailInfluence += exp(-d2 / (TRAIL_R * TRAIL_R)) * exp(-age / TRAIL_TAU);
+  }
+  trailInfluence = clamp(trailInfluence, 0.0, 1.8);
+  vec2 nc = p * 2.8 + vec2(uTime * 0.30, -uTime * 0.22);
+  float eps = 0.035;
+  float nxa = noise(nc + vec2(eps, 0.0));
+  float nxb = noise(nc - vec2(eps, 0.0));
+  float nya = noise(nc + vec2(0.0, eps));
+  float nyb = noise(nc - vec2(0.0, eps));
+  // curl = (∂n/∂y, -∂n/∂x)
+  vec2 curl = vec2(nya - nyb, nxb - nxa);
+  vec2 pd = p + curl * (trailInfluence * 0.14);
 
-  // High-frequency wisp layer — signed fbm adds ±0.3 filament detail symmetrically
-  float wisps = fbm(pShifted * 3.2 + vec2(t * 0.5, -t * 0.35));
+  // Domain warping -> "smoke" flow, sampled at disturbed coords
+  vec2 q = vec2(fbm(pd + vec2(0.0, t)), fbm(pd + vec2(5.2, 1.3) - vec2(t, 0.0)));
+  vec2 r = vec2(
+    fbm(pd + 3.0 * q + vec2(1.7, 9.2) + vec2(t * 1.5, 0.0)),
+    fbm(pd + 3.0 * q + vec2(8.3, 2.8) - vec2(0.0, t * 1.1))
+  );
+  float f = fbm(pd + 3.0 * r);
+
+  // High-frequency wisp layer (also disturbed, so wisps swirl inside the vortex)
+  float wisps = fbm(pd * 3.2 + vec2(t * 0.5, -t * 0.35));
   f += wisps * 0.38;
 
   // Ambient wave field — dark mode: slower/bigger dramatic waves; light mode: faster/airier ripples
@@ -211,12 +209,12 @@ export default function AuroraBackground({ lowMotion = false }: AuroraBackground
 
     const uTime = gl.getUniformLocation(program, 'uTime');
     const uRes = gl.getUniformLocation(program, 'uResolution');
-    const uMouse = gl.getUniformLocation(program, 'uMouse');
-    const uMouseVel = gl.getUniformLocation(program, 'uMouseVel');
-    const uMouseActive = gl.getUniformLocation(program, 'uMouseActive');
+    const uTrailPos = gl.getUniformLocation(program, 'uTrailPos');
+    const uTrailTime = gl.getUniformLocation(program, 'uTrailTime');
     const uDark = gl.getUniformLocation(program, 'uDark');
 
-    const dpr = () => Math.min(window.devicePixelRatio || 1, 1.5);
+    // Aurora is a decorative background — 1.0 DPR is plenty and ~2.25× cheaper on retina.
+    const dpr = () => 1.0;
 
     const resize = () => {
       const w = Math.floor(window.innerWidth * dpr());
@@ -230,29 +228,36 @@ export default function AuroraBackground({ lowMotion = false }: AuroraBackground
     resize();
     window.addEventListener('resize', resize);
 
-    let mouseX = canvas.width / 2;
-    let mouseY = canvas.height / 2;
-    let targetX = mouseX;
-    let targetY = mouseY;
-    let mouseActive = 0;
-    let mouseActiveTarget = 0;
-    let mouseVX = 0;          // velocity in shader coords (aspect-corrected x, normalized y)
-    let mouseVY = 0;
-    let lastMoveTime = performance.now();
+    const TRAIL_MAX = 8;
+    const trailPosArr = new Float32Array(TRAIL_MAX * 2);
+    const trailTimeArr = new Float32Array(TRAIL_MAX);
+    for (let i = 0; i < TRAIL_MAX; i++) trailTimeArr[i] = -1000.0;
+    let trailHead = 0;
+    let lastEmitMs = 0;
+    let lastEmitX = -1e9;
+    let lastEmitY = -1e9;
+    const start = performance.now();
 
     const handleMove = (e: PointerEvent) => {
       const k = dpr();
-      targetX = e.clientX * k;
-      targetY = (window.innerHeight - e.clientY) * k;
-      mouseActiveTarget = 1;
-      lastMoveTime = performance.now();
-    };
-    const handleLeave = () => {
-      mouseActiveTarget = 0;
+      const x = e.clientX * k;
+      const y = (window.innerHeight - e.clientY) * k;
+      const now = performance.now();
+      if (now - lastEmitMs < 22) return;
+      const minDim = Math.min(canvas.width, canvas.height);
+      const minDist = minDim * 0.015;
+      const dx = x - lastEmitX;
+      const dy = y - lastEmitY;
+      if (dx * dx + dy * dy < minDist * minDist) return;
+      trailPosArr[trailHead * 2] = x;
+      trailPosArr[trailHead * 2 + 1] = y;
+      trailTimeArr[trailHead] = (now - start) / 1000;
+      trailHead = (trailHead + 1) % TRAIL_MAX;
+      lastEmitMs = now;
+      lastEmitX = x;
+      lastEmitY = y;
     };
     window.addEventListener('pointermove', handleMove, { passive: true });
-    window.addEventListener('pointerleave', handleLeave);
-    document.addEventListener('pointerleave', handleLeave);
 
     let running = !document.hidden;
     const handleVisibility = () => {
@@ -260,18 +265,20 @@ export default function AuroraBackground({ lowMotion = false }: AuroraBackground
     };
     document.addEventListener('visibilitychange', handleVisibility);
 
+    const emptyPos = new Float32Array(TRAIL_MAX * 2);
+    const emptyTime = new Float32Array(TRAIL_MAX);
+    for (let i = 0; i < TRAIL_MAX; i++) emptyTime[i] = -1000.0;
+
     const drawOnce = () => {
       gl.uniform1f(uTime, 0);
       gl.uniform2f(uRes, canvas.width, canvas.height);
-      gl.uniform2f(uMouse, canvas.width * 0.5, canvas.height * 0.5);
-      gl.uniform2f(uMouseVel, 0, 0);
-      gl.uniform1f(uMouseActive, 0);
+      gl.uniform2fv(uTrailPos, emptyPos);
+      gl.uniform1fv(uTrailTime, emptyTime);
       gl.uniform1f(uDark, themeRef.current === 'dark' ? 1 : 0);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
     };
 
     let rafId = 0;
-    const start = performance.now();
 
     if (lowMotion) {
       drawOnce();
@@ -285,8 +292,6 @@ export default function AuroraBackground({ lowMotion = false }: AuroraBackground
         window.removeEventListener('resize', resize);
         window.removeEventListener('resize', staticResize);
         window.removeEventListener('pointermove', handleMove);
-        window.removeEventListener('pointerleave', handleLeave);
-        document.removeEventListener('pointerleave', handleLeave);
         document.removeEventListener('visibilitychange', handleVisibility);
         gl.deleteBuffer(buf);
         gl.deleteProgram(program);
@@ -302,34 +307,10 @@ export default function AuroraBackground({ lowMotion = false }: AuroraBackground
       const now = performance.now();
       const t = (now - start) / 1000;
 
-      // Ambient decay: after 1.5s idle, hold at 0.4 (gentle ambient ripple)
-      const idleFor = now - lastMoveTime;
-      if (idleFor > 1500 && mouseActiveTarget > 0.4) {
-        mouseActiveTarget = 0.4;
-      }
-
-      mouseActive += (mouseActiveTarget - mouseActive) * 0.06;
-
-      // Capture smoothed position BEFORE this frame's update to derive velocity
-      const prevSmoothX = mouseX;
-      const prevSmoothY = mouseY;
-      mouseX += (targetX - mouseX) * 0.10;
-      mouseY += (targetY - mouseY) * 0.10;
-
-      // Convert per-frame delta into shader-space units (same coord system as `p` in fragment):
-      //   shader x spans 0..aspect, y spans 0..1. So divide deltaY by height; deltaX uses the same scale.
-      const aspect = canvas.width / Math.max(canvas.height, 1);
-      const rawVX = (mouseX - prevSmoothX) / canvas.height * aspect;
-      const rawVY = (mouseY - prevSmoothY) / canvas.height;
-      // Light velocity smoothing — EMA so direction stays stable for a moment after a quick swipe
-      mouseVX += (rawVX - mouseVX) * 0.35;
-      mouseVY += (rawVY - mouseVY) * 0.35;
-
       gl.uniform1f(uTime, t);
       gl.uniform2f(uRes, canvas.width, canvas.height);
-      gl.uniform2f(uMouse, mouseX, mouseY);
-      gl.uniform2f(uMouseVel, mouseVX, mouseVY);
-      gl.uniform1f(uMouseActive, mouseActive);
+      gl.uniform2fv(uTrailPos, trailPosArr);
+      gl.uniform1fv(uTrailTime, trailTimeArr);
       gl.uniform1f(uDark, themeRef.current === 'dark' ? 1 : 0);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
     };
@@ -340,8 +321,6 @@ export default function AuroraBackground({ lowMotion = false }: AuroraBackground
       cancelAnimationFrame(rafId);
       window.removeEventListener('resize', resize);
       window.removeEventListener('pointermove', handleMove);
-      window.removeEventListener('pointerleave', handleLeave);
-      document.removeEventListener('pointerleave', handleLeave);
       document.removeEventListener('visibilitychange', handleVisibility);
       gl.deleteBuffer(buf);
       gl.deleteProgram(program);

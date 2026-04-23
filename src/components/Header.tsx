@@ -20,7 +20,6 @@ export default function Header() {
     { path: '/book', label: isEnglish ? 'Tutorials' : '教程' },
     { path: '/methodology', label: isEnglish ? 'Methodology' : '方法论' },
     { path: '/practice', label: isEnglish ? 'AI Practice' : 'AI练习' },
-    { path: '/vibecoding', label: 'Vibe Coding' },
     { path: '/mindmap', label: 'MindMap' },
   ], [isEnglish]);
 
@@ -193,55 +192,55 @@ export default function Header() {
                   </div>
                 </button>
 
+                {showDropdown && (
+                  <div className="fixed inset-0 z-40" onClick={() => setShowDropdown(false)} />
+                )}
                 <AnimatePresence>
                   {showDropdown && (
-                    <>
-                      <div className="fixed inset-0 z-40" onClick={() => setShowDropdown(false)} />
-                      <motion.div
-                        initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                        exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                        transition={{ duration: 0.2 }}
-                        className="absolute right-0 top-full z-50 mt-3 w-64 rounded-2xl border border-slate-200/50 bg-white/90 py-2 shadow-xl shadow-slate-200/20 backdrop-blur-xl dark:border-slate-700/50 dark:bg-slate-800/90 dark:shadow-black/20"
-                      >
-                        <div className="border-b border-slate-100 px-5 py-4 dark:border-slate-700/50">
-                          <div className="text-lg font-bold text-slate-900 dark:text-white">{user?.username}</div>
-                          <div className="text-xs text-slate-500 dark:text-slate-400">{user?.email}</div>
-                        </div>
-                        <div className="space-y-1 p-2">
-                          <Link
-                            to="/dashboard"
-                            onClick={() => setShowDropdown(false)}
-                            className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-klein-500/60 dark:text-slate-300 dark:hover:bg-slate-700/50"
-                          >
-                            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-klein-50 text-lg dark:bg-klein-900/30">📊</span>
-                            {isEnglish ? 'Dashboard' : '学习中心'}
-                          </Link>
-                          <div className="grid grid-cols-2 gap-2 px-2">
-                            <div className="rounded-xl bg-slate-50 p-3 text-center dark:bg-slate-700/30">
-                              <div className="text-2xl font-bold text-klein-500 dark:text-klein-400">{progress.completedLessons.length}</div>
-                              <div className="text-[10px] text-slate-500 dark:text-slate-400">{isEnglish ? 'Lessons' : '已修课程'}</div>
-                            </div>
-                            <div className="rounded-xl bg-slate-50 p-3 text-center dark:bg-slate-700/30">
-                              <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{progress.completedExercises.length}</div>
-                              <div className="text-[10px] text-slate-500 dark:text-slate-400">{isEnglish ? 'Exercises' : '完成练习'}</div>
-                            </div>
+                    <motion.div
+                      initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                      transition={{ duration: 0.2 }}
+                      className="absolute right-0 top-full z-50 mt-3 w-64 rounded-2xl border border-slate-200/50 bg-white/90 py-2 shadow-xl shadow-slate-200/20 backdrop-blur-xl dark:border-slate-700/50 dark:bg-slate-800/90 dark:shadow-black/20"
+                    >
+                      <div className="border-b border-slate-100 px-5 py-4 dark:border-slate-700/50">
+                        <div className="text-lg font-bold text-slate-900 dark:text-white">{user?.username}</div>
+                        <div className="text-xs text-slate-500 dark:text-slate-400">{user?.email}</div>
+                      </div>
+                      <div className="space-y-1 p-2">
+                        <Link
+                          to="/dashboard"
+                          onClick={() => setShowDropdown(false)}
+                          className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-klein-500/60 dark:text-slate-300 dark:hover:bg-slate-700/50"
+                        >
+                          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-klein-50 text-lg dark:bg-klein-900/30">📊</span>
+                          {isEnglish ? 'Dashboard' : '学习中心'}
+                        </Link>
+                        <div className="grid grid-cols-2 gap-2 px-2">
+                          <div className="rounded-xl bg-slate-50 p-3 text-center dark:bg-slate-700/30">
+                            <div className="text-2xl font-bold text-klein-500 dark:text-klein-400">{progress.completedLessons.length}</div>
+                            <div className="text-[10px] text-slate-500 dark:text-slate-400">{isEnglish ? 'Lessons' : '已修课程'}</div>
+                          </div>
+                          <div className="rounded-xl bg-slate-50 p-3 text-center dark:bg-slate-700/30">
+                            <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{progress.completedExercises.length}</div>
+                            <div className="text-[10px] text-slate-500 dark:text-slate-400">{isEnglish ? 'Exercises' : '完成练习'}</div>
                           </div>
                         </div>
-                        <div className="border-t border-slate-100 px-2 pb-2 pt-2 dark:border-slate-700/50">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              logout();
-                              setShowDropdown(false);
-                            }}
-                            className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium text-rose-600 transition-colors hover:bg-rose-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500/60 dark:text-rose-400 dark:hover:bg-rose-900/10"
-                          >
-                            🚪 {isEnglish ? 'Sign Out' : '退出登录'}
-                          </button>
-                        </div>
-                      </motion.div>
-                    </>
+                      </div>
+                      <div className="border-t border-slate-100 px-2 pb-2 pt-2 dark:border-slate-700/50">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            logout();
+                            setShowDropdown(false);
+                          }}
+                          className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium text-rose-600 transition-colors hover:bg-rose-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500/60 dark:text-rose-400 dark:hover:bg-rose-900/10"
+                        >
+                          🚪 {isEnglish ? 'Sign Out' : '退出登录'}
+                        </button>
+                      </div>
+                    </motion.div>
                   )}
                 </AnimatePresence>
               </div>

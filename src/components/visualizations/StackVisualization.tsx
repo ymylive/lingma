@@ -262,10 +262,10 @@ export default function StackVisualization() {
       )}
 
       <div className="grid lg:grid-cols-2 gap-4">
-        <div className="bg-slate-900 rounded-xl p-6 min-h-[480px] border border-slate-800 flex items-start justify-center">
+        <div className="bg-slate-900 rounded-xl p-6 min-h-[480px] border border-slate-800 flex items-start justify-center overflow-hidden">
           <div
-            className="relative"
-            style={{ width: SLOT_W + 128, height: frameHeight + 64 }}
+            className="relative max-w-full"
+            style={{ width: SLOT_W + 200, height: frameHeight + 64 }}
           >
             {/* Top label */}
             <div className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center" style={{ top: 0 }}>
@@ -326,7 +326,7 @@ export default function StackVisualization() {
                         mass: 0.8,
                       }}
                       className={
-                        'absolute left-1/2 -translate-x-1/2 w-[92%] rounded-md flex items-center justify-between px-3 border-2 font-mono font-bold text-sm ' +
+                        'absolute left-[4%] right-[4%] rounded-md flex items-center justify-between px-3 border-2 font-mono font-bold text-sm ' +
                         (item.status === 'pushing'
                           ? 'bg-emerald-500 text-white border-emerald-400 shadow-md shadow-emerald-500/30'
                           : item.status === 'popping'
@@ -355,8 +355,7 @@ export default function StackVisualization() {
                 transition={{ type: 'spring', stiffness: 260, damping: 24 }}
                 className="absolute flex items-center gap-1.5"
                 style={{
-                  left: '50%',
-                  transform: `translateX(${SLOT_W / 2 + 20}px)`,
+                  left: `calc(50% + ${SLOT_W / 2 + 20}px)`,
                   bottom: 8 + (displayStack.length - 1) * SLOT_PITCH + SLOT_H / 2 - 10,
                 }}
               >

@@ -1010,10 +1010,12 @@ export default function TreeVisualization() {
                 const p = layout.positions.get(visitingId);
                 if (!p) return null;
                 const chipW = Math.max(compareHint.length * 6 + 16, 60);
+                const overflowsRight = p.x + 22 + chipW > viewBoxW - 4;
+                const chipX = overflowsRight ? p.x - 22 - chipW : p.x + 22;
                 return (
                   <g>
                     <rect
-                      x={p.x + 22}
+                      x={chipX}
                       y={p.y - 30}
                       width={chipW}
                       height={20}
@@ -1023,7 +1025,7 @@ export default function TreeVisualization() {
                       strokeWidth={1}
                     />
                     <text
-                      x={p.x + 22 + chipW / 2}
+                      x={chipX + chipW / 2}
                       y={p.y - 16}
                       textAnchor="middle"
                       fontFamily="monospace"

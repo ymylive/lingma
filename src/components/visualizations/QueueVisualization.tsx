@@ -579,12 +579,16 @@ function LinearView({
   const SLOT_H = 56;
   const SLOT_GAP = 6;
   const SLOT_PITCH = SLOT_W + SLOT_GAP;
-  const LEFT_PAD = 18;
-  const TOP_PAD = 52; // space for HEAD / TAIL pointer chips
+  const LEFT_PAD = 24;
+  const TOP_PAD = 68;
   const width = LEFT_PAD * 2 + MAX_CAPACITY * SLOT_PITCH - SLOT_GAP;
   const height = TOP_PAD + SLOT_H + 28;
 
   const slotCenterX = (i: number) => LEFT_PAD + i * SLOT_PITCH + SLOT_W / 2;
+
+  const sameSlot = displayFront === displayRear;
+  const CHIP_H = 40;
+  const STAGGER = 26;
 
   return (
     <div className="relative flex justify-center">
@@ -593,41 +597,55 @@ function LinearView({
         <motion.div
           layout={!lowMotion}
           transition={{ type: 'spring', stiffness: 260, damping: 24 }}
-          className="absolute flex flex-col items-center"
+          className="absolute flex flex-col items-center justify-end"
           style={{
-            left: slotCenterX(displayFront) - 26,
-            top: 0,
-            width: 52,
+            left: slotCenterX(displayFront) - SLOT_W / 2,
+            top: TOP_PAD - CHIP_H,
+            width: SLOT_W,
+            height: CHIP_H,
+            zIndex: sameSlot ? 20 : 10,
           }}
         >
-          <span className="rounded-md bg-emerald-500 px-1.5 py-0.5 text-[10px] font-mono font-bold text-white shadow">
+          <span className="text-[10px] font-mono text-emerald-400 leading-tight">
+            front={displayFront}
+          </span>
+          <span className="rounded-md bg-emerald-500 px-1.5 py-0.5 text-[10px] font-mono font-bold text-white shadow mt-0.5">
             HEAD
           </span>
           <div className="w-0 h-0 border-l-[5px] border-r-[5px] border-t-[6px] border-transparent border-t-emerald-500" />
-          <span className="text-[10px] font-mono text-emerald-400 mt-1">
-            front={displayFront}
-          </span>
         </motion.div>
 
         {/* TAIL pointer chip */}
         <motion.div
           layout={!lowMotion}
           transition={{ type: 'spring', stiffness: 260, damping: 24 }}
-          className="absolute flex flex-col items-center"
+          className="absolute flex flex-col items-center justify-end"
           style={{
-            left: slotCenterX(displayRear) - 26,
-            top: 0,
-            width: 52,
+            left: slotCenterX(displayRear) - SLOT_W / 2,
+            top: sameSlot ? TOP_PAD - CHIP_H - STAGGER : TOP_PAD - CHIP_H,
+            width: SLOT_W,
+            height: CHIP_H,
+            zIndex: sameSlot ? 10 : 11,
           }}
         >
-          <span className="rounded-md bg-pine-500 px-1.5 py-0.5 text-[10px] font-mono font-bold text-slate-900 shadow">
+          <span className="text-[10px] font-mono text-pine-300 leading-tight">
+            rear={displayRear}
+          </span>
+          <span className="rounded-md bg-pine-500 px-1.5 py-0.5 text-[10px] font-mono font-bold text-slate-900 shadow mt-0.5">
             TAIL
           </span>
           <div className="w-0 h-0 border-l-[5px] border-r-[5px] border-t-[6px] border-transparent border-t-pine-500" />
-          <span className="text-[10px] font-mono text-pine-400 mt-1">
-            rear={displayRear}
-          </span>
         </motion.div>
+        {sameSlot && (
+          <div
+            className="absolute w-px bg-pine-500/60"
+            style={{
+              left: slotCenterX(displayRear) - 0.5,
+              top: TOP_PAD - STAGGER,
+              height: STAGGER,
+            }}
+          />
+        )}
 
         {/* Slots */}
         <div className="absolute" style={{ top: TOP_PAD, left: LEFT_PAD }}>
