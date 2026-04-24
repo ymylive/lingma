@@ -93,7 +93,7 @@ export default function Algorithms() {
 
   useEffect(() => {
     syncPageMetadata(
-      isEnglish ? 'Algorithms | Tumafang' : '算法可视化 | Tumafang',
+      isEnglish ? 'Algorithms | Lingma' : '算法可视化 | Lingma',
       t('通过交互式动画探索数据结构与算法的魅力。点击下方卡片开始你的学习旅程。'),
     );
   }, [isEnglish, t]);
@@ -127,15 +127,15 @@ export default function Algorithms() {
   return (
     <div className="min-h-screen pb-24 transition-colors duration-500 sm:pb-32">
       <PageHero
-        eyebrow="Algorithms"
+        marker={{ num: '02', label: isEnglish ? 'ALGORITHMS · VISUAL' : '算法 · 可视化' }}
         title={
           isEnglish ? (
             <>
-              Algorithm <span className="text-gradient">Visualizations</span>
+              Algorithm <em className="italic text-klein-600 dark:text-pine-400 font-normal">visualizations</em>
             </>
           ) : (
             <>
-              算法<span className="text-gradient">可视化</span>
+              算法<em className="italic text-klein-600 dark:text-pine-400 font-normal">可视化</em>
             </>
           )
         }

@@ -126,12 +126,12 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen pb-12">
       <PageHero
-        eyebrow="Dashboard"
+        marker={{ num: '05', label: isEnglish ? 'DASHBOARD · HOME' : '学习中心' }}
         title={
           <>
             {greeting}
             <span className="text-slate-500 dark:text-slate-400">,</span>{' '}
-            <span className="text-gradient">{user.username}</span>
+            <em className="italic font-normal text-klein-600 dark:text-pine-400">{user.username}</em>
           </>
         }
         description={copy.subtitle}

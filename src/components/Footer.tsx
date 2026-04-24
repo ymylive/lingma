@@ -13,12 +13,20 @@ export default function Footer() {
         <div className="grid gap-10 text-center sm:grid-cols-3 sm:text-left">
           {/* Brand */}
           <div>
-            <div className="flex items-center justify-center gap-2.5 sm:justify-start">
-              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-klein-500 to-klein-600 text-[10px] font-bold text-white">
-                DS
-              </div>
-              <span className="text-base font-bold text-slate-800 dark:text-white">
-                Tumafang
+            <div className="flex items-center justify-center gap-3 sm:justify-start">
+              <span
+                className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-klein-500 to-klein-700 font-serif text-lg font-semibold text-white shadow-md shadow-klein-500/20"
+                aria-hidden
+              >
+                灵
+              </span>
+              <span className="flex flex-col leading-tight">
+                <span className="font-serif text-lg font-semibold tracking-tight text-slate-900 dark:text-white">
+                  Lingma
+                </span>
+                <span className="text-[10px] font-mono uppercase tracking-[0.22em] text-slate-400 dark:text-slate-500">
+                  灵码
+                </span>
               </span>
             </div>
             <p className="mt-4 text-sm leading-relaxed text-slate-500 dark:text-slate-400">
@@ -72,7 +80,7 @@ export default function Footer() {
 
         {/* Copyright */}
         <div className="mt-10 border-t border-slate-200/40 pt-6 text-center text-xs text-slate-400 dark:border-slate-800/60 dark:text-slate-500">
-          &copy; {new Date().getFullYear()} Tumafang. {isEnglish ? 'All rights reserved.' : '保留所有权利。'}
+          &copy; {new Date().getFullYear()} Lingma · 灵码. {isEnglish ? 'All rights reserved.' : '保留所有权利。'}
         </div>
       </div>
     </footer>

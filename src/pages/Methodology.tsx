@@ -261,19 +261,29 @@ export default function Methodology() {
             <ArrowLeft className="h-4 w-4" strokeWidth={1.75} aria-hidden />
             {isEnglish ? 'Back to Tutorials' : '返回教程'}
           </Link>
-          <div className="flex items-center gap-4">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-klein-500 to-klein-600 shadow-sm shadow-klein-500/20">
-              <BookOpen className="h-7 w-7 text-white" strokeWidth={1.75} aria-hidden />
-            </div>
-            <div>
-              <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white sm:text-4xl">
-                {isEnglish ? 'Vibe Coding Methodology' : 'Vibe Coding 方法论'}
-              </h1>
-              <p className="mt-1 text-base leading-relaxed text-slate-500 dark:text-slate-400">
-                {isEnglish
-                  ? '10 units covering the professional workflow for AI-assisted development'
-                  : '10 个学习单元，系统掌握 AI 辅助开发的专业工作流'}
-              </p>
+          <div className="flex flex-col gap-3">
+            <span className="inline-flex items-center gap-3 text-[11px] font-mono uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">
+              <span className="h-px w-6 bg-current opacity-50" aria-hidden />
+              03 · {isEnglish ? 'METHODOLOGY · VIBE CODING' : '方法论 · VIBE CODING'}
+            </span>
+            <div className="flex items-center gap-4">
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-klein-500 to-klein-600 shadow-sm shadow-klein-500/20">
+                <BookOpen className="h-7 w-7 text-white" strokeWidth={1.75} aria-hidden />
+              </div>
+              <div>
+                <h1 className="font-serif text-4xl font-medium tracking-tight text-slate-900 dark:text-white sm:text-5xl lg:text-6xl">
+                  {isEnglish ? (
+                    <><em className="italic font-normal">Vibe</em> Coding Methodology</>
+                  ) : (
+                    <>Vibe Coding <em className="italic font-normal">方法论</em></>
+                  )}
+                </h1>
+                <p className="mt-2 text-base leading-relaxed text-slate-500 dark:text-slate-400">
+                  {isEnglish
+                    ? '10 units covering the professional workflow for AI-assisted development'
+                    : '10 个学习单元，系统掌握 AI 辅助开发的专业工作流'}
+                </p>
+              </div>
             </div>
           </div>
         </div>

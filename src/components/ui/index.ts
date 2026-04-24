@@ -18,7 +18,11 @@ export type {
   SectionHeaderProps,
   SectionHeaderAlign,
   SectionHeaderSize,
+  SectionHeaderFont,
 } from './SectionHeader';
+
+export { Eyebrow } from './Eyebrow';
+export type { EyebrowProps } from './Eyebrow';
 
 export { Stat } from './Stat';
 export type { StatProps, StatSize } from './Stat';

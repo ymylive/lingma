@@ -236,7 +236,7 @@ export default function Lesson() {
                   </span>
                 )}
               </div>
-              <h1 className="mb-4 text-3xl font-extrabold tracking-tight leading-tight text-slate-900 dark:text-white sm:text-4xl">
+              <h1 className="mb-4 font-serif text-4xl font-medium tracking-tight leading-[1.1] text-slate-900 dark:text-white sm:text-5xl lg:text-6xl">
                 {lesson.title}
               </h1>
               <div className="flex flex-wrap items-center gap-4">

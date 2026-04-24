@@ -70,18 +70,56 @@ export default function Header() {
           : 'border-b border-transparent bg-transparent'
       }`}
     >
-      <nav className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
-        <Link to="/" className="group flex items-center gap-2.5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-klein-500 to-klein-600 text-xs font-bold tracking-wider text-white shadow-md shadow-klein-500/15 transition-transform duration-300 group-hover:scale-105">
-            DS
-          </div>
-          <span className="hidden text-base font-bold tracking-tight text-slate-800 transition-colors group-hover:text-klein-600 dark:text-white dark:group-hover:text-pine-500 sm:inline">
-            {isEnglish ? 'Data Structures' : '数据结构'}
+      <nav className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-3 px-4 sm:px-6">
+        {/* Brand — 灵 serif 单字 + Lingma 小字 */}
+        <Link to="/" className="group flex items-center gap-2.5 sm:gap-3">
+          <span
+            className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-klein-500 via-klein-600 to-klein-700 font-serif text-lg font-semibold text-white shadow-md shadow-klein-500/20 ring-1 ring-klein-400/30 transition-all duration-300 group-hover:scale-105 group-hover:shadow-lg group-hover:shadow-klein-500/30"
+            aria-hidden
+          >
+            灵
+          </span>
+          <span className="hidden flex-col leading-tight sm:flex">
+            <span className="font-serif text-base font-semibold tracking-tight text-slate-900 transition-colors group-hover:text-klein-600 dark:text-white dark:group-hover:text-pine-400">
+              Lingma
+            </span>
+            <span className="text-[9px] font-mono uppercase tracking-[0.22em] text-slate-400 dark:text-slate-500">
+              灵码
+            </span>
           </span>
         </Link>
 
-        <div className="flex items-center gap-1.5 sm:gap-4">
-          {/* Mobile hamburger */}
+        {/* Desktop nav — 中间 */}
+        <div className="hidden items-center rounded-full border border-slate-200/40 bg-slate-100/40 p-1 backdrop-blur-sm dark:border-white/[0.06] dark:bg-slate-800/40 md:flex">
+          {navItems.map((item) => {
+            const isActive = location.pathname.startsWith(item.path);
+            return (
+              <Link
+                key={item.path}
+                to={item.path}
+                className={`relative cursor-pointer rounded-full px-4 py-1.5 text-sm font-medium transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-klein-500/60 ${
+                  isActive
+                    ? 'text-klein-600 dark:text-white'
+                    : 'text-slate-600 hover:bg-white/50 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-700/50 dark:hover:text-white'
+                }`}
+              >
+                {isActive && (
+                  <motion.div
+                    layoutId="nav-pill"
+                    className="absolute inset-0 rounded-full bg-white shadow-sm dark:bg-klein-600"
+                    transition={{ type: 'spring', bounce: 0.2, duration: 0.6 }}
+                    style={{ zIndex: -1 }}
+                  />
+                )}
+                {item.label}
+              </Link>
+            );
+          })}
+        </div>
+
+        {/* Right cluster */}
+        <div className="flex items-center gap-1.5 sm:gap-2">
+          {/* Mobile hamburger — 放在右侧 action 群 */}
           <button
             type="button"
             onClick={() => setMobileMenuOpen((v) => !v)}
@@ -97,35 +135,9 @@ export default function Header() {
               )}
             </svg>
           </button>
-          <div className="hidden items-center rounded-full border border-slate-200/40 bg-slate-100/40 p-1 backdrop-blur-sm dark:border-white/[0.06] dark:bg-slate-800/40 md:flex">
-            {navItems.map((item) => {
-              const isActive = location.pathname.startsWith(item.path);
-              return (
-                <Link
-                  key={item.path}
-                  to={item.path}
-                  className={`relative cursor-pointer rounded-full px-4 py-1.5 text-sm font-medium transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-klein-500/60 ${
-                    isActive
-                      ? 'text-klein-600 dark:text-white'
-                      : 'text-slate-600 hover:bg-white/50 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-700/50 dark:hover:text-white'
-                  }`}
-                >
-                  {isActive && (
-                    <motion.div
-                      layoutId="nav-pill"
-                      className="absolute inset-0 rounded-full bg-white shadow-sm dark:bg-klein-600"
-                      transition={{ type: 'spring', bounce: 0.2, duration: 0.6 }}
-                      style={{ zIndex: -1 }}
-                    />
-                  )}
-                  {item.label}
-                </Link>
-              );
-            })}
-          </div>
 
-          <div className="flex items-center gap-1.5 border-l border-slate-200 pl-2 dark:border-slate-800 sm:gap-3 sm:pl-5">
-            <div className="hidden items-center rounded-full border border-slate-200 bg-white/70 backdrop-blur-sm p-1 text-xs dark:border-slate-700 dark:bg-slate-900/70 sm:flex">
+          <div className="flex items-center gap-1.5 sm:gap-3 sm:border-l sm:border-slate-200 sm:pl-5 dark:sm:border-slate-800">
+            <div className="hidden items-center rounded-full border border-slate-200 bg-white/70 backdrop-blur-sm p-1 text-xs dark:border-slate-700 dark:bg-slate-900/70 md:flex">
               <button
                 type="button"
                 onClick={() => setLocale('zh-CN')}
@@ -153,7 +165,7 @@ export default function Header() {
             <button
               type="button"
               onClick={toggleTheme}
-              className="relative min-h-[44px] min-w-[44px] cursor-pointer rounded-full p-2 text-slate-500 transition-all hover:scale-105 hover:bg-slate-100 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-klein-500/60 dark:text-slate-400 dark:hover:bg-slate-800"
+              className="relative hidden min-h-[44px] min-w-[44px] cursor-pointer rounded-full p-2 text-slate-500 transition-all hover:scale-105 hover:bg-slate-100 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-klein-500/60 dark:text-slate-400 dark:hover:bg-slate-800 md:inline-flex"
               title={isAuto ? t('自动模式 (19:30-7:30开启夜间)') : t('点击切换主题')}
             >
               {theme === 'light' ? (
@@ -247,7 +259,7 @@ export default function Header() {
             ) : (
               <Link
                 to="/auth"
-                className="rounded-full bg-klein-500 px-4 py-2 text-sm font-medium text-white shadow-lg shadow-klein-500/20 transition-all hover:-translate-y-0.5 hover:bg-klein-600 hover:shadow-klein-500/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-klein-500/60 sm:px-5"
+                className="hidden rounded-full bg-klein-500 px-4 py-2 text-sm font-medium text-white shadow-lg shadow-klein-500/20 transition-all hover:-translate-y-0.5 hover:bg-klein-600 hover:shadow-klein-500/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-klein-500/60 sm:inline-flex sm:px-5"
               >
                 {isEnglish ? 'Sign In' : '登录'}
               </Link>
@@ -267,28 +279,47 @@ export default function Header() {
             className="overflow-hidden border-t border-slate-200/50 bg-white/90 backdrop-blur-xl dark:border-white/5 dark:bg-slate-950/90 md:hidden"
           >
             <div className="space-y-3 px-4 py-4">
-              <div className="flex items-center gap-2 rounded-2xl border border-slate-200/70 bg-slate-50/80 p-1 dark:border-slate-800 dark:bg-slate-900/70 sm:hidden">
+              {/* 移动端语言 + 主题切换（桌面端在 nav 右侧独立显示）*/}
+              <div className="flex items-center gap-2 md:hidden">
+                <div className="flex flex-1 items-center gap-2 rounded-2xl border border-slate-200/70 bg-slate-50/80 p-1 dark:border-slate-800 dark:bg-slate-900/70">
+                  <button
+                    type="button"
+                    onClick={() => setLocale('zh-CN')}
+                    className={`min-h-[44px] flex-1 cursor-pointer rounded-xl px-3 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-klein-500/60 ${
+                      locale === 'zh-CN'
+                        ? 'bg-klein-600 text-white'
+                        : 'text-slate-600 hover:bg-white dark:text-slate-300 dark:hover:bg-slate-800'
+                    }`}
+                  >
+                    中文
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setLocale('en-US')}
+                    className={`min-h-[44px] flex-1 cursor-pointer rounded-xl px-3 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-klein-500/60 ${
+                      locale === 'en-US'
+                        ? 'bg-klein-600 text-white'
+                        : 'text-slate-600 hover:bg-white dark:text-slate-300 dark:hover:bg-slate-800'
+                    }`}
+                  >
+                    English
+                  </button>
+                </div>
                 <button
                   type="button"
-                  onClick={() => setLocale('zh-CN')}
-                  className={`min-h-[44px] flex-1 cursor-pointer rounded-xl px-3 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-klein-500/60 ${
-                    locale === 'zh-CN'
-                      ? 'bg-klein-600 text-white'
-                      : 'text-slate-600 hover:bg-white dark:text-slate-300 dark:hover:bg-slate-800'
-                  }`}
+                  onClick={toggleTheme}
+                  className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-2xl border border-slate-200/70 bg-slate-50/80 text-slate-600 transition-colors hover:bg-white dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-300 dark:hover:bg-slate-800"
+                  aria-label={t('点击切换主题')}
                 >
-                  中文
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setLocale('en-US')}
-                  className={`min-h-[44px] flex-1 cursor-pointer rounded-xl px-3 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-klein-500/60 ${
-                    locale === 'en-US'
-                      ? 'bg-klein-600 text-white'
-                      : 'text-slate-600 hover:bg-white dark:text-slate-300 dark:hover:bg-slate-800'
-                  }`}
-                >
-                  English
+                  {theme === 'light' ? (
+                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                    </svg>
+                  ) : (
+                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                    </svg>
+                  )}
                 </button>
               </div>
               {navItems.map((item) => {

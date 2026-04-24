@@ -3,10 +3,12 @@ import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import useLowMotionMode from '../../hooks/useLowMotionMode';
 import { GlassCard } from './GlassCard';
+import { Eyebrow } from './Eyebrow';
 
 const MotionLink = motion.create(Link);
 
 export type PageHeroVariant = 'default' | 'cta';
+export type PageHeroFont = 'sans' | 'serif';
 
 export interface PageHeroAction {
   label: ReactNode;
@@ -16,12 +18,16 @@ export interface PageHeroAction {
 }
 
 export interface PageHeroProps {
+  /** Deprecated: prefer `marker`. Still honored when `marker` is absent. */
   eyebrow?: ReactNode;
+  marker?: { num?: string; label: ReactNode; variant?: 'default' | 'inverse' | 'brand' };
   title: ReactNode;
   description?: ReactNode;
   primaryAction?: PageHeroAction;
   secondaryAction?: PageHeroAction;
   variant?: PageHeroVariant;
+  /** Editorial (serif) or Sans. Defaults to serif — the Lingma signature type. */
+  font?: PageHeroFont;
   className?: string;
 }
 
@@ -37,11 +43,10 @@ function ActionButton({
   lowMotion: boolean;
 }) {
   const base =
-    'inline-flex items-center justify-center gap-2.5 min-h-[52px] px-6 py-3 text-base rounded-2xl font-semibold transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-klein-500/60 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-950';
+    'inline-flex items-center justify-center gap-2.5 min-h-[52px] px-7 py-3 text-base rounded-2xl font-semibold transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-klein-500/60 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-950';
 
   let style: string;
   if (variant === 'cta') {
-    // On a coloured CTA background, invert the palette for contrast.
     style =
       kind === 'primary'
         ? 'bg-white text-klein-700 shadow-lg shadow-black/10 hover:-translate-y-0.5 hover:shadow-black/20'
@@ -50,7 +55,7 @@ function ActionButton({
     style =
       kind === 'primary'
         ? 'bg-klein-600 text-white shadow-lg shadow-klein-600/20 hover:bg-klein-700 hover:shadow-klein-600/40 hover:-translate-y-0.5'
-        : 'border border-slate-200/80 bg-white/70 backdrop-blur-sm text-slate-700 hover:border-klein-300 hover:text-klein-600 dark:border-slate-700/80 dark:bg-slate-800/70 dark:text-slate-200';
+        : 'border border-slate-200/80 bg-white/70 backdrop-blur-sm text-slate-700 hover:border-klein-300 hover:text-klein-600 dark:border-slate-700/80 dark:bg-slate-800/70 dark:text-slate-200 dark:hover:border-pine-500/50 dark:hover:text-pine-400';
   }
 
   const content = (
@@ -108,16 +113,17 @@ function ActionButton({
 
 export function PageHero({
   eyebrow,
+  marker,
   title,
   description,
   primaryAction,
   secondaryAction,
   variant = 'default',
+  font = 'serif',
   className,
 }: PageHeroProps) {
   const lowMotion = useLowMotionMode();
 
-  // Stagger children; bypass animation entirely when reduced-motion is on.
   const container = lowMotion
     ? undefined
     : {
@@ -138,7 +144,15 @@ export function PageHero({
         },
       };
 
-  const eyebrowNode = eyebrow ? (
+  const eyebrowNode = marker ? (
+    <motion.div variants={child}>
+      <Eyebrow
+        num={marker.num}
+        label={marker.label}
+        variant={marker.variant ?? (variant === 'cta' ? 'inverse' : 'default')}
+      />
+    </motion.div>
+  ) : eyebrow ? (
     <motion.div variants={child} className="inline-flex">
       <span
         className={
@@ -164,10 +178,11 @@ export function PageHero({
     </motion.div>
   ) : null;
 
+  const fontClass = font === 'serif' ? 'font-serif font-medium' : 'font-sans font-extrabold';
   const titleClasses =
     variant === 'cta'
-      ? 'text-4xl sm:text-6xl md:text-7xl font-extrabold leading-tight tracking-tight text-white'
-      : 'text-4xl sm:text-6xl md:text-7xl font-extrabold leading-tight tracking-tight text-slate-900 dark:text-white';
+      ? `${fontClass} text-4xl sm:text-6xl md:text-7xl leading-tight tracking-tight text-white`
+      : `${fontClass} text-4xl sm:text-6xl md:text-7xl leading-[1.05] tracking-tight text-slate-900 dark:text-white`;
 
   const descriptionClasses =
     variant === 'cta'
@@ -231,7 +246,7 @@ export function PageHero({
 
   return (
     <section
-      className={`page-safe-top relative px-4 pb-24 sm:px-6 sm:pb-32 ${className ?? ''}`}
+      className={`page-safe-top relative px-4 pb-14 sm:px-6 sm:pb-20 lg:pb-28 ${className ?? ''}`}
     >
       {inner}
     </section>

@@ -225,15 +225,28 @@ export default function Auth() {
         <div className="order-2 space-y-10 lg:order-1 lg:pr-4">
           <div>
             <Link to="/" className="inline-flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-klein-600 shadow-lg shadow-klein-600/20">
-                <span className="text-xl font-bold text-white">DS</span>
-              </div>
-              <span className="section-label">{copy.marketingEyebrow}</span>
+              <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-klein-500 via-klein-600 to-klein-700 font-serif text-2xl font-semibold text-white shadow-lg shadow-klein-600/20 ring-1 ring-klein-400/30">
+                灵
+              </span>
+              <span className="flex flex-col leading-tight">
+                <span className="font-serif text-lg font-semibold tracking-tight text-slate-900 dark:text-white">
+                  Lingma
+                </span>
+                <span className="text-[9px] font-mono uppercase tracking-[0.22em] text-slate-400 dark:text-slate-500">
+                  灵码
+                </span>
+              </span>
             </Link>
-            <h1 className="mt-6 text-3xl font-extrabold leading-tight tracking-tight text-slate-900 dark:text-white sm:text-4xl lg:text-5xl">
+            <div className="mt-6">
+              <span className="inline-flex items-center gap-3 text-[11px] font-mono uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">
+                <span className="h-px w-6 bg-current opacity-50" aria-hidden />
+                00 · {copy.marketingEyebrow}
+              </span>
+            </div>
+            <h1 className="mt-4 font-serif text-4xl font-medium leading-[1.05] tracking-tight text-slate-900 dark:text-white sm:text-5xl lg:text-6xl">
               {copy.marketingTitle}
             </h1>
-            <p className="mt-4 text-base leading-relaxed text-slate-600 dark:text-slate-400">
+            <p className="mt-5 text-base leading-relaxed text-slate-600 dark:text-slate-400">
               {isEnglish
                 ? 'Sign in to unlock synced progress, a daily recommendation engine, and AI-assisted practice tailored to your level.'
                 : '登录后可同步学习进度、每日推荐与基于水平的 AI 辅助练习。'}
@@ -269,10 +282,10 @@ export default function Auth() {
         <div className="order-1 lg:order-2">
           <div className="mx-auto w-full max-w-lg">
             <div className="mb-8 text-center lg:text-left">
-              <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-3xl">
+              <h2 className="font-serif text-3xl font-medium tracking-tight text-slate-900 dark:text-white sm:text-4xl">
                 {copy.title}
               </h2>
-              <p className="mt-2 text-sm leading-relaxed text-slate-600 dark:text-slate-400">{copy.subtitle}</p>
+              <p className="mt-3 text-sm leading-relaxed text-slate-600 dark:text-slate-400">{copy.subtitle}</p>
             </div>
 
             <GlassCard variant="frosted" padding="lg" hoverable={false}>

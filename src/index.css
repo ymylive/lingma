@@ -1,3 +1,6 @@
+/* ─── Editorial typography · 与 hero film 动画对齐 ─────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,300;0,8..60,400;0,8..60,500;0,8..60,600;0,8..60,700;1,8..60,400;1,8..60,500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:ital,wght@0,400;1,400&family=Noto+Serif+SC:wght@400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -6,6 +9,14 @@
   :root {
     --glass-border: rgba(255, 255, 255, 0.08);
     --glass-surface: rgba(255, 255, 255, 0.03);
+
+    /* ─── 节奏系统（统一 section 呼吸）─────────────── */
+    --rhythm-xs: 2rem;    /* 32 — dense stack */
+    --rhythm-sm: 3.5rem;  /* 56 — mobile section */
+    --rhythm-md: 5rem;    /* 80 — tablet section */
+    --rhythm-lg: 7rem;    /* 112 — desktop section */
+    --rhythm-hero: 9rem;  /* 144 — hero moment */
+
   }
 
   * {
@@ -17,13 +28,22 @@
 
   body {
     font-family: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-feature-settings: 'ss01', 'cv11';
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
     @apply bg-slate-50 text-slate-900 transition-colors duration-500 selection:bg-klein-500/30 selection:text-klein-600 dark:selection:bg-pine-500/30 dark:selection:text-pine-500;
   }
 
   .dark body {
     @apply bg-slate-950 text-slate-50;
+  }
+
+  /* Editorial serif 专用 — Source Serif 4 加强字偶间距 */
+  .font-serif,
+  .font-serif * {
+    font-optical-sizing: auto;
+    font-feature-settings: 'kern', 'liga', 'dlig', 'ss02';
   }
 }
 
@@ -59,6 +79,65 @@
     }
   }
 
+  /* ─── 节奏工具：section 三断点分级 ─────────────── */
+  .section-rhythm {
+    padding-top: var(--rhythm-sm);
+    padding-bottom: var(--rhythm-sm);
+  }
+  @media (min-width: 640px) {
+    .section-rhythm { padding-top: var(--rhythm-md); padding-bottom: var(--rhythm-md); }
+  }
+  @media (min-width: 1024px) {
+    .section-rhythm { padding-top: var(--rhythm-lg); padding-bottom: var(--rhythm-lg); }
+  }
+
+  /* Editorial eyebrow — 电影 "01 · PRELUDE" 风格 */
+  .eyebrow-editorial {
+    @apply inline-flex items-center gap-3 text-[11px] font-mono uppercase text-slate-500 dark:text-slate-400;
+    letter-spacing: 0.22em;
+  }
+
+  .eyebrow-editorial::before {
+    content: '';
+    width: 24px;
+    height: 1px;
+    background: currentColor;
+    opacity: 0.5;
+  }
+
+  /* 签名下划线（Hero 标题下方 handwriting 感 SVG path）
+     方案：给 span padding-bottom 预留空间，SVG 绝对定位在 padding 区域内。
+     padding-bottom 吃进行间距的一部分，下划线在字正下方。 */
+  .signature-underline {
+    position: relative;
+    display: inline-block;
+    padding-bottom: 0.2em;
+  }
+  .signature-underline svg {
+    position: absolute;
+    left: -3%;
+    right: -3%;
+    bottom: 0;
+    width: 106%;
+    height: 0.22em;
+    overflow: visible;
+    pointer-events: none;
+  }
+  .signature-underline svg path {
+    fill: none;
+    stroke: #FFE135;
+    stroke-width: 8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-dasharray: 400;
+    stroke-dashoffset: 400;
+    animation: underlineDraw 900ms cubic-bezier(0.22, 1, 0.36, 1) 400ms forwards;
+    filter: drop-shadow(0 1px 0 rgba(255, 225, 53, 0.3));
+  }
+  @keyframes underlineDraw {
+    to { stroke-dashoffset: 0; }
+  }
+
   /* Consistent section label — small caps above section titles */
   .section-label {
     @apply text-xs font-semibold uppercase tracking-[0.18em] text-klein-500 dark:text-klein-400;
@@ -72,6 +151,16 @@
 
   .dark .divider-fade {
     background: linear-gradient(90deg, transparent, rgba(71, 85, 105, 0.4) 20%, rgba(71, 85, 105, 0.4) 80%, transparent);
+  }
+
+  /* Editorial 暖米框 — Hero Film section 专用 */
+  .editorial-parchment {
+    background: linear-gradient(180deg, #f2ece0 0%, #ede7d8 100%);
+    color: #3d382c;
+  }
+  .dark .editorial-parchment {
+    background: linear-gradient(180deg, #1a1816 0%, #0f0e0c 100%);
+    color: #e4dcc7;
   }
 
   /* 液态玻璃 (Liquid Glass) - Glossy & Wet */

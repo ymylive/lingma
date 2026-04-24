@@ -322,7 +322,7 @@ export default function Practice() {
 
   useEffect(() => {
     syncPageMetadata(
-      isEnglish ? 'Practice | Tumafang' : '刷题中心 | Tumafang',
+      isEnglish ? 'Practice | Lingma' : '刷题中心 | Lingma',
       isEnglish
         ? 'Progressive practice paths with personalized recommendations, searchable problems, and online judging.'
         : '层级刷题路径、个性化推荐、可搜索题库和在线判题。',
@@ -408,10 +408,15 @@ export default function Practice() {
   return (
     <div className="min-h-screen pb-8">
       <PageHero
-        title={t('刷题路径 + 专业判题 + 多语言学习支持')}
+        marker={{ num: '04', label: isEnglish ? 'AI PRACTICE · WORKSPACE' : 'AI 练习 · 工作台' }}
+        title={isEnglish ? (
+          <>Practice with<br /><em className="italic font-normal text-klein-600 dark:text-pine-400">purpose</em>.</>
+        ) : (
+          <>有路径的<br /><em className="italic font-normal text-klein-600 dark:text-pine-400">刷题</em>工作台</>
+        )}
         description={
           isEnglish
-            ? 'The library is no longer a flat list. Practice now groups problems into warmup, solid, upgrade, and sprint stages, then surfaces the next recommended problem, review queue, and checkpoint feedback.'
+            ? 'The library is no longer a flat list. Problems are grouped into warmup, solid, upgrade, and sprint stages — with next-problem recommendations, review queue, and checkpoint feedback.'
             : '现在不再只是平铺题库。页面会按专题和难度自动生成热身、巩固、进阶、冲刺四层路径，并给出推荐下一题、待复盘题和检查点反馈。'
         }
       />

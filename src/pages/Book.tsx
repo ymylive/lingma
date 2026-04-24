@@ -99,7 +99,7 @@ export default function Book() {
 
   useEffect(() => {
     syncPageMetadata(
-      isEnglish ? 'Book | Tumafang' : '教程 | Tumafang',
+      isEnglish ? 'Book | Lingma' : '教程 | Lingma',
       t('系统学习数据结构与算法，从入门到精通'),
     );
   }, [isEnglish, t]);
@@ -144,9 +144,10 @@ export default function Book() {
     <div className="min-h-screen pb-12 transition-colors duration-300">
       <div className="mx-auto max-w-5xl px-4 sm:px-6">
         <PageHero
+          marker={{ num: '01', label: isEnglish ? 'TUTORIALS · BOOK' : '教程 · 书' }}
           title={
-            <span className="inline-flex items-center gap-3">
-              <BookOpen className="h-8 w-8" strokeWidth={1.75} aria-hidden />
+            <span className="inline-flex items-center gap-4">
+              <BookOpen className="h-10 w-10 sm:h-12 sm:w-12" strokeWidth={1.5} aria-hidden />
               {isEnglish ? 'Data Structure Tutorials' : '数据结构教程'}
             </span>
           }

@@ -17,8 +17,6 @@ precision highp float;
 
 uniform float uTime;
 uniform vec2 uResolution;
-uniform vec2 uTrailPos[8];
-uniform float uTrailTime[8];
 uniform float uDark;
 
 vec2 hash2(vec2 p) {
@@ -57,32 +55,11 @@ void main() {
 
   float t = uTime * 0.08;
 
-  // ─── CURSOR DISTURBANCE — curl-noise turbulence along trail ───
-  // Accumulate gaussian trail influence; curl of single-octave noise gives a
-  // divergence-free rotational field that swirls the sampling coords → smoke
-  // visibly rotates/eddies along the cursor path, no linear stretch/distortion.
-  const float TRAIL_R   = 0.24;
-  const float TRAIL_TAU = 1.2;
-  float trailInfluence = 0.0;
-  for (int i = 0; i < 8; i++) {
-    float age = uTime - uTrailTime[i];
-    if (age < 0.0 || age > 3.0) continue;
-    vec2 rUv = uTrailPos[i] / uResolution;
-    vec2 rp  = vec2(rUv.x * aspect, rUv.y);
-    vec2 to  = p - rp;
-    float d2 = dot(to, to);
-    trailInfluence += exp(-d2 / (TRAIL_R * TRAIL_R)) * exp(-age / TRAIL_TAU);
-  }
-  trailInfluence = clamp(trailInfluence, 0.0, 1.8);
-  vec2 nc = p * 2.8 + vec2(uTime * 0.30, -uTime * 0.22);
-  float eps = 0.035;
-  float nxa = noise(nc + vec2(eps, 0.0));
-  float nxb = noise(nc - vec2(eps, 0.0));
-  float nya = noise(nc + vec2(0.0, eps));
-  float nyb = noise(nc - vec2(0.0, eps));
-  // curl = (∂n/∂y, -∂n/∂x)
-  vec2 curl = vec2(nya - nyb, nxb - nxa);
-  vec2 pd = p + curl * (trailInfluence * 0.14);
+  // Non-interactive ambient field — the FluidSmokeLayer overlay handles cursor
+  // interaction on top of this via a Navier-Stokes simulation (Pavel Dobryakov
+  // fork). Keeping this shader focused on the beautiful Klein Aurora ambient
+  // means the two layers don't fight for the pointer or double-process events.
+  vec2 pd = p;
 
   // Domain warping -> "smoke" flow, sampled at disturbed coords
   vec2 q = vec2(fbm(pd + vec2(0.0, t)), fbm(pd + vec2(5.2, 1.3) - vec2(t, 0.0)));
@@ -140,9 +117,7 @@ void main() {
 
   vec3 color = mix(cLight, cDark, uDark);
 
-  // Pine Yellow sparkles at flow crests — ambient (not cursor-driven)
-  // The cursor ripple already pushes local f higher at crests, so sparkles naturally appear
-  // along the ripple bands — giving visual feedback without adding a bloom layer.
+  // Pine Yellow sparkles at flow crests — purely ambient.
   float sparkle = smoothstep(0.86, 0.93, f) * (1.0 - smoothstep(0.93, 0.98, f));
   color += pine * sparkle * mix(0.20, 0.72, uDark);
 
@@ -209,8 +184,6 @@ export default function AuroraBackground({ lowMotion = false }: AuroraBackground
 
     const uTime = gl.getUniformLocation(program, 'uTime');
     const uRes = gl.getUniformLocation(program, 'uResolution');
-    const uTrailPos = gl.getUniformLocation(program, 'uTrailPos');
-    const uTrailTime = gl.getUniformLocation(program, 'uTrailTime');
     const uDark = gl.getUniformLocation(program, 'uDark');
 
     // Aurora is a decorative background — 1.0 DPR is plenty and ~2.25× cheaper on retina.
@@ -228,36 +201,7 @@ export default function AuroraBackground({ lowMotion = false }: AuroraBackground
     resize();
     window.addEventListener('resize', resize);
 
-    const TRAIL_MAX = 8;
-    const trailPosArr = new Float32Array(TRAIL_MAX * 2);
-    const trailTimeArr = new Float32Array(TRAIL_MAX);
-    for (let i = 0; i < TRAIL_MAX; i++) trailTimeArr[i] = -1000.0;
-    let trailHead = 0;
-    let lastEmitMs = 0;
-    let lastEmitX = -1e9;
-    let lastEmitY = -1e9;
     const start = performance.now();
-
-    const handleMove = (e: PointerEvent) => {
-      const k = dpr();
-      const x = e.clientX * k;
-      const y = (window.innerHeight - e.clientY) * k;
-      const now = performance.now();
-      if (now - lastEmitMs < 22) return;
-      const minDim = Math.min(canvas.width, canvas.height);
-      const minDist = minDim * 0.015;
-      const dx = x - lastEmitX;
-      const dy = y - lastEmitY;
-      if (dx * dx + dy * dy < minDist * minDist) return;
-      trailPosArr[trailHead * 2] = x;
-      trailPosArr[trailHead * 2 + 1] = y;
-      trailTimeArr[trailHead] = (now - start) / 1000;
-      trailHead = (trailHead + 1) % TRAIL_MAX;
-      lastEmitMs = now;
-      lastEmitX = x;
-      lastEmitY = y;
-    };
-    window.addEventListener('pointermove', handleMove, { passive: true });
 
     let running = !document.hidden;
     const handleVisibility = () => {
@@ -265,15 +209,9 @@ export default function AuroraBackground({ lowMotion = false }: AuroraBackground
     };
     document.addEventListener('visibilitychange', handleVisibility);
 
-    const emptyPos = new Float32Array(TRAIL_MAX * 2);
-    const emptyTime = new Float32Array(TRAIL_MAX);
-    for (let i = 0; i < TRAIL_MAX; i++) emptyTime[i] = -1000.0;
-
     const drawOnce = () => {
       gl.uniform1f(uTime, 0);
       gl.uniform2f(uRes, canvas.width, canvas.height);
-      gl.uniform2fv(uTrailPos, emptyPos);
-      gl.uniform1fv(uTrailTime, emptyTime);
       gl.uniform1f(uDark, themeRef.current === 'dark' ? 1 : 0);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
     };
@@ -282,7 +220,6 @@ export default function AuroraBackground({ lowMotion = false }: AuroraBackground
 
     if (lowMotion) {
       drawOnce();
-      // redraw on resize or theme change (theme change re-runs the effect via dep)
       const staticResize = () => {
         resize();
         drawOnce();
@@ -291,7 +228,6 @@ export default function AuroraBackground({ lowMotion = false }: AuroraBackground
       return () => {
         window.removeEventListener('resize', resize);
         window.removeEventListener('resize', staticResize);
-        window.removeEventListener('pointermove', handleMove);
         document.removeEventListener('visibilitychange', handleVisibility);
         gl.deleteBuffer(buf);
         gl.deleteProgram(program);
@@ -309,8 +245,6 @@ export default function AuroraBackground({ lowMotion = false }: AuroraBackground
 
       gl.uniform1f(uTime, t);
       gl.uniform2f(uRes, canvas.width, canvas.height);
-      gl.uniform2fv(uTrailPos, trailPosArr);
-      gl.uniform1fv(uTrailTime, trailTimeArr);
       gl.uniform1f(uDark, themeRef.current === 'dark' ? 1 : 0);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
     };
@@ -320,7 +254,6 @@ export default function AuroraBackground({ lowMotion = false }: AuroraBackground
     return () => {
       cancelAnimationFrame(rafId);
       window.removeEventListener('resize', resize);
-      window.removeEventListener('pointermove', handleMove);
       document.removeEventListener('visibilitychange', handleVisibility);
       gl.deleteBuffer(buf);
       gl.deleteProgram(program);

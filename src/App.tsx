@@ -9,6 +9,7 @@ import LocalizationBridge from './components/LocalizationBridge';
 import ProtectedRoute from './components/ProtectedRoute';
 import PixelCat from './components/PixelCat';
 import AuroraBackground from './components/AuroraBackground';
+import FluidSmokeLayer from './components/FluidSmokeLayer';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { motion } from 'framer-motion';
 import useLowMotionMode from './hooks/useLowMotionMode';
@@ -113,6 +114,7 @@ function App() {
             <Router>
             <LocalizationBridge />
             <AuroraBackground lowMotion={lowMotionMode} />
+            <FluidSmokeLayer lowMotion={lowMotionMode} />
 
             <div className="relative z-10 flex flex-col min-h-screen">
               <Header />

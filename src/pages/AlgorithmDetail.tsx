@@ -82,13 +82,13 @@ export default function AlgorithmDetail() {
   useEffect(() => {
     if (!info) {
       syncPageMetadata(
-        isEnglish ? 'Algorithm Not Found | Tumafang' : '算法不存在 | Tumafang',
+        isEnglish ? 'Algorithm Not Found | Lingma' : '算法不存在 | Lingma',
         isEnglish ? 'The requested algorithm demo or tutorial could not be found.' : '请求的算法演示或教程不存在。',
       );
       return;
     }
 
-    syncPageMetadata(`${t(info.title)} | ${t('算法可视化')} | Tumafang`, t(info.desc));
+    syncPageMetadata(`${t(info.title)} | ${t('算法可视化')} | Lingma`, t(info.desc));
   }, [info, isEnglish, t]);
 
   const tabItems = useMemo<TabItem<'visual' | 'tutorial'>[]>(
@@ -179,7 +179,7 @@ export default function AlgorithmDetail() {
               </span>
             </div>
             <div>
-              <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white sm:text-3xl md:text-4xl">
+              <h1 className="font-serif text-3xl font-medium tracking-tight text-slate-900 dark:text-white sm:text-4xl md:text-5xl">
                 {t(info.title)}
               </h1>
               <p className="mt-3 max-w-2xl text-sm leading-relaxed text-slate-500 dark:text-slate-400 sm:text-base">
